@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useMemo, useState, useCallback } from "react";
-import CodeEditor from "../components/CodeEditor";
-import PreviewRenderer from "../components/PreviewRenderer";
-import ToggleSwitch from "../components/ToggleSwitch";
+import CodeEditor from "../../components/CodeEditor";
+import PreviewRenderer from "../../components/PreviewRenderer";
+import ToggleSwitch from "../../components/ToggleSwitch";
 
 type Mode = "code" | "preview";
 
@@ -12,7 +12,7 @@ const STARTER_TEMPLATE = `export default function Template({ values, setValue })
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto w-[794px] bg-white text-gray-900 shadow-lg print:shadow-none">
         {/* Header with Logo */}
-        <div className="bg-linear-to-r from-pink-600 to-red-600 px-10 py-6">
+        <div className="bg-gradient-to-r from-pink-600 to-red-600 px-10 py-6">
           <div className="flex items-center justify-between">
             <div className="bg-white px-4 py-2 rounded">
               <h1 className="text-2xl font-bold text-pink-600">
@@ -131,23 +131,145 @@ export default function CodePage() {
     setValues((prev) => ({ ...prev, [id]: v }));
   }, []);
 
+  const handleExportCode = useCallback(() => {
+    // Replace all default values in the code with current values
+    let updatedCode = code;
+    
+    Object.entries(values).forEach(([key, value]) => {
+      // Escape special regex characters in the key
+      const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Find and replace the default value with the new value
+      const regex = new RegExp(
+        `value={values\\['${escapedKey}'\\]\\s*\\|\\|\\s*['"]([^'"]*?)['"]`,
+        'g'
+      );
+      updatedCode = updatedCode.replace(regex, `value={values['${key}'] || '${value.replace(/'/g, "\\'")}'`);
+    });
+
+    // Create blob and download
+    const blob = new Blob([updatedCode], { type: 'text/javascript' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `template-${new Date().toISOString().split('T')[0]}.jsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [code, values]);
+
+  const handleExportPDF = useCallback(() => {
+    // Use browser's native print function which handles modern CSS perfectly
+    // Add print styles to hide everything except the preview content
+    const style = document.createElement('style');
+    style.id = 'pdf-export-styles';
+    style.textContent = `
+      @page {
+        margin: 0;
+        size: A4;
+      }
+      
+      @media print {
+        /* Remove default print margins and headers/footers */
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 100%;
+          height: 100%;
+        }
+        
+        /* Hide everything except preview content */
+        body * {
+          visibility: hidden;
+        }
+        
+        .preview-content,
+        .preview-content * {
+          visibility: visible;
+        }
+        
+        .preview-content {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          margin: 0;
+          padding: 0;
+        }
+        
+        /* Hide editable text controls and interactive elements */
+        .preview-content button,
+        .preview-content input[type="file"],
+        .preview-content input,
+        .preview-content textarea {
+          display: none !important;
+        }
+        
+        /* Ensure proper page breaks */
+        .preview-content > * {
+          page-break-inside: avoid;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Trigger print dialog
+    window.print();
+
+    // Clean up after print dialog closes
+    setTimeout(() => {
+      const styleEl = document.getElementById('pdf-export-styles');
+      if (styleEl) {
+        styleEl.remove();
+      }
+    }, 1000);
+  }, []);
+
   const header = useMemo(() => (
     <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white shadow-sm px-6 py-4">
-      <div className="flex items-center gap-2">
-        <h1 className="text-xl font-bold text-gray-900">PDF Template Editor</h1>
-        <span className="text-xs text-gray-500">Code ⇄ Live Preview</span>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
+            <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+          </svg>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">PDF Template Editor</h1>
+            <p className="text-xs text-gray-500">Design & Export Professional Documents</p>
+          </div>
+        </div>
       </div>
-      <ToggleSwitch mode={mode} onChange={setMode} />
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleExportCode}
+          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+          </svg>
+          Export Code
+        </button>
+        <button
+          onClick={handleExportPDF}
+          className="export-pdf-btn px-4 py-2 bg-gradient-to-r from-pink-600 to-red-600 text-white rounded-lg font-medium hover:from-pink-700 hover:to-red-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Export PDF
+        </button>
+        <ToggleSwitch mode={mode} onChange={setMode} />
+      </div>
     </div>
-  ), [mode]);
+  ), [mode, handleExportCode, handleExportPDF]);
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 text-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900">
       {header}
       <div className="mx-auto w-full max-w-7xl px-6 py-8">
         {mode === "code" ? (
           <div className="rounded-xl border border-gray-200 shadow-lg overflow-hidden bg-white">
-            <div className="bg-linear-to-r from-gray-800 to-gray-900 px-6 py-3 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-6 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
@@ -162,7 +284,9 @@ export default function CodePage() {
           </div>
         ) : (
           <div className="min-h-[70vh] bg-white rounded-xl shadow-lg p-8">
-            <PreviewRenderer code={code} values={values} setValue={setValue} />
+            <div className="preview-content">
+              <PreviewRenderer code={code} values={values} setValue={setValue} />
+            </div>
           </div>
         )}
       </div>

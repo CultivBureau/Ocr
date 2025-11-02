@@ -9,7 +9,7 @@ export default function Home() {
       <div className="w-full max-w-5xl">
         <h1 className="text-2xl font-semibold text-gray-900 mb-6">Choose what to do</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <Link href="/pages" className="group block rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <Link href="/pages/CodePreview" className="group block rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-lg font-medium text-gray-900">Add Code</h2>
