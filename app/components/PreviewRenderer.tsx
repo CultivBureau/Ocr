@@ -493,11 +493,26 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
     }
   }, [transformed]);
 
-  // Check for incomplete code
-  const hasOrphanClosingBrace = /^\s*\}\s*$/m.test(code);
-  const hasIncompleteJSX = code.includes('onChange={(v)=>setValue(') && 
-                           !code.includes('</li>') && 
-                           code.trim().endsWith('}');
+  // Check for incomplete code (more intelligent check)
+  // Only flag if there are clear signs of incompleteness, not just a closing brace on its own line
+  const codeLines = code.split('\n');
+  const lastNonEmptyLine = codeLines.filter(l => l.trim()).pop() || '';
+  const hasValidClosingBrace = /^\s*\}\s*$/.test(lastNonEmptyLine.trim());
+  
+  // Check if code looks complete:
+  // 1. Has proper function signature
+  // 2. Has return statement
+  // 3. Ends with closing brace (valid case)
+  // 4. Braces are balanced
+  const hasFunctionSignature = /export\s+default\s+function\s+\w+/.test(code);
+  const hasReturnStatement = /return\s*\(/.test(code);
+  const openBracesInCode = (code.match(/\{/g) || []).length;
+  const closeBracesInCode = (code.match(/\}/g) || []).length;
+  const bracesBalanced = Math.abs(openBracesInCode - closeBracesInCode) <= 1; // Allow small difference
+  
+  // Only flag as incomplete if multiple indicators suggest it
+  const hasOrphanClosingBrace = /^\s*\}\s*$/m.test(code) && !hasValidClosingBrace && !hasReturnStatement;
+  const hasIncompleteJSX = !hasFunctionSignature || !hasReturnStatement || !bracesBalanced;
 
   return (
     <div className="w-full">
