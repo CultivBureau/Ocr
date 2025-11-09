@@ -421,6 +421,136 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
     // One more aggressive pass: find and remove any {" "} that appears between any table-related tags
     src = src.replace(/(<[\/]?(?:table|thead|tbody|tr|th|td)[^>]*>)\s*\{\s*["']\s*["']\s*\}\s*(<[\/]?(?:table|thead|tbody|tr|th|td)[^>]*>)/g, '$1$2');
     
+    // CRITICAL FIX 1: Fix unclosed EditableText tags (must be self-closing)
+    // Find all EditableText tags and ensure they're properly closed
+    let editableSearchIndex = 0;
+    const editableFixes: Array<{ index: number; length: number; replacement: string }> = [];
+    
+    while (true) {
+      const editableStart = src.indexOf('<EditableText', editableSearchIndex);
+      if (editableStart === -1) break;
+      
+      // Find where this tag should end
+      let tagEnd = editableStart + 13; // After "<EditableText"
+      let inQuotes = false;
+      let quoteChar = '';
+      let parenDepth = 0;
+      let braceDepth = 0;
+      let foundClosing = false;
+      
+      while (tagEnd < src.length) {
+        const char = src[tagEnd];
+        const prevChar = tagEnd > 0 ? src[tagEnd - 1] : '';
+        
+        if (!inQuotes) {
+          if ((char === '"' || char === "'") && prevChar !== '\\') {
+            inQuotes = true;
+            quoteChar = char;
+          } else if (char === '(') {
+            parenDepth++;
+          } else if (char === ')') {
+            parenDepth--;
+          } else if (char === '{') {
+            braceDepth++;
+          } else if (char === '}') {
+            braceDepth--;
+            // If we hit } at depth 0 (closing onChange), check what's next
+            if (braceDepth === 0 && parenDepth === 0) {
+              let checkPos = tagEnd + 1;
+              // Skip whitespace
+              while (checkPos < src.length && /\s/.test(src[checkPos])) {
+                checkPos++;
+              }
+              // If next non-whitespace is }, this is likely function closing brace
+              // and EditableText is missing />
+              if (checkPos < src.length && src[checkPos] === '}') {
+                editableFixes.push({
+                  index: tagEnd + 1,
+                  length: 0,
+                  replacement: ' />'
+                });
+                foundClosing = true;
+                break;
+              }
+            }
+          } else if (char === '>' && parenDepth === 0 && braceDepth === 0) {
+            foundClosing = true;
+            break;
+          }
+        } else {
+          if (char === quoteChar && prevChar !== '\\') {
+            inQuotes = false;
+            quoteChar = '';
+          }
+        }
+        
+        tagEnd++;
+      }
+      
+      if (!foundClosing && tagEnd < src.length) {
+        const tagContent = src.substring(editableStart, tagEnd + 1);
+        if (!tagContent.endsWith('/>')) {
+          const afterTag = src.substring(tagEnd + 1);
+          if (!afterTag.trim().startsWith('</EditableText>')) {
+            editableFixes.push({
+              index: tagEnd,
+              length: 1,
+              replacement: ' />'
+            });
+          }
+        }
+      }
+      
+      editableSearchIndex = tagEnd + 1;
+    }
+    
+    // Apply fixes in reverse order
+    editableFixes.reverse().forEach(fix => {
+      src = src.substring(0, fix.index) + fix.replacement + src.substring(fix.index + fix.length);
+    });
+    
+    // CRITICAL FIX 3: Ensure return statement has balanced parentheses
+    const returnMatch = src.match(/return\s*\(/);
+    if (returnMatch) {
+      const returnIndex = returnMatch.index!;
+      let parenDepth = 1; // We're inside return (
+      let foundClosing = false;
+      
+      for (let i = returnIndex + returnMatch[0].length; i < src.length; i++) {
+        const char = src[i];
+        const prevChar = i > 0 ? src[i - 1] : '';
+        
+        if (char === '(' && prevChar !== '\\') parenDepth++;
+        else if (char === ')' && prevChar !== '\\') {
+          parenDepth--;
+          if (parenDepth === 0) {
+            foundClosing = true;
+            break;
+          }
+        }
+      }
+      
+      // If return ( wasn't closed, add closing ) before the final }
+      if (!foundClosing) {
+        const lastBraceIndex = src.lastIndexOf('}');
+        if (lastBraceIndex > returnIndex) {
+          src = src.substring(0, lastBraceIndex) + ')' + src.substring(lastBraceIndex);
+          console.warn(`⚠️ Fixed missing closing parenthesis for return statement`);
+        }
+      }
+    }
+    
+    // CRITICAL FIX 4: Balance parentheses globally
+    const openParens = (src.match(/\(/g) || []).length;
+    const closeParens = (src.match(/\)/g) || []).length;
+    if (openParens > closeParens) {
+      const lastBraceIndex = src.lastIndexOf('}');
+      if (lastBraceIndex > 0) {
+        src = src.substring(0, lastBraceIndex) + ')'.repeat(openParens - closeParens) + src.substring(lastBraceIndex);
+        console.warn(`⚠️ Fixed ${openParens - closeParens} missing closing parenthesis`);
+      }
+    }
+    
     // Ensure code ends with closing brace (react-live needs complete function)
     if (!src.trim().endsWith('}')) {
       // Try to balance braces if needed
