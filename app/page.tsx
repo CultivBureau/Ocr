@@ -19,15 +19,22 @@ export default function Home() {
             </div>
           </Link>
 
-          <div className="block rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 opacity-60 cursor-not-allowed select-none">
+          <Link
+            href="/pages/PdfConverter"
+            className="group block rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+          >
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-medium text-gray-700">PDF</h2>
-                <p className="mt-1 text-sm text-gray-500">Coming soon: generate PDFs from templates.</p>
+                <h2 className="text-lg font-medium text-gray-900">API Playground</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Upload a PDF, call OpenAI endpoints, and preview JSX output with live editing.
+                </p>
               </div>
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-400">🔒</span>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-purple-50 text-purple-600 group-hover:bg-purple-100">
+                →
+              </span>
             </div>
-          </div>
+          </Link>
         </div>
       </div>
     </div>

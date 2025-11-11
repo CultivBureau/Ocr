@@ -41,6 +41,15 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
     let src = code.trim();
     let componentName = "Template";
 
+    if (!/export\s+default\s+function\s+/m.test(src)) {
+      const fragment = src.length ? src : "<React.Fragment />";
+      const indented = fragment
+        .split("\n")
+        .map((line) => `    ${line}`.replace(/\s+$/, ""))
+        .join("\n");
+      src = `export default function Template({ values, setValue }) {\n  return (\n${indented}\n  );\n}`;
+    }
+
     // Remove any leading/trailing whitespace
     src = src.trim();
 
@@ -57,6 +66,12 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
     // This is the main fix for the syntax error: \" becomes "
     src = src.replace(/\\"/g, '"');
     src = src.replace(/\\'/g, "'");
+    
+    // CRITICAL: Fix newlines between attribute name and equals sign
+    // Pattern: className\n="..." -> className="..." (handles both literal \n and escaped \\n)
+    // This is a critical syntax error that breaks JSX parsing
+    src = src.replace(/(\w+)\s*\\n\s*=/g, '$1=');  // Fix escaped newlines: className\n=
+    src = src.replace(/(\w+)\s*\n\s*=/g, '$1=');  // Fix actual newlines: className\n=
     
     // CRITICAL: Fix double curly braces in JSX expressions
     // Problem: AI/JSON encoding creates ={{ instead of ={ 

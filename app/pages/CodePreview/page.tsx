@@ -1,6 +1,11 @@
 "use client";
 
-import React, { useMemo, useState, useCallback } from "react";
+import React, {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import CodeEditor from "../../components/CodeEditor";
 import PreviewRenderer from "../../components/PreviewRenderer";
 import ToggleSwitch from "../../components/ToggleSwitch";
@@ -126,6 +131,46 @@ export default function CodePage() {
   const [mode, setMode] = useState<Mode>("code");
   const [code, setCode] = useState<string>(STARTER_TEMPLATE);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [externalWarnings, setExternalWarnings] = useState<string[]>([]);
+  const [sourceMetadata, setSourceMetadata] = useState<{
+    filename?: string;
+    uploadedAt?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const storedCode = sessionStorage.getItem("codePreview.initialCode");
+    const storedWarnings = sessionStorage.getItem("codePreview.warnings");
+    const storedMetadata = sessionStorage.getItem("codePreview.metadata");
+
+    if (storedCode) {
+      setCode(storedCode);
+      sessionStorage.removeItem("codePreview.initialCode");
+    }
+
+    if (storedWarnings) {
+      try {
+        const parsed = JSON.parse(storedWarnings);
+        if (Array.isArray(parsed)) {
+          setExternalWarnings(parsed as string[]);
+        }
+      } catch {
+        // ignore parse errors
+      }
+      sessionStorage.removeItem("codePreview.warnings");
+    }
+
+    if (storedMetadata) {
+      try {
+        const parsed = JSON.parse(storedMetadata);
+        setSourceMetadata(parsed);
+      } catch {
+        // ignore parse errors
+      }
+      sessionStorage.removeItem("codePreview.metadata");
+    }
+  }, []);
 
   const setValue = useCallback((id: string, v: string) => {
     setValues((prev) => ({ ...prev, [id]: v }));
@@ -236,6 +281,17 @@ export default function CodePage() {
           <div>
             <h1 className="text-xl font-bold text-gray-900">PDF Template Editor</h1>
             <p className="text-xs text-gray-500">Design & Export Professional Documents</p>
+            {sourceMetadata?.filename && (
+              <p className="text-xs text-gray-400">
+                Loaded from: <span className="font-medium">{sourceMetadata.filename}</span>
+                {sourceMetadata.uploadedAt && (
+                  <>
+                    {" • "}
+                    {new Date(sourceMetadata.uploadedAt).toLocaleString()}
+                  </>
+                )}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -267,6 +323,18 @@ export default function CodePage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900">
       {header}
       <div className="mx-auto w-full max-w-7xl px-6 py-8">
+        {externalWarnings.length > 0 && (
+          <div className="mb-6 rounded border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+            <h2 className="text-sm font-semibold text-yellow-900">
+              Backend Validation Warnings
+            </h2>
+            <ul className="mt-1 list-disc space-y-1 pl-5">
+              {externalWarnings.map((warning, index) => (
+                <li key={index}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         {mode === "code" ? (
           <div className="rounded-xl border border-gray-200 shadow-lg overflow-hidden bg-white">
             <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-6 py-3 flex items-center justify-between">
