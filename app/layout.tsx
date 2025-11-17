@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PDF to Next.js Converter",
-  description: "Convert PDF to Next.js component",
+  title: "HappyLife Travel - PDF Template Generator",
+  description: "Convert PDF to editable Next.js templates - HappyLife Travel & Tourism",
 };
 
 export default function RootLayout({

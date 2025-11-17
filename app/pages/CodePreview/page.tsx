@@ -6,22 +6,26 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import CodeEditor from "../../components/CodeEditor";
 import PreviewRenderer from "../../components/PreviewRenderer";
 import ToggleSwitch from "../../components/ToggleSwitch";
 
 type Mode = "code" | "preview";
 
-const STARTER_TEMPLATE = `export default function Template({ values, setValue }) {
+// Clean starter template without EditableText - only for demonstration
+// The EditableText feature is only used in AI-generated code from PDF uploads
+const STARTER_TEMPLATE = `export default function Template() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto w-[794px] bg-white text-gray-900 shadow-lg print:shadow-none">
-        {/* Header with Logo */}
-        <div className="bg-gradient-to-r from-pink-600 to-red-600 px-10 py-6">
+        {/* Header */}
+        <div className="bg-linear-to-r from-[#A4C639] to-[#8FB02E] px-10 py-6">
           <div className="flex items-center justify-between">
             <div className="bg-white px-4 py-2 rounded">
-              <h1 className="text-2xl font-bold text-pink-600">
-                <EditableText id="company.logo" value={values['company.logo'] || 'TRAVEL+'} onChange={(v)=>setValue('company.logo', v)} />
+              <h1 className="text-2xl font-bold text-[#A4C639]">
+                HappyLife Travel & Tourism
               </h1>
             </div>
           </div>
@@ -29,98 +33,44 @@ const STARTER_TEMPLATE = `export default function Template({ values, setValue })
 
         {/* Main Title */}
         <div className="text-center py-6 px-10">
-          <h1 className="text-3xl font-bold text-red-600 underline decoration-2">
-            <EditableText id="package.title" value={values['package.title'] || 'Special Package 2025'} onChange={(v)=>setValue('package.title', v)} />
+          <h1 className="text-3xl font-bold text-[#A4C639] underline decoration-2">
+            Travel Package Template
           </h1>
-        </div>
-
-        {/* Image Gallery */}
-        <div className="px-10 pb-6">
-          <div className="flex gap-4 justify-center">
-            <div className="w-40 h-32 bg-gray-200 rounded-lg border-4 border-white shadow-md overflow-hidden">
-              <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-                <EditableText id="image.1" value={values['image.1'] || 'Image 1'} onChange={(v)=>setValue('image.1', v)} />
-              </div>
-            </div>
-            <div className="w-40 h-32 bg-gray-200 rounded-lg border-4 border-white shadow-md overflow-hidden">
-              <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-                <EditableText id="image.2" value={values['image.2'] || 'Image 2'} onChange={(v)=>setValue('image.2', v)} />
-              </div>
-            </div>
-            <div className="w-40 h-32 bg-gray-200 rounded-lg border-4 border-white shadow-md overflow-hidden">
-              <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-                <EditableText id="image.3" value={values['image.3'] || 'Image 3'} onChange={(v)=>setValue('image.3', v)} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Package Details */}
-        <div className="px-10 pb-6 text-center">
-          <h2 className="text-xl font-bold text-red-600 mb-2">
-            <EditableText id="package.duration" value={values['package.duration'] || '7 nights/8 days in Azerbaijan'} onChange={(v)=>setValue('package.duration', v)} />
-          </h2>
-          <p className="text-lg text-gray-700 italic">
-            <EditableText id="package.hashtag" value={values['package.hashtag'] || '#Take Another Look'} onChange={(v)=>setValue('package.hashtag', v)} />
+          <p className="text-sm text-gray-600 mt-2">
+            Start editing this template or upload a PDF to generate a custom one
           </p>
         </div>
 
-        {/* Brief Program */}
+        {/* Content Section */}
         <div className="px-10 pb-6">
-          <h3 className="font-bold text-gray-900 underline mb-3">
-            <EditableText id="section.brief" value={values['section.brief'] || 'Brief program:'} onChange={(v)=>setValue('section.brief', v)} />
-          </h3>
-          <ul className="text-sm space-y-1.5 text-gray-800">
-            <li><EditableText id="day.1" value={values['day.1'] || 'Day 1 - airport-hotel transfer'} onChange={(v)=>setValue('day.1', v)} /></li>
-            <li><EditableText id="day.2" value={values['day.2'] || 'Day 2 - Baku city tour'} onChange={(v)=>setValue('day.2', v)} /></li>
-            <li><EditableText id="day.3" value={values['day.3'] || 'Day 3 - Baku-Gabala transfer, Shamakhi on the way'} onChange={(v)=>setValue('day.3', v)} /></li>
-            <li><EditableText id="day.4" value={values['day.4'] || 'Day 4 - Gabala tour'} onChange={(v)=>setValue('day.4', v)} /></li>
-            <li><EditableText id="day.5" value={values['day.5'] || 'Day 5 - Gabala-Baku transfer, Gobustan on the way'} onChange={(v)=>setValue('day.5', v)} /></li>
-            <li><EditableText id="day.6" value={values['day.6'] || 'Day 6 - Absheron tour and shopping'} onChange={(v)=>setValue('day.6', v)} /></li>
-            <li><EditableText id="day.7" value={values['day.7'] || 'Day 7 - One day tour to Shahdag Mountain resort'} onChange={(v)=>setValue('day.7', v)} /></li>
-            <li><EditableText id="day.8" value={values['day.8'] || 'Day 8 - hotel-airport transfer'} onChange={(v)=>setValue('day.8', v)} /></li>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            Welcome to the Template Editor
+          </h2>
+          <p className="text-gray-700 mb-4">
+            This is a simple starter template. You can:
+          </p>
+          <ul className="list-disc pl-6 text-gray-700 space-y-2">
+            <li>Edit this code directly in the Code view</li>
+            <li>Upload a PDF to generate a custom template with editable fields</li>
+            <li>Export your template as code or PDF</li>
           </ul>
         </div>
 
-        {/* Day 01 Details with Image */}
-        <div className="px-10 pb-6">
-          <div className="flex gap-6">
-            <div className="flex-1">
-              <h3 className="font-bold text-gray-900 underline mb-3">
-                <EditableText id="day01.title" value={values['day01.title'] || 'Day - 01 - Arrival day'} onChange={(v)=>setValue('day01.title', v)} />
-              </h3>
-              <ul className="text-sm space-y-2 list-disc pl-5 text-gray-800">
-                <li><EditableText id="day01.item1" value={values['day01.item1'] || 'Arrival to Baku city'} onChange={(v)=>setValue('day01.item1', v)} /></li>
-                <li><EditableText id="day01.item2" value={values['day01.item2'] || 'Meet & Greet at the Airport by representative.'} onChange={(v)=>setValue('day01.item2', v)} /></li>
-                <li><EditableText id="day01.item3" value={values['day01.item3'] || 'Transfer to the hotel'} onChange={(v)=>setValue('day01.item3', v)} /></li>
-                <li><EditableText id="day01.item4" value={values['day01.item4'] || 'Check-in at the hotel'} onChange={(v)=>setValue('day01.item4', v)} /></li>
-                <li><EditableText id="day01.item5" value={values['day01.item5'] || 'Free time to enjoy the windy capital'} onChange={(v)=>setValue('day01.item5', v)} /></li>
-              </ul>
-              <p className="text-sm text-gray-600 mt-3">
-                <EditableText id="day01.note" value={values['day01.note'] || '(Overnight stay in Baku)'} onChange={(v)=>setValue('day01.note', v)} />
-              </p>
-            </div>
-            <div className="w-48 h-40 bg-gray-200 rounded-lg shadow-md overflow-hidden shrink-0">
-              <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-                <EditableText id="day01.image" value={values['day01.image'] || 'Day 1 Image'} onChange={(v)=>setValue('day01.image', v)} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Day 02 Details */}
+        {/* Example Content */}
         <div className="px-10 pb-8">
-          <h3 className="font-bold text-gray-900 underline mb-3">
-            <EditableText id="day02.title" value={values['day02.title'] || 'Day - 02 - Baku city tour'} onChange={(v)=>setValue('day02.title', v)} />
+          <h3 className="font-bold text-gray-900 mb-3">
+            Example Section
           </h3>
-          <ul className="text-sm space-y-2 list-disc pl-5 text-gray-800">
-            <li><EditableText id="day02.item1" value={values['day02.item1'] || 'Breakfast at the hotel'} onChange={(v)=>setValue('day02.item1', v)} /></li>
-            <li><EditableText id="day02.item2" value={values['day02.item2'] || 'Excursion day (pick-up at 10:00)'} onChange={(v)=>setValue('day02.item2', v)} /></li>
-            <li>
-              <EditableText id="day02.item3" value={values['day02.item3'] || 'Visiting Highland park - enjoying panoramic view to Baku. From there guests see Milli Majlis, Flame Towers building which become an icon of Baku. Using one way funicular to go down or up.'} onChange={(v)=>setValue('day02.item3', v)} />
-              <span className="text-blue-600"> <EditableText id="day02.link" value={values['day02.link'] || '(1 ticket to funicular is included)'} onChange={(v)=>setValue('day02.link', v)} /></span>
-            </li>
-          </ul>
+          <p className="text-sm text-gray-700">
+            Replace this with your own content. When you upload a PDF, 
+            the AI will generate a template with your content and add 
+            interactive editing features automatically.
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div className="bg-gray-100 px-10 py-4 text-center text-xs text-gray-600">
+          <p>Created with HappyLife PDF Template Generator</p>
         </div>
       </div>
     </div>
@@ -128,7 +78,7 @@ const STARTER_TEMPLATE = `export default function Template({ values, setValue })
 }`;
 
 export default function CodePage() {
-  const [mode, setMode] = useState<Mode>("code");
+  const [mode, setMode] = useState<Mode>("preview");
   const [code, setCode] = useState<string>(STARTER_TEMPLATE);
   const [values, setValues] = useState<Record<string, string>>({});
   const [externalWarnings, setExternalWarnings] = useState<string[]>([]);
@@ -288,56 +238,68 @@ export default function CodePage() {
   }, []);
 
   const header = useMemo(() => (
-    <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white shadow-sm px-6 py-4">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
-            <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-          </svg>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">PDF Template Editor</h1>
-            <p className="text-xs text-gray-500">Design & Export Professional Documents</p>
-            {sourceMetadata?.filename && (
-              <p className="text-xs text-gray-400">
-                Loaded from: <span className="font-medium">{sourceMetadata.filename}</span>
-                {sourceMetadata.uploadedAt && (
-                  <>
-                    {" • "}
-                    {new Date(sourceMetadata.uploadedAt).toLocaleString()}
-                  </>
-                )}
-              </p>
-            )}
+    <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-md">
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="flex items-center justify-between">
+          {/* Logo and Title */}
+          <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+            <Image
+              src="/logoHappylife.jpg"
+              alt="HappyLife Travel & Tourism"
+              width={140}
+              height={47}
+              className="object-contain"
+              priority
+            />
+          </Link>
+          
+          <div className="flex items-center gap-2">
+            <div className="text-center px-4">
+              <h1 className="text-lg font-bold text-gray-900">Template Editor</h1>
+              <p className="text-xs text-gray-600">Design & Export Professional Documents</p>
+              {sourceMetadata?.filename && (
+                <p className="text-xs text-gray-500 mt-1">
+                  <span className="font-medium">{sourceMetadata.filename}</span>
+                  {sourceMetadata.uploadedAt && (
+                    <span className="text-gray-400">
+                      {" • "}
+                      {new Date(sourceMetadata.uploadedAt).toLocaleString()}
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportCode}
+              className="px-4 py-2 bg-linear-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-cyan-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              </svg>
+              Export Code
+            </button>
+            <button
+              onClick={handleExportPDF}
+              className="export-pdf-btn px-4 py-2 bg-linear-to-r from-[#A4C639] to-[#8FB02E] text-white rounded-lg font-medium hover:from-[#8FB02E] hover:to-[#7A9124] transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export PDF
+            </button>
+            <ToggleSwitch mode={mode} onChange={setMode} />
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <button
-          onClick={handleExportCode}
-          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-          </svg>
-          Export Code
-        </button>
-        <button
-          onClick={handleExportPDF}
-          className="export-pdf-btn px-4 py-2 bg-gradient-to-r from-pink-600 to-red-600 text-white rounded-lg font-medium hover:from-pink-700 hover:to-red-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Export PDF
-        </button>
-        <ToggleSwitch mode={mode} onChange={setMode} />
-      </div>
     </div>
-  ), [mode, handleExportCode, handleExportPDF]);
+  ), [mode, handleExportCode, handleExportPDF, sourceMetadata]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900">
+    <div className="min-h-screen bg-linear-to-br from-cyan-50 via-blue-50 to-lime-50 text-gray-900">
       {header}
       <div className="mx-auto w-full max-w-7xl px-6 py-8">
         {externalWarnings.length > 0 && (
@@ -384,7 +346,7 @@ export default function CodePage() {
         )}
         {mode === "code" ? (
           <div className="rounded-xl border border-gray-200 shadow-lg overflow-hidden bg-white">
-            <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-6 py-3 flex items-center justify-between">
+            <div className="bg-linear-to-r from-gray-800 to-gray-900 px-6 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
