@@ -14,8 +14,8 @@ import ToggleSwitch from "../../components/ToggleSwitch";
 
 type Mode = "code" | "preview";
 
-// Clean starter template without EditableText - only for demonstration
-// The EditableText feature is only used in AI-generated code from PDF uploads
+// Enhanced starter template showcasing DynamicTable, Section, and Header components
+// Import components at the top of the generated template
 const STARTER_TEMPLATE = `export default function Template() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
