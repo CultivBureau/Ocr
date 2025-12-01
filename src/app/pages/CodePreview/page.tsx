@@ -12,7 +12,7 @@ import CodeEditor from "../../components/CodeEditor";
 import PreviewRenderer from "../../components/PreviewRenderer";
 import ToggleSwitch from "../../components/ToggleSwitch";
 
-type Mode = "code" | "preview";
+type Mode = "code" | "preview" | "split";
 
 // Enhanced starter template showcasing DynamicTable, Section, and Header components
 // Import components at the top of the generated template
@@ -291,7 +291,7 @@ export default function CodePage() {
               </svg>
               Export PDF
             </button>
-            <ToggleSwitch mode={mode} onChange={setMode} />
+            <ToggleSwitch mode={mode} onChange={(next: Mode) => setMode(next)} />
           </div>
         </div>
       </div>

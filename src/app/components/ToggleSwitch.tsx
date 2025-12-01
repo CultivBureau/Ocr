@@ -2,13 +2,26 @@
 
 import React from "react";
 
-type Mode = "code" | "preview";
+type Mode = "code" | "preview" | "split";
 
-export default function ToggleSwitch({ mode, onChange }: { mode: Mode; onChange: (next: Mode) => void }) {
+export default function ToggleSwitch({ 
+  mode, 
+  onChange 
+}: { 
+  mode: Mode; 
+  onChange: (next: Mode) => void;
+}) {
   const isPreview = mode === "preview";
+  const isSplit = mode === "split";
 
   function handleToggle() {
-    onChange(isPreview ? "code" : "preview");
+    if (isPreview) {
+      onChange("code");
+    } else if (isSplit) {
+      onChange("preview");
+    } else {
+      onChange("split");
+    }
   }
 
   return (
