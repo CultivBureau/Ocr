@@ -12,6 +12,7 @@ import {
   fixJsx,
   validateAndFixJsx 
 } from "../../services/PdfApi";
+import { cleanJSXCode } from "../../utils/parseGptCode";
 import type { ExtractResponse } from "../../types/ExtractTypes";
 
 const PdfConverter: React.FC = () => {
@@ -72,7 +73,11 @@ const PdfConverter: React.FC = () => {
       let generatedCode = jsxResponse.jsxCode;
       const allWarnings = [...(jsxResponse.warnings || [])];
 
-      // Step 5: Validate and fix JSX if needed
+      // Step 5: Clean and fix import paths
+      setStatus("Cleaning JSX code…");
+      generatedCode = cleanJSXCode(generatedCode);
+
+      // Step 6: Validate and fix JSX if needed
       setStatus("Validating JSX code…");
       const validation = await validateAndFixJsx(generatedCode);
       

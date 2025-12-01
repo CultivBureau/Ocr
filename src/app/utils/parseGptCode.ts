@@ -218,6 +218,78 @@ export function parseGPTResponse(gptResponse: any): string | null {
 }
 
 /**
+ * Fix import paths to match frontend structure
+ * @param code - JSX code with potentially incorrect imports
+ * @returns Code with corrected import paths
+ */
+export function fixImportPaths(code: string): string {
+  let fixed = code;
+  
+  // Fix template imports - multiple patterns
+  const importPatterns = [
+    // Pattern 1: './templates/base_template' -> '@/app/Templates/baseTemplate'
+    {
+      from: /from\s+['"]\.\/templates\/(base_template|section_template|dynamic_table_template)['"]/g,
+      to: (match: string, template: string) => {
+        const templateMap: Record<string, string> = {
+          'base_template': 'baseTemplate',
+          'section_template': 'sectionTemplate',
+          'dynamic_table_template': 'dynamicTableTemplate',
+        };
+        return `from '@/app/Templates/${templateMap[template] || template}'`;
+      }
+    },
+    // Pattern 2: './templates/baseTemplate' -> '@/app/Templates/baseTemplate'
+    {
+      from: /from\s+['"]\.\/templates\/(baseTemplate|sectionTemplate|dynamicTableTemplate)['"]/g,
+      to: (match: string, template: string) => `from '@/app/Templates/${template}'`
+    },
+    // Pattern 3: '../templates/...' -> '@/app/Templates/...'
+    {
+      from: /from\s+['"]\.\.\/templates\/(baseTemplate|sectionTemplate|dynamicTableTemplate|base_template|section_template|dynamic_table_template)['"]/g,
+      to: (match: string, template: string) => {
+        const templateMap: Record<string, string> = {
+          'base_template': 'baseTemplate',
+          'section_template': 'sectionTemplate',
+          'dynamic_table_template': 'dynamicTableTemplate',
+        };
+        const mapped = templateMap[template] || template;
+        return `from '@/app/Templates/${mapped}'`;
+      }
+    },
+    // Pattern 4: '@/templates/...' -> '@/app/Templates/...'
+    {
+      from: /from\s+['"]@\/templates\/(baseTemplate|sectionTemplate|dynamicTableTemplate|base_template|section_template|dynamic_table_template)['"]/g,
+      to: (match: string, template: string) => {
+        const templateMap: Record<string, string> = {
+          'base_template': 'baseTemplate',
+          'section_template': 'sectionTemplate',
+          'dynamic_table_template': 'dynamicTableTemplate',
+        };
+        const mapped = templateMap[template] || template;
+        return `from '@/app/Templates/${mapped}'`;
+      }
+    },
+  ];
+  
+  // Apply all import fixes
+  for (const pattern of importPatterns) {
+    fixed = fixed.replace(pattern.from, pattern.to);
+  }
+  
+  // Ensure "use client" directive for Next.js client components
+  if (!fixed.includes('"use client"') && !fixed.includes("'use client'")) {
+    // Add after any existing comments but before imports
+    const importIndex = fixed.indexOf('import');
+    if (importIndex !== -1) {
+      fixed = '"use client";\n\n' + fixed;
+    }
+  }
+  
+  return fixed;
+}
+
+/**
  * Clean and prepare JSX code for rendering
  * @param code - Raw JSX code
  * @returns Cleaned JSX code
@@ -229,9 +301,17 @@ export function cleanJSXCode(code: string): string {
   cleaned = cleaned.replace(/^```(?:jsx|javascript|tsx|typescript)?\n/gm, '');
   cleaned = cleaned.replace(/```$/gm, '');
   
+  // Fix import paths first
+  cleaned = fixImportPaths(cleaned);
+  
   // Ensure React import exists
   if (!hasReactImport(cleaned)) {
-    cleaned = "import React from 'react';\n\n" + cleaned;
+    // Add React import after "use client" if present
+    if (cleaned.startsWith('"use client"') || cleaned.startsWith("'use client'")) {
+      cleaned = cleaned.replace(/("use client"|'use client');?\n?/, '$1;\n\nimport React from \'react\';\n');
+    } else {
+      cleaned = "import React from 'react';\n\n" + cleaned;
+    }
   }
   
   // Ensure export default exists

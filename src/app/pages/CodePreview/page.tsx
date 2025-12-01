@@ -100,7 +100,11 @@ export default function CodePage() {
     const storedTables = sessionStorage.getItem("codePreview.processedTables");
 
     if (storedCode) {
-      setCode(storedCode);
+      // Clean and fix import paths when loading from storage
+      import("../../utils/parseGptCode").then(({ cleanJSXCode }) => {
+        const cleanedCode = cleanJSXCode(storedCode);
+        setCode(cleanedCode);
+      });
       sessionStorage.removeItem("codePreview.initialCode");
     }
 

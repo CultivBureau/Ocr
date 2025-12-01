@@ -132,25 +132,106 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
     }
   }, [code, isFixing]);
 
+  // Import template components for complete components
+  // These will be available in react-live scope (react-live doesn't support ES6 imports)
+  const [templateComponents, setTemplateComponents] = useState<any>(null);
+  
+  useEffect(() => {
+    // Check if code uses template components (check for imports or component usage)
+    const usesTemplates = code.includes('BaseTemplate') || 
+                         code.includes('SectionTemplate') || 
+                         code.includes('DynamicTableTemplate') ||
+                         code.includes('@/app/Templates/') ||
+                         code.includes('./Templates/');
+    
+    if (usesTemplates) {
+      // Dynamically import template components
+      Promise.all([
+        import('../Templates/baseTemplate').then(m => m.default).catch(() => null),
+        import('../Templates/sectionTemplate').then(m => m.default).catch(() => null),
+        import('../Templates/dynamicTableTemplate').then(m => m.default).catch(() => null),
+      ]).then(([BaseTemplate, SectionTemplate, DynamicTableTemplate]) => {
+        const components: any = {};
+        if (BaseTemplate) components.BaseTemplate = BaseTemplate;
+        if (SectionTemplate) components.SectionTemplate = SectionTemplate;
+        if (DynamicTableTemplate) components.DynamicTableTemplate = DynamicTableTemplate;
+        
+        if (Object.keys(components).length > 0) {
+          setTemplateComponents(components);
+        }
+      }).catch(err => {
+        console.warn('Failed to load template components:', err);
+        setTemplateComponents(null);
+      });
+    } else {
+      // Clear template components if not needed
+      setTemplateComponents(null);
+    }
+  }, [code]);
+
   const scope = useMemo(() => ({
     React,
     EditableText,
     values: stableValuesRef.current,
     setValue,
     Fragment: React.Fragment,
-  }), [setValue]);
+    ...(templateComponents || {}),
+  }), [setValue, templateComponents]);
 
   // Transform user code for noInline mode:
-  // 1) Strip `export default` from `export default function Template`.
-  // 2) Append explicit render call.
-  // 3) Clean up any syntax issues
+  // 1) Detect if code is a complete component (has imports + component + export)
+  // 2) If complete, extract component and use it directly
+  // 3) If incomplete, wrap in Template function
+  // 4) Append explicit render call
   const transformed = useMemo(() => {
     // Use fixed code if available, otherwise use original code
     const codeToTransform = fixedCode || code;
     let src = codeToTransform.trim();
     let componentName = "Template";
 
-    if (!/export\s+default\s+function\s+/m.test(src)) {
+    // CRITICAL FIRST STEP: Remove ALL imports, require(), and "use client" BEFORE any other processing
+    // react-live doesn't support ES6 imports or CommonJS require() - components must be in scope
+    // Remove all import statement patterns
+    src = src.replace(/^import\s+.*?from\s+['"].*?['"];?\s*$/gm, '');
+    src = src.replace(/^import\s+.*?from\s+["'].*?["'];?\s*$/gm, '');
+    src = src.replace(/^import\s+.*?from\s+`.*?`;?\s*$/gm, '');
+    src = src.replace(/^import\s+\{.*?\}\s+from\s+['"`].*?['"`];?\s*$/gm, '');
+    src = src.replace(/^import\s+\*\s+as\s+\w+\s+from\s+['"`].*?['"`];?\s*$/gm, '');
+    // Remove require() calls (CommonJS, not supported in browser)
+    src = src.replace(/const\s+\w+\s*=\s*require\s*\([^)]+\)\s*;?\s*/g, '');
+    src = src.replace(/let\s+\w+\s*=\s*require\s*\([^)]+\)\s*;?\s*/g, '');
+    src = src.replace(/var\s+\w+\s*=\s*require\s*\([^)]+\)\s*;?\s*/g, '');
+    src = src.replace(/require\s*\([^)]+\)\s*;?\s*/g, '');
+    // Remove "use client" directive (not needed in react-live)
+    src = src.replace(/^"use client";?\s*/gm, '');
+    src = src.replace(/^'use client';?\s*/gm, '');
+    // Clean up multiple blank lines
+    src = src.replace(/\n\s*\n\s*\n+/g, '\n\n');
+    src = src.trim();
+
+    // Check if code is a complete component structure (after removing imports)
+    // Has: component definition, and export default
+    const hasComponent = /(?:const|function|class)\s+\w+\s*=?\s*(?:\(|=>|extends)/m.test(src) || 
+                         /const\s+\w+\s*=\s*\(\)\s*=>/m.test(src) ||
+                         /function\s+\w+\s*\(/m.test(src);
+    const hasExport = /export\s+default/m.test(src);
+    const isCompleteComponent = hasComponent && hasExport;
+    
+    if (isCompleteComponent) {
+      // Code is already a complete component - extract component name and use it directly
+      // Extract component name from export default
+      const exportMatch = src.match(/export\s+default\s+(\w+)/);
+      if (exportMatch) {
+        componentName = exportMatch[1];
+      }
+      
+      // Remove export default, keep the component definition
+      src = src.replace(/export\s+default\s+/g, '');
+      
+      // Clean up any extra whitespace
+      src = src.trim();
+    } else if (!/export\s+default\s+function\s+/m.test(src)) {
+      // Incomplete code - wrap in Template function
       const fragment = src.length ? src : "<React.Fragment />";
       const indented = fragment
         .split("\n")
@@ -415,35 +496,35 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
       src = src.replace(placeholder, original);
     });
 
-    // Remove any import statements if present (AI-generated code shouldn't have these)
-    src = src.replace(/^import\s+.*?from\s+.*?;\s*/gm, '');
-    src = src.replace(/^"use client";\s*/gm, '');
-    src = src.replace(/^'use client';\s*/gm, '');
-    
-    // Validate that code matches expected AI format
-    // Should have: export default function Name({ values, setValue })
-    const formatCheck = src.match(/export\s+default\s+function\s+\w+\s*\(\s*\{\s*values\s*,\s*setValue\s*\}\s*\)/);
-    if (!formatCheck && process.env.NODE_ENV === 'development') {
-      console.warn('⚠️ Code format check: Expected pattern "export default function Name({ values, setValue })"');
-    }
+    // Note: Imports, "use client", and export default already removed above
+    // Handle incomplete code export default removal
+    if (!isCompleteComponent) {
+      
+      // Validate that code matches expected AI format
+      // Should have: export default function Name({ values, setValue })
+      const formatCheck = src.match(/export\s+default\s+function\s+\w+\s*\(\s*\{\s*values\s*,\s*setValue\s*\}\s*\)/);
+      if (!formatCheck && process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ Code format check: Expected pattern "export default function Name({ values, setValue })"');
+      }
 
-    // Case 1: export default function Name
-    const fnMatch = src.match(/export\s+default\s+function\s+([A-Za-z0-9_]+)/);
-    if (fnMatch) {
-      componentName = fnMatch[1];
-      src = src.replace(/export\s+default\s+function\s+/m, "function ");
-    } else {
-      // Case 2: export default class Name
-      const classMatch = src.match(/export\s+default\s+class\s+([A-Za-z0-9_]+)/);
-      if (classMatch) {
-        componentName = classMatch[1];
-        src = src.replace(/export\s+default\s+class\s+/m, "class ");
+      // Case 1: export default function Name
+      const fnMatch = src.match(/export\s+default\s+function\s+([A-Za-z0-9_]+)/);
+      if (fnMatch) {
+        componentName = fnMatch[1];
+        src = src.replace(/export\s+default\s+function\s+/m, "function ");
       } else {
-        // Case 3: export default Identifier;
-        const idMatch = src.match(/export\s+default\s+([A-Za-z0-9_]+)\s*;?/);
-        if (idMatch) {
-          componentName = idMatch[1];
-          src = src.replace(/export\s+default\s+([A-Za-z0-9_]+)\s*;?/m, "");
+        // Case 2: export default class Name
+        const classMatch = src.match(/export\s+default\s+class\s+([A-Za-z0-9_]+)/);
+        if (classMatch) {
+          componentName = classMatch[1];
+          src = src.replace(/export\s+default\s+class\s+/m, "class ");
+        } else {
+          // Case 3: export default Identifier;
+          const idMatch = src.match(/export\s+default\s+([A-Za-z0-9_]+)\s*;?/);
+          if (idMatch) {
+            componentName = idMatch[1];
+            src = src.replace(/export\s+default\s+([A-Za-z0-9_]+)\s*;?/m, "");
+          }
         }
       }
     }
@@ -725,7 +806,17 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
       }
     }
 
-    return `${src}\n\nrender(<${componentName} values={values} setValue={setValue} />);`;
+    // Check if component accepts props
+    const componentAcceptsProps = src.match(new RegExp(`(?:function|const)\\s+${componentName}\\s*[=(]\\s*\\{?\\s*[^)]*values|setValue`));
+    
+    // Render component with or without props based on signature
+    if (componentAcceptsProps || !isCompleteComponent) {
+      // Component expects props or it's a wrapped template
+      return `${src}\n\nrender(<${componentName} values={values} setValue={setValue} />);`;
+    } else {
+      // Complete component that doesn't need props
+      return `${src}\n\nrender(<${componentName} />);`;
+    }
   }, [code, fixedCode]);
 
   // Debug: Log transformed code and check for syntax errors
