@@ -17,6 +17,7 @@ export default function Home() {
               width={180}
               height={60}
               className="object-contain"
+              style={{ width: "auto", height: "auto" }}
               priority
             />
           </div>
@@ -137,6 +138,7 @@ export default function Home() {
               width={120}
               height={40}
               className="object-contain opacity-75"
+              style={{ width: "auto", height: "auto" }}
             />
             <span>•</span>
             <span>Professional Travel Document Solutions</span>

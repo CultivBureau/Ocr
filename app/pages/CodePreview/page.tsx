@@ -249,6 +249,7 @@ export default function CodePage() {
               width={140}
               height={47}
               className="object-contain"
+              style={{ width: "auto", height: "auto" }}
               priority
             />
           </Link>

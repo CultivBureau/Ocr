@@ -1,11 +1,11 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:5001";
+  "http://localhost:8000";
 
 if (process.env.NODE_ENV !== "production" && !process.env.NEXT_PUBLIC_API_BASE_URL) {
   // eslint-disable-next-line no-console
   console.warn(
-    "[PdfApi] NEXT_PUBLIC_API_BASE_URL is not set. Falling back to http://localhost:5001. " +
+    "[PdfApi] NEXT_PUBLIC_API_BASE_URL is not set. Falling back to http://localhost:8000. " +
       "Set this in .env.local to avoid CORS mistakes when the backend runs on a different host.",
   );
 }
@@ -16,9 +16,12 @@ async function handleResponse(response) {
   const payload = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
+    // Handle backend error format
     const errorMessage =
-      isJson && payload?.detail
-        ? JSON.stringify(payload.detail)
+      isJson && payload?.message
+        ? payload.message
+        : isJson && payload?.detail
+        ? (typeof payload.detail === 'string' ? payload.detail : JSON.stringify(payload.detail))
         : payload || response.statusText;
     throw new Error(errorMessage || "Request failed");
   }
@@ -28,9 +31,17 @@ async function handleResponse(response) {
 
 async function request(path, init = {}) {
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const url = `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
       ...init,
       mode: init.mode ?? "cors",
+      // Only set headers if not FormData (FormData sets its own Content-Type with boundary)
+      headers: init.body instanceof FormData 
+        ? (init.headers || {})
+        : {
+            "Content-Type": "application/json",
+            ...(init.headers || {}),
+          },
     });
     return await handleResponse(response);
   } catch (error) {
@@ -39,44 +50,119 @@ async function request(path, init = {}) {
   }
 }
 
+/**
+ * Upload PDF file to backend
+ * @param {File} file - PDF file to upload
+ * @returns {Promise<{file_path: string, filename: string, original_filename: string, message: string}>}
+ */
 export async function uploadFile(file) {
   const formData = new FormData();
   formData.append("file", file);
 
-  return request("/api/upload", {
+  return request("/upload/", {
     method: "POST",
     body: formData,
+    // Don't set Content-Type header for FormData - browser will set it with boundary
+    headers: {},
   });
 }
 
+/**
+ * Extract text and tables from uploaded PDF
+ * @param {string} filePath - Path returned from uploadFile
+ * @returns {Promise<{sections: Array, tables: Array, meta: Object}>}
+ */
+export async function extractContent(filePath) {
+  return request("/extract/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ file_path: filePath }),
+  });
+}
+
+/**
+ * Clean and enhance document structure using Claude AI
+ * @param {Object} structure - Structure with sections and tables
+ * @param {Object} options - Optional parameters (model, max_retries, timeout, temperature)
+ * @returns {Promise<{sections: Array, tables: Array, meta: Object}>}
+ */
+export async function cleanStructure(structure, options = {}) {
+  return request("/ai/clean-structure", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      structure,
+      ...options,
+    }),
+  });
+}
+
+/**
+ * Generate JSX code from document structure using GPT
+ * @param {Object} structure - Structure with sections and tables
+ * @param {Object} options - Optional parameters (model, max_retries, timeout, temperature)
+ * @returns {Promise<{jsxCode: string, componentsUsed: Array, warnings: Array, metadata: Object}>}
+ */
+export async function generateJsx(structure, options = {}) {
+  return request("/ai/generate-jsx", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      structure,
+      ...options,
+    }),
+  });
+}
+
+/**
+ * Fix JSX syntax errors using GPT
+ * @param {string} jsxCode - JSX code that may contain syntax errors
+ * @param {string} errorMessage - Optional error message from compiler
+ * @param {Object} options - Optional parameters (model, max_retries, timeout, temperature)
+ * @returns {Promise<{fixedCode: string, explanation: string, errors: Array, warnings: Array, changes: Array}>}
+ */
+export async function fixJsx(jsxCode, errorMessage = null, options = {}) {
+  return request("/ai/fix-jsx", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      jsx_code: jsxCode,
+      error_message: errorMessage,
+      ...options,
+    }),
+  });
+}
+
+/**
+ * Legacy function - kept for backward compatibility
+ * @deprecated Use generateJsx instead
+ */
 export async function generateNextJs(extractedText) {
-  return request("/api/generate-nextjs", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ extracted_text: extractedText }),
-  });
-}
-
-export async function generateJsx(payload) {
-  return request("/api/ai/generate-jsx", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ payload }),
-  });
-}
-
-export async function fixJsx(jsx) {
-  return request("/api/ai/fix-jsx", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ jsx }),
-  });
+  console.warn("generateNextJs is deprecated. Use the upload → extract → generateJsx pipeline instead.");
+  // For backward compatibility, try to create a simple structure from text
+  const structure = {
+    sections: [
+      {
+        type: "section",
+        id: "section_1",
+        title: "",
+        content: extractedText,
+        order: 0,
+        parent_id: null,
+      },
+    ],
+    tables: [],
+    meta: {},
+  };
+  return generateJsx(structure);
 }
 
 /**
@@ -226,9 +312,9 @@ export async function validateAndFixJsx(jsxCode, maxRetries = 2) {
     // If validation failed and we haven't exceeded retries, try to fix
     if (attempts < maxRetries - 1) {
       try {
-        const fixResponse = await fixJsx(currentCode);
-        if (fixResponse.jsx) {
-          currentCode = fixResponse.jsx;
+        const fixResponse = await fixJsx(currentCode, validation.errors.join(', '));
+        if (fixResponse.fixedCode) {
+          currentCode = fixResponse.fixedCode;
           allWarnings.push(...(fixResponse.warnings || []));
           allWarnings.push(`Fix attempt ${attempts + 1}: ${validation.errors.join(', ')}`);
           attempts++;
