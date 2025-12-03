@@ -1,0 +1,78 @@
+/**
+ * PDF Export Styles
+ * 
+ * Add these classes to your components for better PDF export:
+ * - .no-break: Prevent page breaks inside element
+ * - .page-break-before: Force page break before element
+ * - .page-break-after: Force page break after element
+ * - .pdf-export-container: Main container for PDF export
+ */
+
+/* Prevent page breaks inside these elements */
+.no-break {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* Force page break before */
+.page-break-before {
+  page-break-before: always;
+  break-before: page;
+}
+
+/* Force page break after */
+.page-break-after {
+  page-break-after: always;
+  break-after: page;
+}
+
+/* Main PDF export container */
+.pdf-export-container {
+  width: 210mm; /* A4 width */
+  min-height: 297mm; /* A4 height */
+  margin: 0 auto;
+  background: white;
+  padding: 20mm;
+  box-sizing: border-box;
+}
+
+/* Ensure images don't break across pages */
+.pdf-export-container img {
+  page-break-inside: avoid;
+  break-inside: avoid;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Tables should try to stay together */
+.pdf-export-container table {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* Section headers should stay with content */
+.pdf-export-container h1,
+.pdf-export-container h2,
+.pdf-export-container h3 {
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+/* Keep list items together */
+.pdf-export-container li {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* Print-specific styles */
+@media print {
+  .pdf-export-container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}

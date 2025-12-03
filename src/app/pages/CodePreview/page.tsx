@@ -174,71 +174,38 @@ export default function CodePage() {
     URL.revokeObjectURL(url);
   }, [code, values]);
 
-  const handleExportPDF = useCallback(() => {
-    // Use browser's native print function which handles modern CSS perfectly
-    // Add print styles to hide everything except the preview content
-    const style = document.createElement('style');
-    style.id = 'pdf-export-styles';
-    style.textContent = `
-      @page {
-        margin: 0;
-        size: A4;
-      }
+  const handleExportPDF = useCallback(async () => {
+    // Use html2pdf.js for programmatic download (NO browser print dialog)
+    const previewElement = document.querySelector('.preview-content') as HTMLElement;
+    
+    if (!previewElement) {
+      alert('Preview content not found');
+      return;
+    }
+
+    try {
+      // Import the export function
+      const { exportToPDF } = await import('@/app/utils/pdfExport');
       
-      @media print {
-        /* Remove default print margins and headers/footers */
-        html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          width: 100%;
-          height: 100%;
-        }
-        
-        /* Hide everything except preview content */
-        body * {
-          visibility: hidden;
-        }
-        
-        .preview-content,
-        .preview-content * {
-          visibility: visible;
-        }
-        
-        .preview-content {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100%;
-          margin: 0;
-          padding: 0;
-        }
-        
-        /* Hide editable text controls and interactive elements */
-        .preview-content button,
-        .preview-content input[type="file"],
-        .preview-content input,
-        .preview-content textarea {
-          display: none !important;
-        }
-        
-        /* Ensure proper page breaks */
-        .preview-content > * {
-          page-break-inside: avoid;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-
-    // Trigger print dialog
-    window.print();
-
-    // Clean up after print dialog closes
-    setTimeout(() => {
-      const styleEl = document.getElementById('pdf-export-styles');
-      if (styleEl) {
-        styleEl.remove();
-      }
-    }, 1000);
+      await exportToPDF(previewElement, 'document', {
+        format: 'a4',
+        orientation: 'portrait',
+        margin: 10,
+        image: {
+          type: 'png',
+          quality: 0.98,
+        },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+        },
+      });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to export PDF');
+    }
   }, []);
 
   const header = useMemo(() => (

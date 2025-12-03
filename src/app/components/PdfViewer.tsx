@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { exportElementToPDF, getPDFBlob } from "../utils/downloadPdf";
+import { exportToPDF, generatePDFBlob, exportToPDFWithProgress } from "../utils/pdfExport";
 import PreviewRenderer from "./PreviewRenderer";
 
 interface PdfViewerProps {
@@ -36,7 +36,7 @@ interface PdfViewerProps {
   exportOptions?: {
     format?: "a4" | "letter" | [number, number];
     orientation?: "portrait" | "landscape";
-    margin?: number;
+    margin?: number | [number, number, number, number];
     quality?: number;
     scale?: number;
   };
@@ -91,16 +91,32 @@ export default function PdfViewer({
     setExportProgress(0);
 
     try {
-      // Simulate progress
-      setExportProgress(25);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Convert exportOptions to pdfExport format
+      const pdfOptions = {
+        format: exportOptions?.format || 'a4',
+        orientation: exportOptions?.orientation || 'portrait',
+        margin: exportOptions?.margin || 10,
+        image: {
+          type: 'png' as const,
+          quality: exportOptions?.quality || 0.98,
+        },
+        html2canvas: {
+          scale: exportOptions?.scale || 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+        },
+      };
 
-      setExportProgress(50);
-      
-      // Export to PDF
-      await exportElementToPDF(previewRef.current, filename, exportOptions);
-      
-      setExportProgress(100);
+      // Export with progress
+      await exportToPDFWithProgress(
+        previewRef.current,
+        filename,
+        pdfOptions,
+        (progress) => {
+          setExportProgress(progress);
+        }
+      );
       
       // Reset after a moment
       setTimeout(() => {
@@ -121,11 +137,41 @@ export default function PdfViewer({
       return;
     }
 
+    setIsExporting(true);
+    setExportProgress(0);
+
     try {
-      const url = await getPDFBlob(previewRef.current, filename, exportOptions);
+      // Convert exportOptions to pdfExport format
+      const pdfOptions = {
+        format: exportOptions?.format || 'a4',
+        orientation: exportOptions?.orientation || 'portrait',
+        margin: exportOptions?.margin || 10,
+        image: {
+          type: 'png' as const,
+          quality: exportOptions?.quality || 0.98,
+        },
+        html2canvas: {
+          scale: exportOptions?.scale || 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+        },
+      };
+
+      setExportProgress(30);
+      const url = await generatePDFBlob(previewRef.current, pdfOptions);
       setPreviewUrl(url);
+      setExportProgress(100);
+      
+      setTimeout(() => {
+        setIsExporting(false);
+        setExportProgress(0);
+      }, 500);
     } catch (error) {
       console.error("Preview PDF error:", error);
+      setIsExporting(false);
+      setExportProgress(0);
+      alert(error instanceof Error ? error.message : "فشل إنشاء معاينة PDF");
     }
   }, [filename, exportOptions]);
 
@@ -158,9 +204,22 @@ export default function PdfViewer({
             <button
               onClick={handlePreviewPDF}
               disabled={isExporting}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
-              معاينة PDF
+              {isExporting && previewUrl === null ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>جاري الإنشاء...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <span>معاينة PDF</span>
+                </>
+              )}
             </button>
 
             {/* Export Button */}
