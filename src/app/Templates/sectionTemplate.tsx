@@ -107,51 +107,54 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   // Determine heading tag
   const HeadingTag = `h${titleLevel}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 
-  // Build title classes
+  // Build title classes - Compact for perfect UI
   const titleClasses = [
-    `text-${titleSize}`,
+    "text-sm",
     `font-${titleWeight}`,
     titleColor,
-    titleMarginBottom,
+    titleMarginBottom || "mb-3",
     "tracking-tight",
     titleClassName,
   ].filter(Boolean).join(" ");
 
-  // Build content classes
+  // Build content classes - Compact text
   const contentClasses = [
     contentClassName,
-    `text-${contentSize}`,
+    "text-sm",
     contentColor,
     `text-${contentAlignment}`,
-    "leading-relaxed",
+    "leading-snug",
     preserveWhitespace && "whitespace-pre-wrap",
     contentMarginTop,
   ].filter(Boolean).join(" ");
 
-  // Build container classes with type-based styling
+  // Build container classes with type-based styling - Clean borders like design
   const getSectionClasses = () => {
     const baseClasses = [
       "section-template",
-      marginBottom,
+      "mb-5",
       "last:mb-0",
-      padding,
       containerClassName,
       className,
     ];
 
-    // Type-specific styling
+    // Type-specific styling - Clean bordered sections
     if (type === 'day') {
-      baseClasses.push("bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border-l-4 border-[#A4C639]");
+      baseClasses.push("border-2 border-[#A4C639] rounded-lg p-4 bg-white");
     } else if (type === 'included' || type === 'excluded') {
-      baseClasses.push("bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500");
+      baseClasses.push("border-2 border-blue-400 rounded-lg p-4 bg-white");
     } else if (backgroundColor && !backgroundColor.startsWith("bg-")) {
-      // Custom background color
+      baseClasses.push("border border-gray-200 rounded-lg p-4");
     } else if (backgroundColor) {
-      baseClasses.push(backgroundColor);
+      baseClasses.push(backgroundColor, "border border-gray-200 rounded-lg p-4");
+    } else {
+      // Default clean section with subtle border
+      baseClasses.push("border border-gray-200 rounded-lg p-4 bg-white");
     }
 
-    if (border) baseClasses.push(`border ${borderColor}`);
-    if (rounded) baseClasses.push("rounded-lg");
+    if (border && !baseClasses.some(c => c.includes('border-'))) {
+      baseClasses.push(`border ${borderColor}`);
+    }
     if (shadow) baseClasses.push("shadow-md");
 
     return baseClasses.filter(Boolean).join(" ");
@@ -213,8 +216,8 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           }
           
           return (
-            <div className="prose prose-lg max-w-none">
-              <ul className="mb-4 last:mb-0 list-disc list-inside space-y-2 text-gray-700">
+            <div className="content">
+              <ul className="list-disc list-inside space-y-1 text-gray-700">
                 {items.map((item, index) => {
                   // Remove bullet markers and clean
                   const cleanItem = item
@@ -225,7 +228,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                   if (!cleanItem) return null;
                   
                   return (
-                    <li key={index} className="text-justify leading-relaxed">
+                    <li key={index} className="text-sm leading-snug" style={{ fontSize: '11px', lineHeight: '1.4' }}>
                       {cleanItem}
                     </li>
                   );
@@ -240,7 +243,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           if (paragraphs.length === 0) return null;
           
           return (
-            <div className="prose prose-lg max-w-none">
+            <div className="content">
               {paragraphs.map((paragraph, pIndex) => {
                 const trimmed = paragraph.trim();
                 if (!trimmed) return null;
@@ -248,9 +251,9 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                 // If paragraph has single newlines, split into multiple paragraphs
                 if (trimmed.includes('\n') && !hasBullets) {
                   return (
-                    <div key={pIndex} className="mb-4 last:mb-0">
+                    <div key={pIndex} className="mb-2 last:mb-0">
                       {trimmed.split(/\n/).filter(p => p.trim()).map((p, idx) => (
-                        <p key={idx} className="mb-2 last:mb-0 text-justify leading-relaxed text-gray-700">
+                        <p key={idx} className="mb-1 last:mb-0 text-sm leading-snug text-gray-700" style={{ fontSize: '11px', lineHeight: '1.4' }}>
                           {p.trim()}
                         </p>
                       ))}
@@ -262,7 +265,8 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                 return (
                   <p
                     key={pIndex}
-                    className="mb-4 last:mb-0 text-justify leading-relaxed text-gray-700"
+                    className="mb-2 last:mb-0 text-sm leading-snug text-gray-700"
+                    style={{ fontSize: '11px', lineHeight: '1.4' }}
                   >
                     {trimmed}
                   </p>
@@ -273,7 +277,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
         }
       }
       // If parseParagraphs is false, preserve whitespace
-      return <div className={preserveWhitespace ? "whitespace-pre-wrap" : ""}>{content}</div>;
+      return <div className={preserveWhitespace ? "whitespace-pre-wrap leading-snug" : ""} style={{ fontSize: '11px', lineHeight: '1.4' }}>{content}</div>;
     }
     return <div className="content">{content}</div>;
   };
@@ -292,17 +296,12 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
 
       {/* Section Title */}
       {showTitle && title && (
-        <div className={titleMarginBottom}>
-          {titleLevel === 1 && <h1 className={titleClasses}>{title}</h1>}
-          {titleLevel === 2 && <h2 className={titleClasses}>{title}</h2>}
-          {titleLevel === 3 && <h3 className={titleClasses}>{title}</h3>}
-          {titleLevel === 4 && <h4 className={titleClasses}>{title}</h4>}
-          {titleLevel === 5 && <h5 className={titleClasses}>{title}</h5>}
-          {titleLevel === 6 && <h6 className={titleClasses}>{title}</h6>}
-          {/* Decorative underline */}
-          {showUnderline && (
-            <div className={`mt-2 ${underlineClasses}`} />
-          )}
+        <div className="mb-3">
+          <h2 className={titleClasses} style={{ fontSize: '13px', lineHeight: '1.3' }}>
+            {title}
+          </h2>
+          {/* Thin decorative line matching the design */}
+          <div className="h-0.5 w-12 bg-[#A4C639] mt-1"></div>
         </div>
       )}
 

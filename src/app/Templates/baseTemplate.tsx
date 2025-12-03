@@ -124,7 +124,7 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
 
   const dimensions = getPageDimensions();
 
-  // Build background classes
+  // Build background classes - Clean white background for perfect UI
   const getBackgroundClasses = () => {
     if (backgroundImage) {
       return `bg-cover bg-center bg-no-repeat`;
@@ -136,44 +136,34 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
     if (backgroundColor) {
       return `bg-[${backgroundColor}]`;
     }
-    // Default gradient
-    return "bg-gradient-to-r from-[#A4C639] to-[#8FB02E]";
+    // Clean white background
+    return "bg-white";
   };
 
-  // Build container classes - 100% width with responsive padding
+  // Build container classes - Clean minimal design
   const containerClasses = [
     "base-template",
     "w-full",
     "min-h-screen",
-    "py-8",
-    "px-4",
     getBackgroundClasses(),
     className,
   ].filter(Boolean).join(" ");
 
-  // Build inner container classes
+  // Build inner container classes - No shadows or rounded corners
   const innerContainerClasses = [
     "w-full",
     "max-w-full",
     "mx-auto",
     "bg-white",
-    shadow && "shadow-2xl",
-    rounded && "rounded-lg",
     border && `border ${borderColor}`,
-    "overflow-hidden",
     containerClassName,
   ].filter(Boolean).join(" ");
 
-  // Build content area classes - Responsive padding
+  // Build content area classes - Comfortable padding for clean look
   const contentAreaClasses = [
     "w-full",
-    "px-4",
-    "sm:px-6",
-    "md:px-8",
-    "lg:px-12",
-    "xl:px-16",
-    "py-8",
-    "md:py-12",
+    "px-6",
+    "py-5",
     contentClassName,
   ].filter(Boolean).join(" ");
 
@@ -201,7 +191,7 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
               src={headerImage}
               alt={headerImageAlt}
               className="w-full h-auto object-cover block"
-              style={{ display: "block", width: "100%", height: "auto" }}
+              style={{ display: "block", width: "100%", height: "auto", maxHeight: "520px" }}
             />
           </div>
         )}
@@ -213,12 +203,12 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
 
         {/* Footer Image */}
         {showFooter && footerImage && (
-          <div className={`w-full mt-auto ${footerClassName}`}>
+          <div className={`w-full mt-2 ${footerClassName}`}>
             <img
               src={footerImage}
               alt={footerImageAlt}
               className="w-full h-auto object-cover block"
-              style={{ display: "block", width: "100%", height: "auto" }}
+              style={{ display: "block", width: "100%", height: "auto", maxHeight: "100px" }}
             />
           </div>
         )}

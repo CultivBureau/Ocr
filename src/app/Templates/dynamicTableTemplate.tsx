@@ -138,16 +138,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
 
   // Handle empty state
   if (!tableHeaders || tableHeaders.length === 0) {
-    if (!showEmptyState) return null;
-    
-    return (
-      <div
-        className={`dynamic-table-empty p-8 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 ${marginBottom} ${emptyStateClassName} ${className}`}
-        style={style}
-      >
-        <p className="text-gray-500 text-lg">{emptyStateMessage}</p>
-      </div>
-    );
+    return null;
   }
 
   // Normalize rows to match headers length
@@ -162,6 +153,8 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
 
   // Clean empty headers
   const cleanHeaders = tableHeaders.filter(h => h && String(h).trim());
+  
+  if (cleanHeaders.length === 0) return null;
 
   // Build header background classes
   const getHeaderBackgroundClasses = () => {
@@ -175,27 +168,25 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
     return `bg-gradient-to-r from-[#A4C639] to-[#8FB02E]`;
   };
 
-  // Build header classes
+  // Build header classes - Ultra compact for NO scrolling
   const headerClasses = [
     getHeaderBackgroundClasses(),
     headerTextColor,
     `font-${headerFontWeight}`,
-    `text-${headerTextSize}`,
-    cellPadding,
-    border && `border-r ${borderColor}`,
+    "text-center",
+    "border-r border-white/30",
     headerUppercase && "uppercase",
-    `tracking-${headerTracking}`,
-    "first:rounded-tl-lg last:rounded-tr-lg last:border-r-0",
+    "tracking-tight",
+    "last:border-r-0",
     headerClassName,
   ].filter(Boolean).join(" ");
 
-  // Build cell classes
+  // Build cell classes - Compact for perfect compression
   const cellClasses = [
     cellTextColor,
-    `text-${cellTextSize}`,
-    cellPadding,
-    border && `border-r ${borderColor} last:border-r-0`,
-    `text-${cellAlignment}`,
+    "text-center",
+    "border-r border-gray-200",
+    "last:border-r-0",
     cellClassName,
   ].filter(Boolean).join(" ");
 
@@ -221,114 +212,95 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
     }
   };
 
-  // Build wrapper classes - Always 100% width
+  // Build wrapper classes - Always 100% width, comfortable spacing
   const wrapperClasses = [
     "dynamic-table-wrapper",
-    "w-full", // Always full width
-    marginBottom,
+    "w-full",
+    marginBottom || "mb-6",
     tableWrapperClassName,
     className,
   ].filter(Boolean).join(" ");
 
-  // Build table classes
-  const tableClasses = [
-    "dynamic-table",
-    fullWidth && "w-full",
-    "border-collapse",
-    backgroundColor,
-    containerClassName,
-  ].filter(Boolean).join(" ");
-
   return (
     <div className={wrapperClasses} style={style}>
-      {/* Table Title */}
+      {/* Table Title - Compact */}
       {showTitle && title && (
-        <div className="mb-4">
-          <h3 className={`text-${titleSize} font-bold text-gray-900 ${titleClassName}`}>
+        <div className="mb-3">
+          <h3 className="text-base font-bold text-gray-900">
             {title}
           </h3>
-          <div className="h-1 w-16 bg-gradient-to-r from-[#A4C639] to-[#8FB02E] rounded-full mt-2"></div>
         </div>
       )}
 
-      {/* Table Container - 100% width with horizontal scroll for very wide tables */}
-      <div className={`w-full ${overflowX ? "overflow-x-auto" : ""} rounded-lg ${shadow ? "shadow-lg" : ""} ${border ? `border ${borderColor}` : ""} ${backgroundColor}`}>
-        <div className="min-w-full inline-block align-middle">
-          <table className={`${tableClasses} ${overflowX ? "min-w-[640px] sm:min-w-0" : ""}`}>
-            {/* Table Header */}
-            <thead>
-              <tr>
-                {cleanHeaders.map((header, index) => (
-                  <th
-                    key={index}
-                    className={`${headerClasses} ${overflowX ? "whitespace-nowrap" : ""}`}
-                  >
-                    {header || `Column ${index + 1}`}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+      {/* Table Container - NO overflow, perfect compression */}
+      <div className="w-full rounded-lg border-2 border-[#A4C639] overflow-hidden">
+        <table className="dynamic-table w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+          {/* Table Header */}
+          <thead>
+            <tr className="bg-linear-to-r from-[#A4C639] to-[#8FB02E]">
+              {cleanHeaders.map((header, index) => (
+                <th
+                  key={index}
+                  className={headerClasses}
+                  style={{ 
+                    fontSize: '9px',
+                    lineHeight: '1.2',
+                    padding: '6px 4px',
+                    verticalAlign: 'middle'
+                  }}
+                >
+                  <div className="wrap-break-word hyphens-auto" style={{ wordBreak: 'break-word' }}>
+                    {header || `Col ${index + 1}`}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
 
-            {/* Table Body */}
-            <tbody className={border ? `divide-y ${borderColor}` : ""}>
-              {normalizedRows.length > 0 ? (
-                normalizedRows.map((row, rowIndex) => (
-                  <tr key={rowIndex} className={getRowClasses(rowIndex)}>
-                    {cleanHeaders.map((_, cellIndex) => {
-                      const cell = row[cellIndex];
-                      const cellValue = cell !== null && cell !== undefined ? String(cell) : '';
-                      
-                      return (
-                        <td key={cellIndex} className={cellClasses}>
-                          <div className="font-medium break-words">
-                            {cellValue || <span className="text-gray-400">—</span>}
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={cleanHeaders.length}
-                    className={`${cellClasses} text-center text-gray-500 bg-gray-50`}
-                  >
-                    <div className="flex flex-col items-center justify-center py-8">
-                      <svg
-                        className="w-12 h-12 text-gray-400 mb-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+          {/* Table Body */}
+          <tbody>
+            {normalizedRows.length > 0 ? (
+              normalizedRows.map((row, rowIndex) => (
+                <tr 
+                  key={rowIndex} 
+                  className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-green-50/50 transition-colors`}
+                >
+                  {cleanHeaders.map((_, cellIndex) => {
+                    const cell = row[cellIndex];
+                    const cellValue = cell !== null && cell !== undefined ? String(cell) : '';
+                    
+                    return (
+                      <td 
+                        key={cellIndex} 
+                        className={cellClasses}
+                        style={{ 
+                          fontSize: '8px',
+                          lineHeight: '1.3',
+                          padding: '5px 4px',
+                          verticalAlign: 'middle'
+                        }}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                        />
-                      </svg>
-                      <p className="text-lg">{emptyStateMessage}</p>
-                    </div>
-                  </td>
+                        <div className="wrap-break-word font-medium" style={{ wordBreak: 'break-word' }}>
+                          {cellValue || '—'}
+                        </div>
+                      </td>
+                    );
+                  })}
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={cleanHeaders.length}
+                  className="px-4 py-6 text-center text-gray-400 text-xs"
+                >
+                  No data
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-      
-      {/* Mobile-friendly scroll hint */}
-      {overflowX && (
-        <div className="sm:hidden mt-2 text-xs text-gray-500 text-center">
-          <span className="inline-flex items-center gap-1">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
-            </svg>
-            Swipe to see more
-          </span>
-        </div>
-      )}
     </div>
   );
 };
