@@ -224,6 +224,15 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
       const exportMatch = src.match(/export\s+default\s+(\w+)/);
       if (exportMatch) {
         componentName = exportMatch[1];
+        // CRITICAL: Ensure component name starts with uppercase (React requirement)
+        // React components must start with uppercase letter, otherwise React treats them as HTML tags
+        if (componentName && componentName.length > 0 && componentName[0] !== componentName[0].toUpperCase()) {
+          const capitalizedName = componentName.charAt(0).toUpperCase() + componentName.slice(1);
+          // Replace component name in source code
+          const nameRegex = new RegExp(`\\b${componentName}\\b`, 'g');
+          src = src.replace(nameRegex, capitalizedName);
+          componentName = capitalizedName;
+        }
       }
       
       // Remove export default, keep the component definition
@@ -239,6 +248,7 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
         .map((line) => `    ${line}`.replace(/\s+$/, ""))
         .join("\n");
       src = `export default function Template({ values, setValue }) {\n  return (\n${indented}\n  );\n}`;
+      componentName = 'Template'; // Ensure Template starts with uppercase
     }
 
     // Remove any leading/trailing whitespace
@@ -807,16 +817,29 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
       }
     }
 
+    // Ensure componentName starts with uppercase (React requirement)
+    // React components must start with uppercase letter
+    const capitalizedComponentName = componentName && componentName.length > 0
+      ? componentName.charAt(0).toUpperCase() + componentName.slice(1)
+      : 'Template';
+    
+    // If componentName was changed, update it in the source code
+    if (componentName && componentName !== capitalizedComponentName) {
+      // Replace all occurrences of the old component name with the capitalized version
+      const componentNameRegex = new RegExp(`\\b${componentName}\\b`, 'g');
+      src = src.replace(componentNameRegex, capitalizedComponentName);
+    }
+    
     // Check if component accepts props
-    const componentAcceptsProps = src.match(new RegExp(`(?:function|const)\\s+${componentName}\\s*[=(]\\s*\\{?\\s*[^)]*values|setValue`));
+    const componentAcceptsProps = src.match(new RegExp(`(?:function|const)\\s+${capitalizedComponentName}\\s*[=(]\\s*\\{?\\s*[^)]*values|setValue`));
     
     // Render component with or without props based on signature
     if (componentAcceptsProps || !isCompleteComponent) {
       // Component expects props or it's a wrapped template
-      return `${src}\n\nrender(<${componentName} values={values} setValue={setValue} />);`;
+      return `${src}\n\nrender(<${capitalizedComponentName} values={values} setValue={setValue} />);`;
     } else {
       // Complete component that doesn't need props
-      return `${src}\n\nrender(<${componentName} />);`;
+      return `${src}\n\nrender(<${capitalizedComponentName} />);`;
     }
   }, [code, fixedCode]);
 
