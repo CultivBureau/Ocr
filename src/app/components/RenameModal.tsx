@@ -29,7 +29,7 @@ export default function RenameModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-lg animate-fadeIn text-black">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scaleIn">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">Rename Document</h2>

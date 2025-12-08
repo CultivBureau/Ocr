@@ -10,7 +10,6 @@ import {
   deleteDocument,
   updateDocument,
   shareDocument,
-  exportDocument,
   type Document,
 } from "@/app/services/HistoryApi";
 import DocumentCard from "@/app/components/DocumentCard";
@@ -93,24 +92,13 @@ function HistoryPageContent() {
   };
 
   const handleShare = (docId: string) => {
-    const doc = filteredDocuments.find((d) => d.id === docId);
-    if (doc) {
-      setShareModal({ isOpen: true, docId, title: doc.title });
-    }
+    // Share functionality disabled - do nothing
+    return;
   };
 
   const handleShareSubmit = async (emails: string[], isPublic: boolean) => {
-    setIsModalLoading(true);
-    try {
-      await shareDocument(shareModal.docId, { emails, is_public: isPublic });
-      alert("Document shared successfully!");
-      await refreshDocuments();
-      setShareModal({ isOpen: false, docId: "", title: "" });
-    } catch (err) {
-      alert("Failed to share document");
-    } finally {
-      setIsModalLoading(false);
-    }
+    // Share functionality disabled - do nothing
+    return;
   };
 
   const handleDelete = async (docId: string) => {
@@ -124,25 +112,6 @@ function HistoryPageContent() {
     }
   };
 
-  const handleExport = async (docId: string) => {
-    try {
-      const doc = filteredDocuments.find((d) => d.id === docId);
-      const data = await exportDocument(docId, "json");
-      
-      // Download JSON
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${doc?.title || "document"}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      alert("Failed to export document");
-    }
-  };
 
   if (isLoading && documents.length === 0) {
     return <Loading message="Loading your documents..." />;
@@ -340,9 +309,7 @@ function HistoryPageContent() {
                 document={doc}
                 onOpen={handleOpen}
                 onRename={handleRename}
-                onShare={handleShare}
                 onDelete={handleDelete}
-                onExport={handleExport}
               />
             ))}
           </div>
