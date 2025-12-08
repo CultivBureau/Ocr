@@ -4,6 +4,30 @@ import React from 'react';
 import type { Table } from "../types/ExtractTypes";
 import { tableToDynamicTableRows, formatTable } from "../utils/formatTables";
 
+// Helper function to detect Arabic text
+function hasArabic(text: string): boolean {
+  if (!text) return false;
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
+}
+
+// Helper function to detect text direction
+function detectTextDirection(text: string): 'rtl' | 'ltr' | 'mixed' {
+  if (!text) return 'ltr';
+  
+  const arabicChars = (text.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g) || []).length;
+  const englishChars = (text.match(/[a-zA-Z]/g) || []).length;
+  const totalChars = arabicChars + englishChars;
+  
+  if (totalChars === 0) return 'ltr';
+  
+  const arabicRatio = arabicChars / totalChars;
+  const englishRatio = englishChars / totalChars;
+  
+  if (arabicRatio > 0.5) return 'rtl';
+  if (englishRatio > 0.5) return 'ltr';
+  return 'mixed';
+}
+
 interface TableCell {
   content: string;
   rowSpan?: number;
@@ -109,14 +133,20 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
           {displayHeaders && displayHeaders.length > 0 && (
             <thead>
               <tr className="bg-[#A4C639]">
-                {displayHeaders.map((header, index) => (
-                  <th
-                    key={index}
-                    className={`border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-white text-xs sm:text-sm whitespace-nowrap ${headerClassName}`}
-                  >
-                    {header}
-                  </th>
-                ))}
+                {displayHeaders.map((header, index) => {
+                  const headerDirection = detectTextDirection(String(header));
+                  const headerDir = headerDirection === 'rtl' || headerDirection === 'mixed' ? 'rtl' : 'ltr';
+                  
+                  return (
+                    <th
+                      key={index}
+                      className={`border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-white text-xs sm:text-sm whitespace-nowrap ${headerClassName}`}
+                      dir={headerDir}
+                    >
+                      {header}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
           )}
@@ -132,6 +162,11 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
                     ? 'bg-green-100 font-bold text-gray-900'
                     : 'text-gray-800';
                   
+                  // Detect text direction for this cell
+                  const cellContent = String(cell.content || '');
+                  const cellDirection = detectTextDirection(cellContent);
+                  const cellDir = cellDirection === 'rtl' || cellDirection === 'mixed' ? 'rtl' : 'ltr';
+                  
                   return (
                     <CellTag
                       key={cellIndex}
@@ -139,7 +174,7 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
                       colSpan={cell.colSpan}
                       className={`border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm ${baseClass} ${cell.className || ''} ${cellClassName} break-words`}
                     >
-                      <div className="max-w-[200px] sm:max-w-none mx-auto">
+                      <div className="max-w-[200px] sm:max-w-none mx-auto" dir={cellDir}>
                         {cell.content}
                       </div>
                     </CellTag>

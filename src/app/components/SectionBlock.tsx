@@ -19,9 +19,42 @@ interface SectionBlockProps {
  * 
  * Displays a section with title and content
  */
-// Helper function to detect Arabic text
+// Helper function to detect Arabic text (enhanced for mixed content)
 function hasArabic(text: string): boolean {
-  return /[\u0600-\u06FF]/.test(text);
+  if (!text) return false;
+  // Arabic Unicode ranges: \u0600-\u06FF (Arabic), \u0750-\u077F (Arabic Supplement), 
+  // \u08A0-\u08FF (Arabic Extended-A), \uFB50-\uFDFF (Arabic Presentation Forms-A),
+  // \uFE70-\uFEFF (Arabic Presentation Forms-B)
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
+}
+
+// Helper function to detect text direction (RTL, LTR, or mixed)
+function detectTextDirection(text: string): 'rtl' | 'ltr' | 'mixed' {
+  if (!text) return 'ltr';
+  
+  const arabicChars = (text.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g) || []).length;
+  const englishChars = (text.match(/[a-zA-Z]/g) || []).length;
+  const totalChars = arabicChars + englishChars;
+  
+  if (totalChars === 0) return 'ltr';
+  
+  const arabicRatio = arabicChars / totalChars;
+  const englishRatio = englishChars / totalChars;
+  
+  if (arabicRatio > 0.5) return 'rtl';
+  if (englishRatio > 0.5) return 'ltr';
+  return 'mixed';
+}
+
+// Helper function to split content into paragraphs and detect direction for each
+function splitContentByDirection(content: string): Array<{ text: string; direction: 'rtl' | 'ltr' | 'mixed' }> {
+  if (!content) return [];
+  
+  const paragraphs = content.split('\n\n').filter(p => p.trim());
+  return paragraphs.map(para => ({
+    text: para,
+    direction: detectTextDirection(para)
+  }));
 }
 
 export default function SectionBlock({
@@ -35,8 +68,13 @@ export default function SectionBlock({
   const formatted = formatSection(section);
   
   // Detect Arabic content for RTL support
-  const isArabic = hasArabic(section.title + section.content);
-  const textDirection = isArabic ? 'rtl' : 'ltr';
+  // Use direction from section if available (from backend), otherwise detect
+  const sectionDirection = (section as any).direction;
+  const detectedDirection = sectionDirection || detectTextDirection(section.title + section.content);
+  const textDirection = detectedDirection === 'rtl' || detectedDirection === 'mixed' ? 'rtl' : 'ltr';
+  
+  // Split content into paragraphs for per-paragraph RTL detection
+  const contentParagraphs = splitContentByDirection(section.content);
   
   // Determine heading level based on hierarchy level
   const HeadingTag = level === 0 ? "h2" : level === 1 ? "h3" : level === 2 ? "h4" : "h5";
@@ -77,9 +115,20 @@ export default function SectionBlock({
         <div
           className="section-content text-gray-700 leading-relaxed whitespace-pre-wrap"
           style={{ marginLeft: `${level * 1.5}rem` }}
-          dir={textDirection}
         >
-          {formatted.displayContent}
+          {contentParagraphs.length > 0 ? (
+            // Render paragraphs with individual direction detection
+            contentParagraphs.map((para, idx) => (
+              <div key={idx} dir={para.direction === 'rtl' || para.direction === 'mixed' ? 'rtl' : 'ltr'} className="mb-2">
+                {para.text}
+              </div>
+            ))
+          ) : (
+            // Fallback to original content with section-level direction
+            <div dir={textDirection}>
+              {formatted.displayContent}
+            </div>
+          )}
         </div>
       )}
 
