@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Loading from "./components/Loading";
 
 function HomeContent() {
   const { user, isAdmin, logout } = useAuth();
@@ -13,6 +14,7 @@ function HomeContent() {
   const handleLogout = async () => {
     await logout();
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">

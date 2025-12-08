@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
+import Loading from "./Loading";
 
 interface AdminRouteProps {
   children: React.ReactNode;
@@ -33,25 +34,20 @@ export default function AdminRoute({ children }: AdminRouteProps) {
 
   // Show loading state while checking authentication
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-50 via-blue-50 to-lime-50">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#A4C639]"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <Loading message="Verifying admin access..." />;
   }
 
   // Show unauthorized message for non-admin authenticated users
   if (showUnauthorized && !isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-50 via-blue-50 to-lime-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50">
         <div className="text-center max-w-md mx-auto px-6">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 border-t-4 border-red-500">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-10 border border-gray-100 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 to-orange-500"></div>
+            
+            <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg animate-pulse">
               <svg
-                className="w-8 h-8 text-red-600"
+                className="w-10 h-10 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -64,18 +60,27 @@ export default function AdminRoute({ children }: AdminRouteProps) {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent mb-3">
               Access Denied
             </h1>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 mb-4 leading-relaxed">
               This page is only accessible to administrators.
             </p>
-            <p className="text-sm text-gray-500">
-              You are logged in as: <span className="font-semibold">{user?.name}</span> (User)
-            </p>
-            <p className="text-xs text-gray-400 mt-4">
-              Redirecting to home page...
-            </p>
+            
+            <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200">
+              <p className="text-sm text-gray-600">
+                Logged in as: <span className="font-bold text-gray-900">{user?.name}</span>
+              </p>
+              <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">
+                User Role
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+              <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+              <p>Redirecting to home page...</p>
+            </div>
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
+import Loading from "./Loading";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -21,14 +22,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // Show loading state while checking authentication
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-50 via-blue-50 to-lime-50">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#A4C639]"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <Loading message="Verifying access..." />;
   }
 
   // Don't render children if not authenticated

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Loading from "../components/Loading";
 import {
   login as apiLogin,
   logout as apiLogout,
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
   const isAuthenticated = user !== null;
@@ -53,6 +55,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Set mounted state to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
   }, []);
 
   // Check auth status on mount
@@ -103,6 +110,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     refreshUser,
   };
+
+  // Show loading screen during initial authentication check (only after mounted to prevent hydration mismatch)
+  if (!mounted) {
+    return null;
+  }
+
+  if (loading && user === null && checkAuthenticated()) {
+    return <Loading message="Authenticating..." />;
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
