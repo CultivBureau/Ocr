@@ -4,9 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { isAuthenticated, getCurrentUser, type User } from "@/app/services/AuthApi";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useHistory } from "@/app/contexts/HistoryContext";
 import {
-  getHistory,
   deleteDocument,
   updateDocument,
   shareDocument,
@@ -16,18 +16,27 @@ import {
 import DocumentCard from "@/app/components/DocumentCard";
 import RenameModal from "@/app/components/RenameModal";
 import ShareModal from "@/app/components/ShareModal";
+import HistoryFilters from "@/app/components/HistoryFilters";
+import HistorySort from "@/app/components/HistorySort";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
+import Loading from "@/app/components/Loading";
 
 function HistoryPageContent() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const { user } = useAuth();
+  const {
+    documents,
+    isLoading,
+    error,
+    searchQuery,
+    setSearchQuery,
+    getFilteredDocuments,
+    refreshDocuments,
+  } = useHistory();
+  
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [localSearch, setLocalSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   // Modal states
   const [renameModal, setRenameModal] = useState<{
@@ -42,47 +51,21 @@ function HistoryPageContent() {
   }>({ isOpen: false, docId: "", title: "" });
   const [isModalLoading, setIsModalLoading] = useState(false);
 
-  // Check authentication
+  // Debounce search
   useEffect(() => {
-    const checkAuth = async () => {
-      if (!isAuthenticated()) {
-        router.push("/pages/Login?returnUrl=/pages/History");
-        return;
-      }
-
-      try {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
-      } catch (err) {
-        router.push("/pages/Login?returnUrl=/pages/History");
-      }
-    };
-
-    checkAuth();
-  }, [router]);
-
-  // Fetch documents
+    const timer = setTimeout(() => {
+      setSearchQuery(localSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localSearch, setSearchQuery]);
+  
+  // Refresh documents when needed
   useEffect(() => {
-    if (!user) return;
-
-    const fetchDocuments = async () => {
-      setIsLoading(true);
-      setError("");
-
-      try {
-        const response = await getHistory(page, 20, searchQuery || undefined);
-        setDocuments(response.documents);
-        setTotalPages(response.total_pages);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to load documents";
-        setError(message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchDocuments();
-  }, [user, page, searchQuery]);
+    refreshDocuments();
+  }, [refreshDocuments]);
+  
+  // Get filtered documents
+  const filteredDocuments = getFilteredDocuments();
 
   const handleOpen = (docId: string) => {
     // Store document ID and navigate to editor
@@ -90,7 +73,7 @@ function HistoryPageContent() {
   };
 
   const handleRename = (docId: string) => {
-    const doc = documents.find((d) => d.id === docId);
+    const doc = filteredDocuments.find((d) => d.id === docId);
     if (doc) {
       setRenameModal({ isOpen: true, docId, currentTitle: doc.title });
     }
@@ -100,11 +83,7 @@ function HistoryPageContent() {
     setIsModalLoading(true);
     try {
       await updateDocument(renameModal.docId, { title: newTitle });
-      setDocuments((docs) =>
-        docs.map((doc) =>
-          doc.id === renameModal.docId ? { ...doc, title: newTitle } : doc
-        )
-      );
+      await refreshDocuments();
       setRenameModal({ isOpen: false, docId: "", currentTitle: "" });
     } catch (err) {
       alert("Failed to rename document");
@@ -114,7 +93,7 @@ function HistoryPageContent() {
   };
 
   const handleShare = (docId: string) => {
-    const doc = documents.find((d) => d.id === docId);
+    const doc = filteredDocuments.find((d) => d.id === docId);
     if (doc) {
       setShareModal({ isOpen: true, docId, title: doc.title });
     }
@@ -125,6 +104,7 @@ function HistoryPageContent() {
     try {
       await shareDocument(shareModal.docId, { emails, is_public: isPublic });
       alert("Document shared successfully!");
+      await refreshDocuments();
       setShareModal({ isOpen: false, docId: "", title: "" });
     } catch (err) {
       alert("Failed to share document");
@@ -138,7 +118,7 @@ function HistoryPageContent() {
 
     try {
       await deleteDocument(docId);
-      setDocuments((docs) => docs.filter((doc) => doc.id !== docId));
+      await refreshDocuments();
     } catch (err) {
       alert("Failed to delete document");
     }
@@ -146,7 +126,7 @@ function HistoryPageContent() {
 
   const handleExport = async (docId: string) => {
     try {
-      const doc = documents.find((d) => d.id === docId);
+      const doc = filteredDocuments.find((d) => d.id === docId);
       const data = await exportDocument(docId, "json");
       
       // Download JSON
@@ -164,18 +144,14 @@ function HistoryPageContent() {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#A4C639]"></div>
-      </div>
-    );
+  if (isLoading && documents.length === 0) {
+    return <Loading message="Loading your documents..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-blue-50 to-lime-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
@@ -189,10 +165,12 @@ function HistoryPageContent() {
               />
             </Link>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">Welcome, {user.name}</span>
+              {user && (
+                <span className="text-sm font-medium text-gray-700">Welcome, {user.name}</span>
+              )}
               <Link
                 href="/pages/PdfConverter"
-                className="px-4 py-2 bg-[#A4C639] text-white rounded-lg font-medium hover:bg-[#8FB02E] transition-colors shadow-md text-sm"
+                className="px-4 py-2 bg-gradient-to-r from-[#A4C639] to-emerald-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 text-sm"
               >
                 Upload PDF
               </Link>
@@ -204,26 +182,32 @@ function HistoryPageContent() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Page Title */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Document History</h1>
-          <p className="text-gray-600">Manage all your converted documents</p>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-4xl font-extrabold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Document History</h1>
+              <p className="text-gray-600 mt-1">Manage all your converted documents</p>
+            </div>
+          </div>
         </div>
 
         {/* Controls */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="mb-6 flex flex-col lg:flex-row gap-4">
           {/* Search */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1">
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
               placeholder="Search documents..."
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A4C639] focus:border-transparent"
+              className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#A4C639]/20 focus:border-[#A4C639] transition-all duration-200"
             />
             <svg
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -237,131 +221,142 @@ function HistoryPageContent() {
             </svg>
           </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex gap-2 bg-white rounded-lg p-1 border border-gray-200">
+          {/* View Mode & Filter Toggle */}
+          <div className="flex gap-2">
             <button
-              onClick={() => setViewMode("grid")}
-              className={`px-3 py-2 rounded transition-colors ${
-                viewMode === "grid"
-                  ? "bg-[#A4C639] text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-4 py-3 rounded-xl font-semibold transition-all ${
+                showFilters
+                  ? "bg-gradient-to-r from-[#A4C639] to-emerald-500 text-white shadow-md"
+                  : "bg-white text-gray-700 border-2 border-gray-200 hover:border-[#A4C639]"
               }`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                />
-              </svg>
+              <span className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Filters
+              </span>
             </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`px-3 py-2 rounded transition-colors ${
-                viewMode === "list"
-                  ? "bg-[#A4C639] text-white"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
+            <div className="flex gap-2 bg-white rounded-xl p-1 border-2 border-gray-200">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`px-3 py-2 rounded-lg transition-all ${
+                  viewMode === "grid"
+                    ? "bg-gradient-to-r from-[#A4C639] to-emerald-500 text-white shadow-md"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`px-3 py-2 rounded-lg transition-all ${
+                  viewMode === "list"
+                    ? "bg-gradient-to-r from-[#A4C639] to-emerald-500 text-white shadow-md"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Error */}
-        {error && (
-          <div className="mb-6 rounded-lg bg-red-50 border border-red-200 p-4">
-            <p className="text-sm text-red-700">{error}</p>
+        
+        {/* Filters & Sort Panel */}
+        {showFilters && (
+          <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-4 animate-in fade-in duration-200">
+            <HistoryFilters />
+            <HistorySort />
           </div>
         )}
 
-        {/* Loading */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#A4C639]"></div>
+        {/* Error */}
+        {error && (
+          <div className="mb-6 rounded-xl bg-red-50 border-2 border-red-200 p-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-red-700 font-medium">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Documents Count */}
+        {filteredDocuments.length > 0 && (
+          <div className="mb-4 text-sm text-gray-600">
+            Showing <span className="font-bold text-[#A4C639]">{filteredDocuments.length}</span> of <span className="font-semibold">{documents.length}</span> documents
           </div>
         )}
 
         {/* Documents Grid */}
-        {!isLoading && documents.length > 0 && (
-          <>
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                  : "flex flex-col gap-4"
-              }
-            >
-              {documents.map((doc) => (
-                <DocumentCard
-                  key={doc.id}
-                  document={doc}
-                  onOpen={handleOpen}
-                  onRename={handleRename}
-                  onShare={handleShare}
-                  onDelete={handleDelete}
-                  onExport={handleExport}
-                />
-              ))}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-8 flex justify-center gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <span className="px-4 py-2 bg-white border border-gray-300 rounded-lg">
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && documents.length === 0 && (
-          <div className="text-center py-12">
-            <svg
-              className="mx-auto h-24 w-24 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+        {filteredDocuments.length > 0 ? (
+          <div
+            className={
+              viewMode === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                : "flex flex-col gap-4"
+            }
+          >
+            {filteredDocuments.map((doc) => (
+              <DocumentCard
+                key={doc.id}
+                document={doc}
+                onOpen={handleOpen}
+                onRename={handleRename}
+                onShare={handleShare}
+                onDelete={handleDelete}
+                onExport={handleExport}
               />
-            </svg>
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">No documents yet</h3>
-            <p className="mt-2 text-gray-600">Upload your first PDF to get started</p>
-            <Link
-              href="/pages/PdfConverter"
-              className="mt-4 inline-block px-6 py-3 bg-[#A4C639] text-white rounded-lg font-medium hover:bg-[#8FB02E] transition-colors"
-            >
-              Upload PDF
-            </Link>
+            ))}
+          </div>
+        ) : (
+          /* Empty State */
+          <div className="text-center py-16 bg-white rounded-2xl shadow-lg border border-gray-200">
+            <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-10 h-10 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              {searchQuery ? "No documents found" : "No documents yet"}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {searchQuery ? "Try adjusting your search or filters" : "Upload your first PDF to get started"}
+            </p>
+            {!searchQuery && (
+              <Link
+                href="/pages/PdfConverter"
+                className="inline-block px-6 py-3 bg-gradient-to-r from-[#A4C639] to-emerald-500 text-white rounded-xl font-bold hover:shadow-lg transition-all duration-200"
+              >
+                Upload PDF
+              </Link>
+            )}
           </div>
         )}
       </div>
