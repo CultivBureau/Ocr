@@ -71,6 +71,13 @@ export interface SectionTemplateProps {
   enableTextSplitting?: boolean;
 }
 
+// Helper function to detect Arabic text
+const hasArabic = (text: string): boolean => {
+  if (!text) return false;
+  const textStr = typeof text === 'string' ? text : String(text);
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(textStr);
+};
+
 const SectionTemplate: React.FC<SectionTemplateProps> = ({
   title,
   content,
@@ -365,6 +372,13 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
 
   const containerClasses = getSectionClasses();
 
+  // Detect Arabic content for RTL support
+  const titleStr = title || '';
+  const contentStr = typeof content === 'string' ? content : '';
+  const isArabic = hasArabic(titleStr + contentStr);
+  const textDirection = isArabic ? 'rtl' : 'ltr';
+  const textAlign = isArabic ? 'right' : (contentAlignment === 'justify' ? 'justify' : contentAlignment);
+
   // Build underline classes - use inline style for gradient to avoid lab() colors
   const underlineClasses = [
     "h-1",
@@ -445,7 +459,13 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                     <li 
                       key={index} 
                       className="text-sm leading-snug" 
-                      style={{ fontSize: '11px', lineHeight: '1.4' }}
+                      style={{ 
+                        fontSize: '11px', 
+                        lineHeight: '1.4',
+                        direction: textDirection,
+                        textAlign: textAlign as any
+                      }}
+                      dir={textDirection}
                       contentEditable={editable}
                       suppressContentEditableWarning={true}
                       onBlur={(e) => {
@@ -486,7 +506,13 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                         <p 
                           key={idx} 
                           className="mb-1 last:mb-0 text-sm leading-snug text-gray-700" 
-                          style={{ fontSize: '11px', lineHeight: '1.4' }}
+                          style={{ 
+                            fontSize: '11px', 
+                            lineHeight: '1.4',
+                            direction: textDirection,
+                            textAlign: textAlign as any
+                          }}
+                          dir={textDirection}
                           contentEditable={editable}
                           suppressContentEditableWarning={true}
                           onBlur={(e) => {
@@ -507,7 +533,13 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                   <p
                     key={pIndex}
                     className="mb-2 last:mb-0 text-sm leading-snug text-gray-700"
-                    style={{ fontSize: '11px', lineHeight: '1.4' }}
+                    style={{ 
+                      fontSize: '11px', 
+                      lineHeight: '1.4',
+                      direction: textDirection,
+                      textAlign: textAlign as any
+                    }}
+                    dir={textDirection}
                     contentEditable={editable}
                     suppressContentEditableWarning={true}
                     onBlur={(e) => {
@@ -528,7 +560,13 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       return (
         <div 
           className={preserveWhitespace ? "whitespace-pre-wrap leading-snug" : ""} 
-          style={{ fontSize: '11px', lineHeight: '1.4' }}
+          style={{ 
+            fontSize: '11px', 
+            lineHeight: '1.4',
+            direction: textDirection,
+            textAlign: textAlign as any
+          }}
+          dir={textDirection}
           contentEditable={editable}
           suppressContentEditableWarning={true}
           onBlur={(e) => {
@@ -544,6 +582,11 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     return (
       <div 
         className="content"
+        style={{ 
+          direction: textDirection,
+          textAlign: textAlign as any
+        }}
+        dir={textDirection}
         contentEditable={editable}
         suppressContentEditableWarning={true}
         onBlur={(e) => {
@@ -573,10 +616,15 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
 
       {/* Section Title */}
       {showTitle && title && (
-        <div className="mb-3">
+        <div className="mb-3" dir={textDirection} style={{ textAlign: isArabic ? 'right' : 'left' }}>
           <h2 
             className={titleClasses} 
-            style={{ fontSize: '13px', lineHeight: '1.3' }}
+            style={{ 
+              fontSize: '13px', 
+              lineHeight: '1.3',
+              direction: textDirection,
+              textAlign: isArabic ? 'right' : 'left'
+            }}
             contentEditable={editable}
             suppressContentEditableWarning={true}
             onBlur={(e) => {
@@ -590,7 +638,11 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           {/* Thin decorative line matching the design */}
           <div 
             className="h-0.5 w-12 mt-1" 
-            style={{ backgroundColor: '#A4C639' }}
+            style={{ 
+              backgroundColor: '#A4C639',
+              marginRight: isArabic ? '0' : 'auto',
+              marginLeft: isArabic ? 'auto' : '0'
+            }}
           ></div>
         </div>
       )}
@@ -599,6 +651,11 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       <div 
         ref={contentContainerRef}
         className={`${contentClasses} relative`}
+        dir={textDirection}
+        style={{ 
+          direction: textDirection,
+          textAlign: textAlign as any
+        }}
         onMouseLeave={() => {
           // Hide split button when mouse leaves content area
           setTimeout(() => {

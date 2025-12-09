@@ -84,6 +84,13 @@ export interface DynamicTableTemplateProps {
   style?: React.CSSProperties;
 }
 
+// Helper function to detect Arabic text
+const hasArabic = (text: string): boolean => {
+  if (!text) return false;
+  const textStr = typeof text === 'string' ? text : String(text);
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(textStr);
+};
+
 const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
   headers,
   columns, // Use 'columns' from JSON or fallback to 'headers'
@@ -146,6 +153,16 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
 }) => {
   // Use 'columns' from JSON or fallback to 'headers'
   const tableHeaders = columns || headers || [];
+
+  // Detect Arabic content for RTL support
+  const allText = [
+    title || '',
+    ...tableHeaders,
+    ...rows.flat().map(cell => String(cell || ''))
+  ].join(' ');
+  const isArabic = hasArabic(allText);
+  const textDirection = isArabic ? 'rtl' : 'ltr';
+  const tableAlignment = isArabic ? 'right' : (cellAlignment === 'left' ? 'left' : cellAlignment);
 
   // Handle empty state
   if (!tableHeaders || tableHeaders.length === 0) {
@@ -233,12 +250,21 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
   ].filter(Boolean).join(" ");
 
   return (
-    <div className={wrapperClasses} style={style}>
+    <div 
+      className={wrapperClasses} 
+      style={{ ...style, direction: textDirection }}
+      dir={textDirection}
+    >
       {/* Table Title - Compact */}
       {showTitle && title && (
         <div className="mb-3">
           <h3 
             className="text-base font-bold text-gray-900"
+            dir={textDirection}
+            style={{ 
+              direction: textDirection,
+              textAlign: isArabic ? 'right' : 'left'
+            }}
             contentEditable={editable}
             suppressContentEditableWarning={true}
             onBlur={(e) => {
@@ -266,12 +292,20 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                     fontSize: '9px',
                     lineHeight: '1.2',
                     padding: '6px 4px',
-                    verticalAlign: 'middle'
+                    verticalAlign: 'middle',
+                    direction: textDirection,
+                    textAlign: isArabic ? 'right' : 'center'
                   }}
+                  dir={textDirection}
                 >
                   <div 
                     className="wrap-break-word hyphens-auto" 
-                    style={{ wordBreak: 'break-word' }}
+                    style={{ 
+                      wordBreak: 'break-word',
+                      direction: textDirection,
+                      textAlign: isArabic ? 'right' : 'center'
+                    }}
+                    dir={textDirection}
                     contentEditable={editable}
                     suppressContentEditableWarning={true}
                     onBlur={(e) => {
@@ -307,12 +341,20 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                           fontSize: '8px',
                           lineHeight: '1.3',
                           padding: '5px 4px',
-                          verticalAlign: 'middle'
+                          verticalAlign: 'middle',
+                          direction: textDirection,
+                          textAlign: isArabic ? 'right' : (cellAlignment === 'center' ? 'center' : 'left')
                         }}
+                        dir={textDirection}
                       >
                         <div 
                           className="wrap-break-word font-medium" 
-                          style={{ wordBreak: 'break-word' }}
+                          style={{ 
+                            wordBreak: 'break-word',
+                            direction: textDirection,
+                            textAlign: isArabic ? 'right' : (cellAlignment === 'center' ? 'center' : 'left')
+                          }}
+                          dir={textDirection}
                           contentEditable={editable}
                           suppressContentEditableWarning={true}
                           onBlur={(e) => {
