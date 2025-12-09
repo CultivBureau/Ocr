@@ -27,15 +27,25 @@ interface DocumentViewerProps {
   sections?: Section[];
   tables?: Table[];
   language?: 'ar' | 'en' | 'auto';
+  documentId?: string | null;
+  onSave?: (sections: Section[], tables: Table[]) => Promise<void>;
+  autoSave?: boolean;
+  autoSaveDelay?: number; // Delay in milliseconds before auto-saving
 }
 
 const DocumentViewer: React.FC<DocumentViewerProps> = ({ 
   sections: initialSections = [], 
   tables = [],
-  language = 'auto'
+  language = 'auto',
+  documentId = null,
+  onSave,
+  autoSave = false,
+  autoSaveDelay = 2000 // Default 2 seconds delay
 }) => {
   // State to manage sections (allows updates)
   const [sections, setSections] = useState<Section[]>(initialSections);
+  const [isSaving, setIsSaving] = useState(false);
+  const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   
   // Update sections when initialSections prop changes
   useEffect(() => {
@@ -71,9 +81,40 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           updated[index] = { ...updated[index], content: newContent };
         }
       }
+      
+      // Auto-save if enabled
+      if (autoSave && onSave) {
+        // Clear existing timeout
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        
+        // Set new timeout for auto-save
+        saveTimeoutRef.current = setTimeout(async () => {
+          try {
+            setIsSaving(true);
+            await onSave(updated, tables);
+            console.log('Auto-saved document changes');
+          } catch (error) {
+            console.error('Auto-save failed:', error);
+          } finally {
+            setIsSaving(false);
+          }
+        }, autoSaveDelay);
+      }
+      
       return updated;
     });
   };
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div style={containerStyle}>

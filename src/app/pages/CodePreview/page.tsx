@@ -16,7 +16,7 @@ import ToggleSwitch from "../../components/ToggleSwitch";
 import CustomizationPanel, { PanelContext } from "../../components/CustomizationPanel";
 import CreateTableModal from "../../components/CreateTableModal";
 import { getElementInfo } from "../../utils/jsxParser";
-import { addSection, addNewTable, updateTableCell, updateTableColumnHeader } from "../../utils/codeManipulator";
+import { addSection, addNewTable, updateTableCell, updateTableColumnHeader, updateSectionContent, updateSectionTitle } from "../../utils/codeManipulator";
 import { extractAllTablesFromDOM, updateCodeWithTableData } from "../../utils/extractTableData";
 import { isAuthenticated } from "../../services/AuthApi";
 import { saveDocument, updateDocument, getDocument } from "../../services/HistoryApi";
@@ -551,17 +551,81 @@ function CodePageContent() {
       let updatedExtractedData = null;
       
       try {
+        // Extract sections from DOM (including split text changes)
+        // IMPORTANT: Only extract content, not titles, and match sections correctly
+        const sectionElements = previewContainerRef.current?.querySelectorAll('section');
+        if (sectionElements && sectionElements.length > 0) {
+          const extractedDataStr = sessionStorage.getItem("codePreview.extractedData");
+          if (extractedDataStr) {
+            try {
+              updatedExtractedData = JSON.parse(extractedDataStr);
+              
+              // Update sections in extracted_data with content from DOM
+              if (updatedExtractedData.sections && Array.isArray(updatedExtractedData.sections)) {
+                sectionElements.forEach((sectionEl, index) => {
+                  if (index < updatedExtractedData.sections.length) {
+                    // Extract title (from heading, not contentEditable title)
+                    const titleEl = sectionEl.querySelector('h1, h2, h3, h4, h5, h6');
+                    if (titleEl && titleEl.textContent) {
+                      const newTitle = titleEl.textContent.trim();
+                      // Only update if title actually changed
+                      if (newTitle && newTitle !== updatedExtractedData.sections[index].title) {
+                        updatedExtractedData.sections[index].title = newTitle;
+                        updatedCode = updateSectionTitle(updatedCode || code, index, newTitle);
+                      }
+                    }
+                    
+                    // Extract content - look for contentEditable elements that are NOT titles
+                    // Content is usually in .content, div.content, or direct contentEditable that's not a heading
+                    const contentEl = sectionEl.querySelector(
+                      '.content[contenteditable="true"], ' +
+                      'div[contenteditable="true"]:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6), ' +
+                      '[contenteditable="true"]:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not([class*="title"])'
+                    );
+                    
+                    if (contentEl) {
+                      // Get the text content (preserves line breaks and bullet points)
+                      const newContent = contentEl.textContent || contentEl.innerText || '';
+                      if (newContent.trim()) {
+                        // Preserve formatting (bullet points, line breaks)
+                        // Don't filter empty lines - they might be intentional spacing
+                        const formattedContent = newContent
+                          .split('\n')
+                          .map(line => line.trim())
+                          .join('\n')
+                          .replace(/\n{3,}/g, '\n\n'); // Max 2 consecutive newlines
+                        
+                        // Only update if content actually changed
+                        if (formattedContent !== updatedExtractedData.sections[index].content) {
+                          updatedExtractedData.sections[index].content = formattedContent;
+                          
+                          // Update JSX code with new content
+                          updatedCode = updateSectionContent(updatedCode || code, index, formattedContent);
+                        }
+                      }
+                    }
+                  }
+                });
+              }
+            } catch (parseError) {
+              console.error("Error parsing extracted data:", parseError);
+            }
+          }
+        }
+        
         // Extract tables from the preview container
         const extractedTables = extractAllTablesFromDOM(previewContainerRef.current);
         if (extractedTables.length > 0) {
           // Update JSX code with extracted table data using updateTableCell function
-          updatedCode = updateCodeWithTableData(code, extractedTables, updateTableCell, updateTableColumnHeader);
+          updatedCode = updateCodeWithTableData(updatedCode || code, extractedTables, updateTableCell, updateTableColumnHeader);
           
           // Also update extracted_data structure if it exists
           const extractedDataStr = sessionStorage.getItem("codePreview.extractedData");
           if (extractedDataStr) {
             try {
-              updatedExtractedData = JSON.parse(extractedDataStr);
+              if (!updatedExtractedData) {
+                updatedExtractedData = JSON.parse(extractedDataStr);
+              }
               
               // Update tables in extracted_data
               if (updatedExtractedData.tables && Array.isArray(updatedExtractedData.tables)) {
@@ -580,14 +644,19 @@ function CodePageContent() {
               console.error("Error parsing extracted data:", parseError);
             }
           }
-          
-          // Update code state if it changed
-          if (updatedCode !== code) {
-            setCode(updatedCode);
-          }
+        }
+        
+        // Update code state if it changed
+        if (updatedCode !== code) {
+          setCode(updatedCode);
+        }
+        
+        // Update sessionStorage with latest extracted_data
+        if (updatedExtractedData) {
+          sessionStorage.setItem("codePreview.extractedData", JSON.stringify(updatedExtractedData));
         }
       } catch (extractError) {
-        console.error("Error extracting table data:", extractError);
+        console.error("Error extracting data:", extractError);
         // Continue with save even if extraction fails
       }
       
