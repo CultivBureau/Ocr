@@ -22,7 +22,7 @@ export interface UseUploadReturn {
   
   // Actions
   handleUpload: (file: File) => Promise<UploadResponse | null>;
-  handleExtract: (filePath: string) => Promise<ExtractResponse | null>;
+  handleExtract: (filePath: string, language?: 'auto' | 'en' | 'ar') => Promise<ExtractResponse | null>;
   reset: () => void;
 }
 
@@ -83,15 +83,16 @@ export function useUpload(): UseUploadReturn {
   /**
    * Extract content from uploaded PDF
    * @param filePath - File path returned from upload
+   * @param language - Language code: 'auto' (default), 'en' (English), 'ar' (Arabic)
    * @returns Extract response with sections and tables or null on error
    */
-  const handleExtract = useCallback(async (filePath: string): Promise<ExtractResponse | null> => {
+  const handleExtract = useCallback(async (filePath: string, language: 'auto' | 'en' | 'ar' = 'auto'): Promise<ExtractResponse | null> => {
     setIsExtracting(true);
     setExtractError(null);
     setStatus("جاري استخراج المحتوى...");
 
     try {
-      const response = await extractContent(filePath);
+      const response = await extractContent(filePath, language);
       
       if (!response.sections && !response.tables) {
         throw new Error("لم يتم استخراج أي محتوى من الملف.");

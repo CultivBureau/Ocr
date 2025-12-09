@@ -21,6 +21,7 @@ import ProtectedRoute from "../../components/ProtectedRoute";
 const PdfConverterContent: React.FC = () => {
   const router = useRouter();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [language, setLanguage] = useState<'auto' | 'ar' | 'en'>('auto');
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -47,9 +48,9 @@ const PdfConverterContent: React.FC = () => {
         throw new Error("Upload failed: No file path returned.");
       }
 
-      // Step 2: Extract content (sections and tables)
+      // Step 2: Extract content (sections and tables) with selected language
       setStatus("Extracting content from PDF…");
-      const extractResponse: ExtractResponse = await extractContent(uploadResponse.file_path);
+      const extractResponse: ExtractResponse = await extractContent(uploadResponse.file_path, language);
       
       if (!extractResponse.sections && !extractResponse.tables) {
         throw new Error("Extraction returned no content.");
@@ -280,6 +281,63 @@ const PdfConverterContent: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Language Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                PDF Language / لغة الملف
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setLanguage('auto')}
+                  className={`px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
+                    language === 'auto'
+                      ? 'border-[#A4C639] bg-[#A4C639] text-white shadow-md'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-[#A4C639] hover:bg-lime-50'
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <span>Auto Detect</span>
+                    <span className="text-xs opacity-80">تلقائي</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('ar')}
+                  className={`px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
+                    language === 'ar'
+                      ? 'border-[#A4C639] bg-[#A4C639] text-white shadow-md'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-[#A4C639] hover:bg-lime-50'
+                  }`}
+                  dir="rtl"
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <span>Arabic</span>
+                    <span className="text-xs opacity-80">عربي</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('en')}
+                  className={`px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
+                    language === 'en'
+                      ? 'border-[#A4C639] bg-[#A4C639] text-white shadow-md'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-[#A4C639] hover:bg-lime-50'
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <span>English</span>
+                    <span className="text-xs opacity-80">إنجليزي</span>
+                  </div>
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                {language === 'auto' && 'The system will automatically detect the language'}
+                {language === 'ar' && 'سيتم استخدام خط أنابيب الاستخراج العربي'}
+                {language === 'en' && 'English extraction pipeline will be used'}
+              </p>
             </div>
 
             {error && (

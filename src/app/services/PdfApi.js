@@ -87,15 +87,19 @@ export async function uploadFile(file) {
 /**
  * Extract text and tables from uploaded PDF
  * @param {string} filePath - Path returned from uploadFile
+ * @param {string} language - Language code: 'auto' (default, auto-detect), 'en' (English), 'ar' (Arabic)
  * @returns {Promise<{sections: Array, tables: Array, meta: Object}>}
  */
-export async function extractContent(filePath) {
+export async function extractContent(filePath, language = 'auto') {
   return request("/extract/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ file_path: filePath }),
+    body: JSON.stringify({ 
+      file_path: filePath,
+      language: language 
+    }),
   });
 }
 
