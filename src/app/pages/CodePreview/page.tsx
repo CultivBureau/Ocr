@@ -15,8 +15,11 @@ import PreviewRenderer from "../../components/PreviewRenderer";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import CustomizationPanel, { PanelContext } from "../../components/CustomizationPanel";
 import CreateTableModal from "../../components/CreateTableModal";
+import AirplaneSectionModal, { type AirplaneSectionData } from "../../components/AirplaneSectionModal";
+import HotelsSectionModal, { type HotelsSectionData } from "../../components/HotelsSectionModal";
 import { getElementInfo } from "../../utils/jsxParser";
 import { addSection, addNewTable, updateTableCell, updateTableColumnHeader } from "../../utils/codeManipulator";
+import { insertAirplaneSection, insertHotelsSection } from "../../utils/sectionInserter";
 import { extractAllTablesFromDOM, updateCodeWithTableData } from "../../utils/extractTableData";
 import { isAuthenticated } from "../../services/AuthApi";
 import { saveDocument, updateDocument, getDocument } from "../../services/HistoryApi";
@@ -104,6 +107,8 @@ function CodePageContent() {
   const [panelContext, setPanelContext] = useState<PanelContext>(null);
   const [isCreateTableModalOpen, setIsCreateTableModalOpen] = useState(false);
   const [showTableCreatedToast, setShowTableCreatedToast] = useState(false);
+  const [airplaneModalOpen, setAirplaneModalOpen] = useState(false);
+  const [hotelsModalOpen, setHotelsModalOpen] = useState(false);
   const [documentId, setDocumentId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
@@ -462,7 +467,20 @@ function CodePageContent() {
   
   const handleCodeChange = useCallback((newCode: string) => {
     setCode(newCode);
+    codeRef.current = newCode;
   }, []);
+
+  const handleAirplaneSectionSubmit = useCallback((data: AirplaneSectionData) => {
+    const updatedCode = insertAirplaneSection(code, data);
+    handleCodeChange(updatedCode);
+    setAirplaneModalOpen(false);
+  }, [code, handleCodeChange]);
+
+  const handleHotelsSectionSubmit = useCallback((data: HotelsSectionData) => {
+    const updatedCode = insertHotelsSection(code, data);
+    handleCodeChange(updatedCode);
+    setHotelsModalOpen(false);
+  }, [code, handleCodeChange]);
 
   const handleCreateTable = useCallback((config: {
     title: string;
@@ -672,6 +690,41 @@ function CodePageContent() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setAirplaneModalOpen(true)}
+              className="px-3 py-2 bg-[#4A5568] text-white rounded-lg font-medium hover:bg-[#2D3748] transition-colors shadow-md text-xs flex items-center gap-2"
+              title="إضافة قسم الطيران"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"
+                />
+              </svg>
+              <span className="hidden sm:inline">إضافة قسم الطيران</span>
+            </button>
+            <button
+              onClick={() => setHotelsModalOpen(true)}
+              className="px-3 py-2 bg-[#3B5998] text-white rounded-lg font-medium hover:bg-[#2E4A7A] transition-colors shadow-md text-xs flex items-center gap-2"
+              title="إضافة قسم الفنادق"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19.006 3.705a.75.75 0 00-.512-1.41L6 6.838V3a.75.75 0 00-.75-.75h-1.5A.75.75 0 003 3v4.93l-1.006.365a.75.75 0 00.512 1.41l16.5-6z"
+                />
+                <path
+                  fillRule="evenodd"
+                  d="M3.019 11.115L18 5.667V9.09l4.006 1.456a.75.75 0 11-.512 1.41l-.494-.18v8.475h.75a.75.75 0 010 1.5H2.25a.75.75 0 010-1.5H3v-9.129l.019-.007zM18 20.25v-9.565l1.5.545v9.02H18zm-9-6a.75.75 0 00-.75.75v4.5c0 .414.336.75.75.75h3a.75.75 0 00.75-.75V15a.75.75 0 00-.75-.75H9z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span className="hidden sm:inline">إضافة قسم الفنادق</span>
+            </button>
             {isAuthenticated() && (
               <button
                 onClick={handleSave}
@@ -851,6 +904,20 @@ function CodePageContent() {
         isOpen={isCreateTableModalOpen}
         onClose={() => setIsCreateTableModalOpen(false)}
         onCreateTable={handleCreateTable}
+      />
+
+      {/* Airplane Section Modal */}
+      <AirplaneSectionModal
+        isOpen={airplaneModalOpen}
+        onClose={() => setAirplaneModalOpen(false)}
+        onSubmit={handleAirplaneSectionSubmit}
+      />
+
+      {/* Hotels Section Modal */}
+      <HotelsSectionModal
+        isOpen={hotelsModalOpen}
+        onClose={() => setHotelsModalOpen(false)}
+        onSubmit={handleHotelsSectionSubmit}
       />
 
       <style jsx>{`

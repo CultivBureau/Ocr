@@ -147,13 +147,17 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
       import('../Templates/baseTemplate').then(m => m.default).catch(() => null),
       import('../Templates/sectionTemplate').then(m => m.default).catch(() => null),
       import('../Templates/dynamicTableTemplate').then(m => m.default).catch(() => null),
-    ]).then(([BaseTemplate, SectionTemplate, DynamicTableTemplate]) => {
+      import('../Templates/airplaneSection').then(m => m.default).catch(() => null),
+      import('../Templates/HotelsSection').then(m => m.default).catch(() => null),
+    ]).then(([BaseTemplate, SectionTemplate, DynamicTableTemplate, AirplaneSection, HotelsSection]) => {
       if (!isMounted) return;
       
       const components: any = {};
       if (BaseTemplate) components.BaseTemplate = BaseTemplate;
       if (SectionTemplate) components.SectionTemplate = SectionTemplate;
       if (DynamicTableTemplate) components.DynamicTableTemplate = DynamicTableTemplate;
+      if (AirplaneSection) components.AirplaneSection = AirplaneSection;
+      if (HotelsSection) components.HotelsSection = HotelsSection;
       
       setTemplateComponents(components);
       setComponentsLoading(false);
