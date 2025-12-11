@@ -87,7 +87,7 @@ export async function uploadFile(file) {
 /**
  * Extract text and tables from uploaded PDF
  * @param {string} filePath - Path returned from uploadFile
- * @returns {Promise<{sections: Array, tables: Array, meta: Object}>}
+ * @returns {Promise<{sections: Array, tables: Array, images: Array, pages: Array, elements: Array, meta: Object}>}
  */
 export async function extractContent(filePath) {
   return request("/extract/", {
@@ -96,6 +96,98 @@ export async function extractContent(filePath) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ file_path: filePath }),
+  });
+}
+
+/**
+ * Map backend JSON response to frontend blocks format
+ * @param {Object} json - ExtractResponse from backend
+ * @returns {Array<Block>} Array of blocks for rendering
+ */
+export function mapJsonToBlocks(json) {
+  const blocks = [];
+  
+  // Map sections
+  if (json.sections && Array.isArray(json.sections)) {
+    json.sections.forEach((section) => {
+      blocks.push({
+        id: section.id,
+        type: "section",
+        page: section.page || 1,
+        bbox: section.bbox,
+        data: section,
+      });
+    });
+  }
+  
+  // Map tables
+  if (json.tables && Array.isArray(json.tables)) {
+    json.tables.forEach((table) => {
+      blocks.push({
+        id: table.id,
+        type: "table",
+        page: table.page || 1,
+        bbox: table.bbox,
+        data: table,
+      });
+    });
+  }
+  
+  // Map images
+  if (json.images && Array.isArray(json.images)) {
+    json.images.forEach((image) => {
+      blocks.push({
+        id: image.id,
+        type: "image",
+        page: image.page || 1,
+        bbox: image.bbox,
+        data: image,
+      });
+    });
+  }
+  
+  // If backend provides pre-sorted elements, use them
+  // Otherwise, sort blocks by page and layout
+  if (json.elements && Array.isArray(json.elements) && json.elements.length > 0) {
+    // Backend already sorted, just map to blocks
+    return json.elements.map((element) => ({
+      id: element.id,
+      type: element.type,
+      page: element.page || 1,
+      bbox: element.bbox,
+      data: element,
+    }));
+  }
+  
+  // Sort blocks by page, then by Y position (top to bottom), then by X (left to right)
+  return sortBlocksByLayout(blocks);
+}
+
+/**
+ * Sort blocks by layout position
+ * @param {Array<Block>} blocks - Blocks to sort
+ * @returns {Array<Block>} Sorted blocks
+ */
+function sortBlocksByLayout(blocks) {
+  return [...blocks].sort((a, b) => {
+    // First, sort by page
+    if (a.page !== b.page) {
+      return a.page - b.page;
+    }
+    
+    // If same page, sort by Y position (top to bottom)
+    if (a.bbox && b.bbox) {
+      const yDiff = a.bbox[1] - b.bbox[1];
+      if (Math.abs(yDiff) > 1) {
+        return yDiff;
+      }
+      
+      // If similar Y, sort by X position (left to right)
+      return a.bbox[0] - b.bbox[0];
+    }
+    
+    // If no bbox, maintain order
+    return 0;
   });
 }
 

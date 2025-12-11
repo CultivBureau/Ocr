@@ -45,6 +45,9 @@ export default function PreviewPage() {
           setStructure({
             sections: extractedData.sections || [],
             tables: extractedData.tables || [],
+            images: extractedData.images || [],
+            pages: extractedData.pages || [],
+            elements: extractedData.elements || [],
             meta: extractedData.meta || {},
           });
         } catch (error) {

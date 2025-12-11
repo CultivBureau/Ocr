@@ -83,7 +83,7 @@ export function useUpload(): UseUploadReturn {
   /**
    * Extract content from uploaded PDF
    * @param filePath - File path returned from upload
-   * @returns Extract response with sections and tables or null on error
+   * @returns Extract response with sections, tables, images, pages, and elements or null on error
    */
   const handleExtract = useCallback(async (filePath: string): Promise<ExtractResponse | null> => {
     setIsExtracting(true);
@@ -93,12 +93,17 @@ export function useUpload(): UseUploadReturn {
     try {
       const response = await extractContent(filePath);
       
-      if (!response.sections && !response.tables) {
+      if (!response.sections && !response.tables && !response.images) {
         throw new Error("لم يتم استخراج أي محتوى من الملف.");
       }
 
       setExtractedData(response);
       setStatus("تم استخراج المحتوى بنجاح!");
+      
+      // Store in sessionStorage for preview pages
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("extract.data", JSON.stringify(response));
+      }
       
       return response;
     } catch (err) {

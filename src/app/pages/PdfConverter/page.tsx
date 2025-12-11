@@ -47,12 +47,17 @@ const PdfConverterContent: React.FC = () => {
         throw new Error("Upload failed: No file path returned.");
       }
 
-      // Step 2: Extract content (sections and tables)
+      // Step 2: Extract content (sections, tables, images)
       setStatus("Extracting content from PDF…");
       const extractResponse: ExtractResponse = await extractContent(uploadResponse.file_path);
       
-      if (!extractResponse.sections && !extractResponse.tables) {
+      if (!extractResponse.sections && !extractResponse.tables && !extractResponse.images) {
         throw new Error("Extraction returned no content.");
+      }
+
+      // Store extracted data in sessionStorage for layout preview
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("extract.data", JSON.stringify(extractResponse));
       }
 
       // Step 3: Clean structure (optional but recommended)

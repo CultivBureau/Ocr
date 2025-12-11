@@ -2,6 +2,9 @@
  * Type definitions for PDF extraction and processing
  */
 
+// Bounding box type: [x0, y0, x1, y1]
+export type BoundingBox = [number, number, number, number];
+
 export interface Section {
   type: "section";
   id: string;
@@ -9,24 +12,35 @@ export interface Section {
   content: string;
   order: number;
   parent_id: string | null;
+  // Layout-based fields
+  bbox?: BoundingBox;
+  direction?: "LTR" | "RTL";
+  page?: number;
+  font_size?: number;
 }
 
-export interface Table {
-  type: "table";
-  id: string;
-  columns: string[];
-  rows: string[][];
-  order: number;
-  section_id: string | null;
+// Union type for all elements
+export type Element = Section | Table | Image;
+
+// Page structure with elements
+export interface Page {
+  page_number: number;
+  elements: Element[];
 }
 
 export interface Structure {
   sections: Section[];
   tables: Table[];
+  images?: Image[];
+  pages?: Page[];
+  elements?: Element[]; // Sorted flat list
   meta: {
     generated_at?: string;
     sections_count?: number;
     tables_count?: number;
+    images_count?: number;
+    pages_count?: number;
+    has_layout_info?: boolean;
     [key: string]: any;
   };
 }
@@ -39,19 +53,43 @@ export interface UploadResponse {
 }
 
 export interface Image {
+  type: "image";
+  id: string;
+  src: string; // base64 data URL (data:image/png;base64,...)
+  bbox: BoundingBox;
   page: number;
-  path: string;
   width: number;
   height: number;
-  format: string;
-  size_bytes: number;
+  section_id?: string | null;
+  // Legacy fields (optional for backward compatibility)
+  path?: string;
+  format?: string;
+  size_bytes?: number;
 }
 
 export interface ExtractResponse {
   sections: Section[];
   tables: Table[];
   images?: Image[];
-  meta: Record<string, any>;
+  pages?: Page[];
+  elements?: Element[]; // Sorted flat list from backend
+  meta: {
+    sections_count?: number;
+    tables_count?: number;
+    images_count?: number;
+    pages_count?: number;
+    has_layout_info?: boolean;
+    [key: string]: any;
+  };
+}
+
+// Block format for frontend rendering
+export interface Block {
+  id: string;
+  type: "section" | "table" | "image";
+  page: number;
+  bbox?: BoundingBox;
+  data: Section | Table | Image;
 }
 
 export interface CleanStructureResponse extends ExtractResponse {
