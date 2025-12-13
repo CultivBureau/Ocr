@@ -9,7 +9,8 @@ import React from 'react';
  * - Blue header with building icon
  * - Dynamic hotel cards with city badges
  * - Hotel details, room info, and dates
- * - RTL support for Arabic text
+ * - RTL/LTR support for Arabic and English
+ * - Enhanced UI with perfect layout and responsive design
  */
 
 export interface Hotel {
@@ -18,6 +19,7 @@ export interface Hotel {
   cityBadge?: string; // e.g., "المدينة الاولى"
   hotelName: string;
   hasDetailsLink?: boolean;
+  detailsLink?: string; // URL for the details link
   roomDescription: {
     includesAll: string; // e.g., "شامل الافطار"
     bedType: string; // e.g., "سرير اضافي/ عدد: 2"
@@ -126,18 +128,11 @@ const HotelsSection: React.FC<HotelsSectionProps> = ({
       }
     }
   ],
-  title = "حجز الفنادق",
+  title,
   showTitle = true,
   direction = "rtl",
   language = "ar",
-  labels = {
-    nights: "ليالي",
-    includes: "شامل الافطار",
-    checkIn: "تاريخ الدخول",
-    checkOut: "تاريخ الخروج",
-    details: "للتفاصيل",
-    count: "عدد"
-  },
+  labels,
   editable = false,
   id,
   sectionId,
@@ -149,14 +144,61 @@ const HotelsSection: React.FC<HotelsSectionProps> = ({
   style
 }) => {
   const sectionIdValue = id || sectionId;
+  
+  // Set default values based on language
+  const defaultTitle = title || (language === 'ar' ? 'حجز الفنادق' : 'Hotel Booking');
+  const defaultLabels = labels || (language === 'ar' ? {
+    nights: "ليالي",
+    includes: "شامل الافطار",
+    checkIn: "تاريخ الدخول",
+    checkOut: "تاريخ الخروج",
+    details: "للتفاصيل",
+    count: "عدد"
+  } : {
+    nights: "Nights",
+    includes: "Includes Breakfast",
+    checkIn: "Check-in",
+    checkOut: "Check-out",
+    details: "Details",
+    count: "Count"
+  });
+  
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
+      
+      if (language === 'ar') {
+        return date.toLocaleDateString('ar-SA', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+      } else {
+        return date.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+      }
+    } catch {
+      return dateString;
+    }
+  };
+  
   return (
-    <div className={`w-full mb-6 ${className}`} style={style} dir={direction} data-hotels-section-id={sectionIdValue}>
+    <div 
+      className={`w-full mb-8 ${className} no-break`} 
+      style={style} 
+      dir={direction} 
+      data-hotels-section-id={sectionIdValue}
+    >
       {/* Header with Title and Icon */}
       {showTitle && (
-        <div className="flex items-center justify-center mb-4 relative">
-          <div className="bg-[#3B5998] text-white px-10 py-3 rounded-full flex items-center gap-3 shadow-md">
-            <h2 className="text-xl font-bold tracking-wide">{title}</h2>
-            <div className="bg-white rounded-full p-2.5">
+        <div className="flex items-center justify-center mb-6 relative">
+          <div className={`bg-[#3B5998] text-white px-10 py-3.5 rounded-full flex items-center gap-3.5 shadow-lg hover:shadow-xl transition-shadow duration-300 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+            <h2 className="text-xl md:text-2xl font-bold tracking-wide">{defaultTitle}</h2>
+            <div className="bg-white rounded-full p-2.5 shadow-inner">
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
                 viewBox="0 0 24 24" 
@@ -171,8 +213,8 @@ const HotelsSection: React.FC<HotelsSectionProps> = ({
           {editable && onEditSection && (
             <button
               onClick={onEditSection}
-              className="absolute left-0 top-1/2 -translate-y-1/2 p-2 bg-[#3B5998] text-white rounded-full hover:bg-[#2E4A7A] transition-colors shadow-md"
-              title="تعديل القسم"
+              className={`absolute top-1/2 -translate-y-1/2 p-2.5 bg-[#3B5998] text-white rounded-full hover:bg-[#2E4A7A] transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 z-10 ${direction === 'rtl' ? 'right-0' : 'left-0'}`}
+              title={language === 'ar' ? 'تعديل القسم' : 'Edit Section'}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -183,19 +225,19 @@ const HotelsSection: React.FC<HotelsSectionProps> = ({
       )}
 
       {/* Hotel Cards */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {hotels.map((hotel, index) => (
           <div 
             key={index} 
-            className="border-2 border-blue-300 rounded-2xl p-4 bg-white shadow-md relative group"
+            className="border-2 border-blue-300 rounded-2xl p-5 md:p-6 bg-white shadow-lg hover:shadow-xl transition-all duration-300 relative group"
           >
             {editable && (
-              <div className="absolute top-2 left-2 z-10 flex gap-2">
+              <div className={`absolute top-3 z-10 flex gap-2 ${direction === 'rtl' ? 'right-3' : 'left-3'}`}>
                 {onEditHotel && (
                   <button
                     onClick={() => onEditHotel(index)}
-                    className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors shadow-md"
-                    title="تعديل"
+                    className="p-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                    title={language === 'ar' ? 'تعديل' : 'Edit'}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -205,8 +247,8 @@ const HotelsSection: React.FC<HotelsSectionProps> = ({
                 {onRemoveHotel && hotels.length > 1 && (
                   <button
                     onClick={() => onRemoveHotel(index)}
-                    className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-md"
-                    title="حذف"
+                    className="p-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                    title={language === 'ar' ? 'حذف' : 'Delete'}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -216,82 +258,133 @@ const HotelsSection: React.FC<HotelsSectionProps> = ({
               </div>
             )}
             {/* City Badge */}
-            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 flex items-center gap-2">
-              <div className="bg-[#FF6B35] text-white px-4 py-1 rounded-full text-sm font-bold">
-                {hotel.cityBadge}
-              </div>
-              <div className="bg-[#1E88E5] text-white px-6 py-1.5 rounded-full text-base font-bold flex items-center gap-2">
-                <span className="bg-white text-[#1E88E5] px-3 py-0.5 rounded-full text-sm">
-                  {hotel.nights} {labels.nights}
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 flex-wrap justify-center">
+              {hotel.cityBadge && (
+                <div className="bg-[#FF6B35] text-white px-4 py-1.5 rounded-full text-sm md:text-base font-bold shadow-md">
+                  {hotel.cityBadge}
+                </div>
+              )}
+              <div className="bg-[#1E88E5] text-white px-6 py-2 rounded-full text-base md:text-lg font-bold flex items-center gap-2 shadow-md">
+                <span className="bg-white text-[#1E88E5] px-3 py-1 rounded-full text-sm md:text-base font-semibold">
+                  {hotel.nights} {defaultLabels.nights}
                 </span>
                 <span>{hotel.city}</span>
               </div>
             </div>
 
-            {/* Day Info - Right Side */}
-            <div className="absolute top-6 right-4 text-right text-sm font-semibold text-[#1E88E5] space-y-1">
-              <div>{hotel.dayInfo.checkInDay}</div>
-              <div>{hotel.dayInfo.checkOutDay}</div>
-            </div>
-
-            {/* Hotel Name Bar */}
-            <div className="mt-6 bg-[#1E88E5] text-white px-4 py-2.5 rounded-lg flex items-center justify-between">
-              <span className="font-bold text-base">{hotel.hotelName}</span>
-              {hotel.hasDetailsLink && (
-                <div className="bg-white rounded-full p-1.5 flex items-center gap-1 px-3">
+            {/* Day Info - More Visible and Prominent */}
+            <div className={`absolute top-2 z-10 text-base md:text-lg font-bold text-[#1E88E5] space-y-2 ${direction === 'rtl' ? 'right-4 text-right' : 'left-4 text-left'}`}>
+              <div className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                <div className="bg-[#1E88E5] rounded-full p-1.5 shadow-md">
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
                     viewBox="0 0 24 24" 
                     fill="currentColor" 
-                    className="w-4 h-4 text-[#4FC3F7]"
+                    className="w-5 h-5 text-white shrink-0"
                   >
-                    <path fillRule="evenodd" d="M19.902 4.098a3.75 3.75 0 00-5.304 0l-4.5 4.5a3.75 3.75 0 001.035 6.037.75.75 0 01-.646 1.353 5.25 5.25 0 01-1.449-8.45l4.5-4.5a5.25 5.25 0 117.424 7.424l-1.757 1.757a.75.75 0 11-1.06-1.06l1.757-1.757a3.75 3.75 0 000-5.304zm-7.389 4.267a.75.75 0 011-.353 5.25 5.25 0 011.449 8.45l-4.5 4.5a5.25 5.25 0 11-7.424-7.424l1.757-1.757a.75.75 0 111.06 1.06l-1.757 1.757a3.75 3.75 0 105.304 5.304l4.5-4.5a3.75 3.75 0 00-1.035-6.037.75.75 0 01-.354-1z" clipRule="evenodd" />
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
                   </svg>
-                  <span className="text-[#1E88E5] text-xs font-bold">{labels.details}</span>
                 </div>
+                <span className="font-bold">{hotel.dayInfo.checkInDay}</span>
+              </div>
+              <div className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                <div className="bg-[#1E88E5] rounded-full p-1.5 shadow-md">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 24 24" 
+                    fill="currentColor" 
+                    className="w-5 h-5 text-white shrink-0"
+                  >
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                  </svg>
+                </div>
+                <span className="font-bold">{hotel.dayInfo.checkOutDay}</span>
+              </div>
+            </div>
+
+            {/* Hotel Name Bar */}
+            <div className={`mt-8 w-1/2 mx-auto bg-[#1E88E5] text-white px-5 py-3 rounded-xl flex items-center justify-center shadow-md ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+              <span className="w-1/2 font-bold text-base md:text-lg leading-relaxed text-center">{hotel.hotelName}</span>
+              {hotel.hasDetailsLink && (
+                hotel.detailsLink ? (
+                  <a 
+                    href={hotel.detailsLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`bg-white rounded-full p-2 flex items-center gap-2 px-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}
+                  >
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 24 24" 
+                      fill="currentColor" 
+                      className="w-4 h-4 text-[#4FC3F7] shrink-0"
+                    >
+                      <path fillRule="evenodd" d="M19.902 4.098a3.75 3.75 0 00-5.304 0l-4.5 4.5a3.75 3.75 0 001.035 6.037.75.75 0 01-.646 1.353 5.25 5.25 0 01-1.449-8.45l4.5-4.5a5.25 5.25 0 117.424 7.424l-1.757 1.757a.75.75 0 11-1.06-1.06l1.757-1.757a3.75 3.75 0 000-5.304zm-7.389 4.267a.75.75 0 011-.353 5.25 5.25 0 011.449 8.45l-4.5 4.5a5.25 5.25 0 11-7.424-7.424l1.757-1.757a.75.75 0 111.06 1.06l-1.757 1.757a3.75 3.75 0 105.304 5.304l4.5-4.5a3.75 3.75 0 00-1.035-6.037.75.75 0 01-.354-1z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-[#1E88E5] text-xs md:text-sm font-bold">{defaultLabels.details}</span>
+                  </a>
+                ) : (
+                  <div className={`bg-white rounded-full p-2 flex items-center gap-2 px-4 shadow-sm ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 24 24" 
+                      fill="currentColor" 
+                      className="w-4 h-4 text-[#4FC3F7] shrink-0"
+                    >
+                      <path fillRule="evenodd" d="M19.902 4.098a3.75 3.75 0 00-5.304 0l-4.5 4.5a3.75 3.75 0 001.035 6.037.75.75 0 01-.646 1.353 5.25 5.25 0 01-1.449-8.45l4.5-4.5a5.25 5.25 0 117.424 7.424l-1.757 1.757a.75.75 0 11-1.06-1.06l1.757-1.757a3.75 3.75 0 000-5.304zm-7.389 4.267a.75.75 0 011-.353 5.25 5.25 0 011.449 8.45l-4.5 4.5a5.25 5.25 0 11-7.424-7.424l1.757-1.757a.75.75 0 111.06 1.06l-1.757 1.757a3.75 3.75 0 105.304 5.304l4.5-4.5a3.75 3.75 0 00-1.035-6.037.75.75 0 01-.354-1z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-[#1E88E5] text-xs md:text-sm font-bold">{defaultLabels.details}</span>
+                  </div>
+                )
               )}
             </div>
 
             {/* Room Details */}
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="bg-[#1E88E5] text-white px-4 py-2 rounded-lg text-center font-semibold text-sm">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="bg-[#1E88E5] text-white px-5 py-3 rounded-xl text-center font-semibold text-sm md:text-base shadow-md">
                 {hotel.roomDescription.includesAll}
               </div>
               {hotel.roomDescription.roomType && (
-                <div className="bg-[#1E88E5] text-white px-4 py-2 rounded-lg text-center font-semibold text-sm">
+                <div className="bg-[#1E88E5] text-white px-5 py-3 rounded-xl text-center font-semibold text-sm md:text-base shadow-md">
                   {hotel.roomDescription.roomType}
                 </div>
               )}
             </div>
 
-            <div className="mt-2">
-              <div className="bg-[#1E88E5] text-white px-4 py-2 rounded-lg text-center font-semibold text-sm">
+            <div className="mt-3">
+              <div className="bg-[#1E88E5] text-white px-5 py-3 rounded-xl text-center font-semibold text-sm md:text-base shadow-md">
                 {hotel.roomDescription.bedType}
               </div>
             </div>
 
             {/* Date Section */}
-            <div className="mt-3 bg-[#FF6B35] text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-3 text-sm font-bold">
-              <span>{labels.checkIn} {hotel.checkInDate}</span>
-              <div className="flex gap-1">
+            <div className={`mt-4 bg-[#FF6B35] text-white px-5 py-3.5 rounded-xl flex items-center justify-center gap-3 text-sm md:text-base font-bold shadow-md ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs opacity-90">{defaultLabels.checkIn}</span>
+                <span className="font-bold">{formatDate(hotel.checkInDate)}</span>
+              </div>
+              <div className="flex gap-1 text-xl md:text-2xl">
                 <span>《</span>
                 <span>《</span>
                 <span>《</span>
               </div>
-              <span>{labels.checkOut} {hotel.checkOutDate}</span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs opacity-90">{defaultLabels.checkOut}</span>
+                <span className="font-bold">{formatDate(hotel.checkOutDate)}</span>
+              </div>
             </div>
           </div>
         ))}
         {editable && onAddHotel && (
-          <div className="border-2 border-dashed border-blue-300 rounded-2xl p-8 bg-blue-50 text-center">
+          <div className="border-2 border-dashed border-blue-300 rounded-2xl p-8 md:p-10 bg-blue-50 text-center hover:bg-blue-100 transition-colors duration-200">
             <button
               onClick={onAddHotel}
-              className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium flex items-center gap-2 mx-auto"
+              className="px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 text-sm md:text-base font-medium flex items-center gap-2 mx-auto shadow-md hover:shadow-lg hover:scale-105"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              إضافة فندق جديد
+              {language === 'ar' ? 'إضافة فندق جديد' : 'Add New Hotel'}
             </button>
           </div>
         )}

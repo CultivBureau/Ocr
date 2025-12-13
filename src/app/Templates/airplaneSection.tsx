@@ -213,10 +213,10 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
       <div className="overflow-hidden rounded-2xl shadow-xl border border-gray-200 bg-white">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[600px]">
-            {/* Column Headers */}
-            <thead>
-              <tr className="bg-[#F5A623]">
-                {editable && (
+          {/* Column Headers */}
+          <thead>
+            <tr className="bg-[#F5A623]">
+              {editable && (
                   <th className="px-3 py-4 text-center text-white font-bold text-xs md:text-sm border-r-2 border-white/30 min-w-[80px]">
                     <div className="flex items-center justify-center">
                       <span>{language === 'ar' ? 'إجراءات' : 'Actions'}</span>
@@ -228,59 +228,59 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                 </th>
                 <th className="px-4 py-4 text-center text-white font-bold text-sm md:text-base border-r-2 border-white/30 min-w-[180px]">
                   {defaultColumnLabels.fromAirport}
-                </th>
+              </th>
                 <th className="px-4 py-4 text-center text-white font-bold text-sm md:text-base border-r-2 border-white/30 min-w-[180px]">
                   {defaultColumnLabels.toAirport}
-                </th>
+              </th>
                 <th className="px-4 py-4 text-center text-white font-bold text-sm md:text-base border-r-2 border-white/30 min-w-[140px]">
                   {defaultColumnLabels.travelers}
-                </th>
+              </th>
                 <th className="px-4 py-4 text-center text-white font-bold text-sm md:text-base min-w-[100px]">
                   {defaultColumnLabels.luggage}
-                </th>
-              </tr>
-            </thead>
+              </th>
+            </tr>
+          </thead>
 
-            {/* Data Rows */}
-            <tbody>
-              {flights.map((flight, index) => (
+          {/* Data Rows */}
+          <tbody>
+            {flights.map((flight, index) => (
                 <tr 
                   key={index} 
                   className="bg-[#E8E8E8] hover:bg-[#D8D8D8] transition-colors duration-200 border-b-2 border-white group"
                 >
-                  {editable && (
+                {editable && (
                     <td className="px-3 py-4 border-r-2 border-white/50">
                       <div className="flex flex-col gap-2 items-center">
-                        {onEditFlight && (
-                          <button
-                            onClick={() => onEditFlight(index)}
+                      {onEditFlight && (
+                        <button
+                          onClick={() => onEditFlight(index)}
                             className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
                             title={language === 'ar' ? 'تعديل' : 'Edit'}
-                          >
+                        >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                        )}
-                        {onRemoveFlight && flights.length > 1 && (
-                          <button
-                            onClick={() => onRemoveFlight(index)}
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      )}
+                      {onRemoveFlight && flights.length > 1 && (
+                        <button
+                          onClick={() => onRemoveFlight(index)}
                             className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
                             title={language === 'ar' ? 'حذف' : 'Delete'}
-                          >
+                        >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                )}
                   <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50">
                     <div className="flex flex-col items-center">
                       <span className="text-[#4A5568] font-bold">{formatDate(flight.date)}</span>
                     </div>
-                  </td>
+                </td>
                   <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50">
                     <div className={`flex items-center justify-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                       <svg 
@@ -293,25 +293,25 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                       </svg>
                       <div className="whitespace-pre-line leading-relaxed text-[#2D3748]">{flight.fromAirport}</div>
                     </div>
-                  </td>
+                </td>
                   <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50">
                     <div className={`flex items-center justify-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        viewBox="0 0 24 24" 
-                        fill="currentColor" 
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 24 24" 
+                    fill="currentColor" 
                         className="w-5 h-5 text-[#4FC3F7] shrink-0"
-                      >
-                        <path fillRule="evenodd" d="M19.902 4.098a3.75 3.75 0 00-5.304 0l-4.5 4.5a3.75 3.75 0 001.035 6.037.75.75 0 01-.646 1.353 5.25 5.25 0 01-1.449-8.45l4.5-4.5a5.25 5.25 0 117.424 7.424l-1.757 1.757a.75.75 0 11-1.06-1.06l1.757-1.757a3.75 3.75 0 000-5.304zm-7.389 4.267a.75.75 0 011-.353 5.25 5.25 0 011.449 8.45l-4.5 4.5a5.25 5.25 0 11-7.424-7.424l1.757-1.757a.75.75 0 111.06 1.06l-1.757 1.757a3.75 3.75 0 105.304 5.304l4.5-4.5a3.75 3.75 0 00-1.035-6.037.75.75 0 01-.354-1z" clipRule="evenodd" />
-                      </svg>
+                  >
+                    <path fillRule="evenodd" d="M19.902 4.098a3.75 3.75 0 00-5.304 0l-4.5 4.5a3.75 3.75 0 001.035 6.037.75.75 0 01-.646 1.353 5.25 5.25 0 01-1.449-8.45l4.5-4.5a5.25 5.25 0 117.424 7.424l-1.757 1.757a.75.75 0 11-1.06-1.06l1.757-1.757a3.75 3.75 0 000-5.304zm-7.389 4.267a.75.75 0 011-.353 5.25 5.25 0 011.449 8.45l-4.5 4.5a5.25 5.25 0 11-7.424-7.424l1.757-1.757a.75.75 0 111.06 1.06l-1.757 1.757a3.75 3.75 0 105.304 5.304l4.5-4.5a3.75 3.75 0 00-1.035-6.037.75.75 0 01-.354-1z" clipRule="evenodd" />
+                  </svg>
                       <div className="whitespace-pre-line leading-relaxed text-[#2D3748]">{flight.toAirport}</div>
                     </div>
-                  </td>
+                </td>
                   <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50">
                     <div className="flex items-center justify-center">
                       {formatTravelers(flight.travelers)}
                     </div>
-                  </td>
+                </td>
                   <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base">
                     <div className={`flex items-center justify-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                       <svg 
@@ -324,26 +324,26 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                       </svg>
                       <span className="text-[#2D3748]">{flight.luggage}</span>
                     </div>
-                  </td>
-                </tr>
-              ))}
-              {editable && onAddFlight && (
+                </td>
+              </tr>
+            ))}
+            {editable && onAddFlight && (
                 <tr className="bg-gray-50 hover:bg-gray-100 transition-colors">
                   <td colSpan={editable ? 6 : 5} className="px-4 py-5 text-center">
-                    <button
-                      onClick={onAddFlight}
+                  <button
+                    onClick={onAddFlight}
                       className="px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 text-sm md:text-base font-medium flex items-center gap-2 mx-auto shadow-md hover:shadow-lg hover:scale-105"
-                    >
+                  >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
                       {language === 'ar' ? 'إضافة رحلة جديدة' : 'Add New Flight'}
-                    </button>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                  </button>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
         </div>
       </div>
 
@@ -361,7 +361,7 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
             </svg>
             <p className="text-[#DC143C] font-bold text-base md:text-lg leading-relaxed">
               {defaultNotice}
-            </p>
+          </p>
           </div>
         </div>
       )}
