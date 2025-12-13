@@ -7,7 +7,7 @@ import { useAuth } from "./contexts/AuthContext";
 import { useHistory } from "./contexts/HistoryContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Loading from "./components/Loading";
-import HotelsSection from "./Templates/HotelsSection";
+
 function HomeContent() {
   const { user, isAdmin, logout } = useAuth();
   const { documents, toggleSidebar } = useHistory();
@@ -304,7 +304,6 @@ function HomeContent() {
           </div>
         </div>
       </footer>
-      <HotelsSection />
     </div>
   );
 }
