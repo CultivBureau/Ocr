@@ -156,19 +156,12 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return dateString;
       
-      if (language === 'ar') {
-        return date.toLocaleDateString('ar-SA', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        });
-      } else {
-        return date.toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        });
-      }
+      // Format as dd/mm/yyyy (Gregorian/Melady calendar)
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${day}/${month}/${year}`;
     } catch {
       return dateString;
     }
