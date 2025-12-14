@@ -320,23 +320,13 @@ function replaceHotelsInComponent(component: string, hotels: Hotel[]): string {
 }
 
 /**
- * Update HotelsSection props (title, labels, etc.)
+ * Update HotelsSection props (title, showTitle only)
  */
 export function updateHotelSectionProps(
   component: string, 
   props: {
     title?: string;
     showTitle?: boolean;
-    direction?: "rtl" | "ltr";
-    language?: "ar" | "en";
-    labels?: {
-      nights: string;
-      includes: string;
-      checkIn: string;
-      checkOut: string;
-      details: string;
-      count: string;
-    };
   }
 ): string {
   let updated = component;
@@ -357,45 +347,6 @@ export function updateHotelSectionProps(
       updated = updated.replace(/showTitle=\{?[^}]*\}?/g, `showTitle={${props.showTitle}}`);
     } else {
       updated = updated.replace(/(showTitle=\{?[^}]*\}?|id=["'][^"']*["'])/, `showTitle={${props.showTitle}} $1`);
-    }
-  }
-  
-  // Update direction
-  if (props.direction !== undefined) {
-    if (updated.includes('direction=')) {
-      updated = updated.replace(/direction=["'][^"']*["']/g, `direction="${props.direction}"`);
-    } else {
-      updated = updated.replace(/(language=|id=["'][^"']*["'])/, `direction="${props.direction}" $1`);
-    }
-  }
-  
-  // Update language
-  if (props.language !== undefined) {
-    if (updated.includes('language=')) {
-      updated = updated.replace(/language=["'][^"']*["']/g, `language="${props.language}"`);
-    } else {
-      updated = updated.replace(/(\/>|>)/, `language="${props.language}" $1`);
-    }
-  }
-  
-  // Update labels
-  if (props.labels !== undefined) {
-    const labelsString = `{
-            nights: "${props.labels.nights.replace(/"/g, '\\"')}",
-            includes: "${props.labels.includes.replace(/"/g, '\\"')}",
-            checkIn: "${props.labels.checkIn.replace(/"/g, '\\"')}",
-            checkOut: "${props.labels.checkOut.replace(/"/g, '\\"')}",
-            details: "${props.labels.details.replace(/"/g, '\\"')}",
-            count: "${props.labels.count.replace(/"/g, '\\"')}"
-          }`;
-    
-    if (updated.includes('labels=')) {
-      // Replace existing labels
-      const labelsRegex = /labels\s*=\s*\{[\s\S]*?\}/;
-      updated = updated.replace(labelsRegex, `labels={${labelsString}}`);
-    } else {
-      // Add labels prop
-      updated = updated.replace(/(language=["'][^"']*["']|id=["'][^"']*["'])/, `labels={${labelsString}} $1`);
     }
   }
   

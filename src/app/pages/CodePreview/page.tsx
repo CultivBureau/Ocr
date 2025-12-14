@@ -927,16 +927,6 @@ function CodePageContent() {
   const handleEditHotelSectionSubmit = useCallback((props: {
     title?: string;
     showTitle?: boolean;
-    direction?: "rtl" | "ltr";
-    language?: "ar" | "en";
-    labels?: {
-      nights: string;
-      includes: string;
-      checkIn: string;
-      checkOut: string;
-      details: string;
-      count: string;
-    };
   }) => {
     if (!editingHotelId) {
       return;
@@ -1008,16 +998,6 @@ function CodePageContent() {
   const getInitialHotelSectionData = useCallback((): {
     title?: string;
     showTitle?: boolean;
-    direction?: "rtl" | "ltr";
-    language?: "ar" | "en";
-    labels?: {
-      nights: string;
-      includes: string;
-      checkIn: string;
-      checkOut: string;
-      details: string;
-      count: string;
-    };
   } | null => {
     if (!editingHotelId) {
       return null;
@@ -1030,7 +1010,10 @@ function CodePageContent() {
       }
       
       const component = section.component;
-      const data: any = {};
+      const data: {
+        title?: string;
+        showTitle?: boolean;
+      } = {};
       
       // Extract title
       const titleMatch = component.match(/title=["']([^"']*)["']/);
@@ -1042,41 +1025,6 @@ function CodePageContent() {
       const showTitleMatch = component.match(/showTitle=\{?([^}]*)\}?/);
       if (showTitleMatch) {
         data.showTitle = showTitleMatch[1].trim() === 'true';
-      }
-      
-      // Extract direction
-      const directionMatch = component.match(/direction=["']([^"']*)["']/);
-      if (directionMatch) {
-        data.direction = directionMatch[1] as "rtl" | "ltr";
-      }
-      
-      // Extract language
-      const languageMatch = component.match(/language=["']([^"']*)["']/);
-      if (languageMatch) {
-        data.language = languageMatch[1] as "ar" | "en";
-      }
-      
-      // Extract labels
-      const labelsMatch = component.match(/labels\s*=\s*\{[\s\S]*?\}/);
-      if (labelsMatch) {
-        const labelsStr = labelsMatch[0];
-        const nightsMatch = labelsStr.match(/nights\s*:\s*["']([^"']*)["']/);
-        const includesMatch = labelsStr.match(/includes\s*:\s*["']([^"']*)["']/);
-        const checkInMatch = labelsStr.match(/checkIn\s*:\s*["']([^"']*)["']/);
-        const checkOutMatch = labelsStr.match(/checkOut\s*:\s*["']([^"']*)["']/);
-        const detailsMatch = labelsStr.match(/details\s*:\s*["']([^"']*)["']/);
-        const countMatch = labelsStr.match(/count\s*:\s*["']([^"']*)["']/);
-        
-        if (nightsMatch || includesMatch || checkInMatch || checkOutMatch || detailsMatch || countMatch) {
-          data.labels = {
-            nights: nightsMatch ? nightsMatch[1].replace(/\\"/g, '"') : "ليالي",
-            includes: includesMatch ? includesMatch[1].replace(/\\"/g, '"') : "شامل الافطار",
-            checkIn: checkInMatch ? checkInMatch[1].replace(/\\"/g, '"') : "تاريخ الدخول",
-            checkOut: checkOutMatch ? checkOutMatch[1].replace(/\\"/g, '"') : "تاريخ الخروج",
-            details: detailsMatch ? detailsMatch[1].replace(/\\"/g, '"') : "للتفاصيل",
-            count: countMatch ? countMatch[1].replace(/\\"/g, '"') : "عدد"
-          };
-        }
       }
       
       return data;

@@ -8,30 +8,10 @@ interface EditHotelSectionModalProps {
   onSubmit: (data: {
     title?: string;
     showTitle?: boolean;
-    direction?: "rtl" | "ltr";
-    language?: "ar" | "en";
-    labels?: {
-      nights: string;
-      includes: string;
-      checkIn: string;
-      checkOut: string;
-      details: string;
-      count: string;
-    };
   }) => void;
   initialData: {
     title?: string;
     showTitle?: boolean;
-    direction?: "rtl" | "ltr";
-    language?: "ar" | "en";
-    labels?: {
-      nights: string;
-      includes: string;
-      checkIn: string;
-      checkOut: string;
-      details: string;
-      count: string;
-    };
   } | null;
 }
 
@@ -43,43 +23,12 @@ export default function EditHotelSectionModal({
 }: EditHotelSectionModalProps) {
   const [title, setTitle] = useState("حجز الفنادق");
   const [showTitle, setShowTitle] = useState(true);
-  const [direction, setDirection] = useState<"rtl" | "ltr">("rtl");
-  const [language, setLanguage] = useState<"ar" | "en">("ar");
-  const [labels, setLabels] = useState({
-    nights: "ليالي",
-    includes: "شامل الافطار",
-    checkIn: "تاريخ الدخول",
-    checkOut: "تاريخ الخروج",
-    details: "للتفاصيل",
-    count: "عدد"
-  });
 
   // Populate form when modal opens or initialData changes
   useEffect(() => {
     if (isOpen && initialData) {
       setTitle(initialData.title || "حجز الفنادق");
       setShowTitle(initialData.showTitle !== undefined ? initialData.showTitle : true);
-      setDirection(initialData.direction || "rtl");
-      setLanguage(initialData.language || "ar");
-      if (initialData.labels) {
-        setLabels(initialData.labels);
-      } else {
-        setLabels(initialData.language === 'en' ? {
-          nights: "Nights",
-          includes: "Includes Breakfast",
-          checkIn: "Check-in",
-          checkOut: "Check-out",
-          details: "Details",
-          count: "Count"
-        } : {
-          nights: "ليالي",
-          includes: "شامل الافطار",
-          checkIn: "تاريخ الدخول",
-          checkOut: "تاريخ الخروج",
-          details: "للتفاصيل",
-          count: "عدد"
-        });
-      }
     }
   }, [isOpen, initialData]);
 
@@ -89,9 +38,6 @@ export default function EditHotelSectionModal({
     onSubmit({
       title: title.trim() || undefined,
       showTitle,
-      direction,
-      language,
-      labels,
     });
 
     onClose();
@@ -159,138 +105,6 @@ export default function EditHotelSectionModal({
               <label htmlFor="showTitle" className="text-sm text-gray-700">
                 Show Title
               </label>
-            </div>
-          </div>
-
-          {/* Language & Direction */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Language
-              </label>
-              <select
-                value={language}
-                onChange={(e) => {
-                  const newLang = e.target.value as "ar" | "en";
-                  setLanguage(newLang);
-                  // Update labels based on language
-                  if (newLang === 'en') {
-                    setLabels({
-                      nights: "Nights",
-                      includes: "Includes Breakfast",
-                      checkIn: "Check-in",
-                      checkOut: "Check-out",
-                      details: "Details",
-                      count: "Count"
-                    });
-                  } else {
-                    setLabels({
-                      nights: "ليالي",
-                      includes: "شامل الافطار",
-                      checkIn: "تاريخ الدخول",
-                      checkOut: "تاريخ الخروج",
-                      details: "للتفاصيل",
-                      count: "عدد"
-                    });
-                  }
-                }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent"
-              >
-                <option value="ar">Arabic</option>
-                <option value="en">English</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Direction
-              </label>
-              <select
-                value={direction}
-                onChange={(e) => setDirection(e.target.value as "rtl" | "ltr")}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent"
-              >
-                <option value="rtl">Right to Left (RTL)</option>
-                <option value="ltr">Left to Right (LTR)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Labels */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Labels
-            </label>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Nights
-                </label>
-                <input
-                  type="text"
-                  value={labels.nights}
-                  onChange={(e) => setLabels({ ...labels, nights: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Includes
-                </label>
-                <input
-                  type="text"
-                  value={labels.includes}
-                  onChange={(e) => setLabels({ ...labels, includes: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent text-sm"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Check-in
-                  </label>
-                  <input
-                    type="text"
-                    value={labels.checkIn}
-                    onChange={(e) => setLabels({ ...labels, checkIn: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Check-out
-                  </label>
-                  <input
-                    type="text"
-                    value={labels.checkOut}
-                    onChange={(e) => setLabels({ ...labels, checkOut: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent text-sm"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Details
-                  </label>
-                  <input
-                    type="text"
-                    value={labels.details}
-                    onChange={(e) => setLabels({ ...labels, details: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Count
-                  </label>
-                  <input
-                    type="text"
-                    value={labels.count}
-                    onChange={(e) => setLabels({ ...labels, count: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent text-sm"
-                  />
-                </div>
-              </div>
             </div>
           </div>
         </form>
