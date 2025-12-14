@@ -871,6 +871,14 @@ function CodePageContent() {
             const tableElement = table.closest('div') || table;
             const tableEl = tableElement as HTMLElement;
             
+            // Skip tables inside AirplaneSection component
+            const isInsideAirplaneSection = table.closest('[data-airplane-section-id]') !== null;
+            if (isInsideAirplaneSection) {
+              console.log(`Skipping table ${tableIndex} - inside AirplaneSection`);
+              tableIndex++;
+              return;
+            }
+            
             console.log(`Setting up table ${tableIndex} (DOM index ${domIndex})`);
             tableEl.setAttribute('data-table-index', tableIndex.toString());
             tableEl.setAttribute('data-table-setup', 'true');
