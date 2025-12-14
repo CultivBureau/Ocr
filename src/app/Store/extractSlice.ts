@@ -3,7 +3,9 @@
  * Using a simple state pattern (can be replaced with Redux/Zustand later)
  */
 
-import type { Section, Table, Structure } from "@/app/types/ExtractTypes";
+import type { Section, Table, Structure, UserElement, SeparatedStructure } from "@/app/types/ExtractTypes";
+import { migrateToSeparatedStructure, isSeparatedStructure, isLegacyStructure } from "@/app/utils/structureMigration";
+import { guardGeneratedContent } from "@/app/utils/contentGuards";
 
 export interface ExtractState {
   // Upload state
@@ -13,11 +15,20 @@ export interface ExtractState {
   isUploading: boolean;
   uploadError: string | null;
 
-  // Extract state - Phase 3: Receiving Extracted Data
+  // New separated structure (v2)
+  generatedElements: {
+    sections: Section[];
+    tables: Table[];
+  };
+  userElements: UserElement[];
+  layoutOrder: string[];
+
+  // Legacy structure support (deprecated, kept for backward compatibility)
   sections: Section[];
   tables: Table[];
-  structure: Structure | null; // Complete structure JSON
+  structure: Structure | null; // Complete structure JSON (legacy)
   meta: Record<string, any> | null;
+  
   isExtracting: boolean;
   extractError: string | null;
 
@@ -36,6 +47,12 @@ export const initialExtractState: ExtractState = {
   originalFilename: null,
   isUploading: false,
   uploadError: null,
+  generatedElements: {
+    sections: [],
+    tables: []
+  },
+  userElements: [],
+  layoutOrder: [],
   sections: [],
   tables: [],
   structure: null,
@@ -55,7 +72,12 @@ export type ExtractAction =
   | { type: "UPLOAD_ERROR"; payload: string }
   | { type: "EXTRACT_START" }
   | { type: "EXTRACT_SUCCESS"; payload: { sections: Section[]; tables: Table[]; meta: Record<string, any> } }
-  | { type: "SET_STRUCTURE"; payload: Structure }
+  | { type: "SET_STRUCTURE"; payload: Structure | SeparatedStructure }
+  | { type: "SET_SEPARATED_STRUCTURE"; payload: SeparatedStructure }
+  | { type: "ADD_USER_ELEMENT"; payload: UserElement }
+  | { type: "UPDATE_USER_ELEMENT"; payload: { id: string; element: UserElement } }
+  | { type: "DELETE_USER_ELEMENT"; payload: string }
+  | { type: "REORDER_LAYOUT"; payload: string[] }
   | { type: "UPDATE_SECTION"; payload: { id: string; section: Section } }
   | { type: "UPDATE_TABLE"; payload: { id: string; table: Table } }
   | { type: "EXTRACT_ERROR"; payload: string }
@@ -109,7 +131,16 @@ export function extractReducer(state: ExtractState, action: ExtractAction): Extr
         tableMap.set(table.id, table);
       });
       
-      // Create complete structure
+      // Build separated structure from extracted data
+      // Extract success returns sections/tables that should be treated as generated
+      const generatedSections = action.payload.sections;
+      const generatedTables = action.payload.tables;
+      const layoutOrder = [
+        ...generatedSections.map(s => s.id),
+        ...generatedTables.map(t => t.id)
+      ];
+      
+      // Create legacy structure for backward compatibility
       const structure: Structure = {
         sections: action.payload.sections,
         tables: action.payload.tables,
@@ -119,6 +150,12 @@ export function extractReducer(state: ExtractState, action: ExtractAction): Extr
       return {
         ...state,
         isExtracting: false,
+        generatedElements: {
+          sections: generatedSections,
+          tables: generatedTables
+        },
+        userElements: [],
+        layoutOrder,
         sections: action.payload.sections,
         tables: action.payload.tables,
         structure,
@@ -129,29 +166,127 @@ export function extractReducer(state: ExtractState, action: ExtractAction): Extr
       };
 
     case "SET_STRUCTURE":
+      // Handle both new (SeparatedStructure) and old (Structure) formats
+      let separatedStruct: SeparatedStructure;
+      
+      if (isSeparatedStructure(action.payload)) {
+        // Already in new format
+        separatedStruct = action.payload;
+      } else if (isLegacyStructure(action.payload)) {
+        // Migrate from old format
+        separatedStruct = migrateToSeparatedStructure(action.payload);
+      } else {
+        // Fallback: try to extract what we can
+        separatedStruct = {
+          generated: { sections: [], tables: [] },
+          user: { elements: [] },
+          layout: [],
+          meta: action.payload.meta || {}
+        };
+      }
+      
       const newSectionMap = new Map<string, Section>();
       const newTableMap = new Map<string, Table>();
       
-      action.payload.sections.forEach((section: Section) => {
+      separatedStruct.generated.sections.forEach((section: Section) => {
         newSectionMap.set(section.id, section);
       });
       
-      action.payload.tables.forEach((table: Table) => {
+      separatedStruct.generated.tables.forEach((table: Table) => {
         newTableMap.set(table.id, table);
       });
       
+      // Build legacy structure for backward compatibility
+      const legacyStructure: Structure = {
+        sections: separatedStruct.generated.sections,
+        tables: separatedStruct.generated.tables,
+        meta: separatedStruct.meta
+      };
+      
       return {
         ...state,
-        structure: action.payload,
-        sections: action.payload.sections,
-        tables: action.payload.tables,
-        meta: action.payload.meta,
+        generatedElements: separatedStruct.generated,
+        userElements: separatedStruct.user.elements,
+        layoutOrder: separatedStruct.layout,
+        structure: legacyStructure,
+        sections: separatedStruct.generated.sections,
+        tables: separatedStruct.generated.tables,
+        meta: separatedStruct.meta,
         sectionMap: newSectionMap,
         tableMap: newTableMap,
       };
+    
+    case "SET_SEPARATED_STRUCTURE":
+      const sepSectionMap = new Map<string, Section>();
+      const sepTableMap = new Map<string, Table>();
+      
+      action.payload.generated.sections.forEach((section: Section) => {
+        sepSectionMap.set(section.id, section);
+      });
+      
+      action.payload.generated.tables.forEach((table: Table) => {
+        sepTableMap.set(table.id, table);
+      });
+      
+      // Build legacy structure for backward compatibility
+      const legacyStruct: Structure = {
+        sections: action.payload.generated.sections,
+        tables: action.payload.generated.tables,
+        meta: action.payload.meta
+      };
+      
+      return {
+        ...state,
+        generatedElements: action.payload.generated,
+        userElements: action.payload.user.elements,
+        layoutOrder: action.payload.layout,
+        structure: legacyStruct,
+        sections: action.payload.generated.sections,
+        tables: action.payload.generated.tables,
+        meta: action.payload.meta,
+        sectionMap: sepSectionMap,
+        tableMap: sepTableMap,
+      };
+    
+    case "ADD_USER_ELEMENT":
+      return {
+        ...state,
+        userElements: [...state.userElements, action.payload],
+        layoutOrder: [...state.layoutOrder, action.payload.id],
+      };
+    
+    case "UPDATE_USER_ELEMENT":
+      return {
+        ...state,
+        userElements: state.userElements.map(el =>
+          el.id === action.payload.id ? action.payload.element : el
+        ),
+      };
+    
+    case "DELETE_USER_ELEMENT":
+      // Guard: Cannot delete generated content
+      guardGeneratedContent(action.payload, "delete");
+      
+      return {
+        ...state,
+        userElements: state.userElements.filter(el => el.id !== action.payload),
+        layoutOrder: state.layoutOrder.filter(id => id !== action.payload),
+      };
+    
+    case "REORDER_LAYOUT":
+      return {
+        ...state,
+        layoutOrder: action.payload,
+      };
 
     case "UPDATE_SECTION":
+      // Guard: Cannot update generated content
+      guardGeneratedContent(action.payload.id, "update");
+      
       const updatedSections = state.sections.map((s) =>
+        s.id === action.payload.id ? action.payload.section : s
+      );
+      const updatedGeneratedSections = state.generatedElements.sections.map((s) =>
         s.id === action.payload.id ? action.payload.section : s
       );
       const updatedSectionMap = new Map(state.sectionMap);
@@ -159,6 +294,10 @@ export function extractReducer(state: ExtractState, action: ExtractAction): Extr
       
       return {
         ...state,
+        generatedElements: {
+          ...state.generatedElements,
+          sections: updatedGeneratedSections
+        },
         sections: updatedSections,
         sectionMap: updatedSectionMap,
         structure: state.structure
@@ -170,7 +309,13 @@ export function extractReducer(state: ExtractState, action: ExtractAction): Extr
       };
 
     case "UPDATE_TABLE":
+      // Guard: Cannot update generated content
+      guardGeneratedContent(action.payload.id, "update");
+      
       const updatedTables = state.tables.map((t) =>
+        t.id === action.payload.id ? action.payload.table : t
+      );
+      const updatedGeneratedTables = state.generatedElements.tables.map((t) =>
         t.id === action.payload.id ? action.payload.table : t
       );
       const updatedTableMap = new Map(state.tableMap);
@@ -178,6 +323,10 @@ export function extractReducer(state: ExtractState, action: ExtractAction): Extr
       
       return {
         ...state,
+        generatedElements: {
+          ...state.generatedElements,
+          tables: updatedGeneratedTables
+        },
         tables: updatedTables,
         tableMap: updatedTableMap,
         structure: state.structure

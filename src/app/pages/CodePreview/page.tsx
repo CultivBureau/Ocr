@@ -15,9 +15,22 @@ import PreviewRenderer from "../../components/PreviewRenderer";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import CustomizationPanel, { PanelContext } from "../../components/CustomizationPanel";
 import CreateTableModal from "../../components/CreateTableModal";
+import AddAirplaneModal, { FlightData } from "../../components/AddAirplaneModal";
+import EditFlightModal from "../../components/EditFlightModal";
+import EditAirplaneSectionModal from "../../components/EditAirplaneSectionModal";
 import { getElementInfo } from "../../utils/jsxParser";
 import { addSection, addNewTable, updateTableCell, updateTableColumnHeader } from "../../utils/codeManipulator";
 import { extractAllTablesFromDOM, updateCodeWithTableData } from "../../utils/extractTableData";
+import { 
+  findAirplaneSection, 
+  updateFlightInComponent, 
+  addFlightToComponent, 
+  removeFlightFromComponent,
+  removeAirplaneSection,
+  updateAirplaneSectionProps,
+  extractFlightsFromComponent
+} from "../../utils/airplaneSectionManipulator";
+import { guardGeneratedContent } from "../../utils/contentGuards";
 import { isAuthenticated } from "../../services/AuthApi";
 import { saveDocument, updateDocument, getDocument } from "../../services/HistoryApi";
 import ProtectedRoute from "../../components/ProtectedRoute";
@@ -111,8 +124,466 @@ function CodePageContent() {
   const [currentVersion, setCurrentVersion] = useState<number>(1);
   const [totalVersions, setTotalVersions] = useState<number>(1);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showMenuDropdown, setShowMenuDropdown] = useState(false);
+  const [showAddAirplaneModal, setShowAddAirplaneModal] = useState(false);
+  const [editingAirplaneId, setEditingAirplaneId] = useState<string | null>(null);
+  const [editingFlightIndex, setEditingFlightIndex] = useState<number | null>(null);
+  const [showEditFlightModal, setShowEditFlightModal] = useState(false);
+  const [showEditSectionModal, setShowEditSectionModal] = useState(false);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const codeRef = useRef<string>(code);
+  
+  // Event delegation for airplane section actions
+  useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+    
+    const handleAirplaneSectionClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // Find the button that was clicked (or its parent button)
+      const button = target.closest('button[data-action]') as HTMLButtonElement;
+      if (!button) return;
+      
+      const action = button.getAttribute('data-action');
+      const sectionId = button.getAttribute('data-airplane-section-id');
+      const flightIndexStr = button.getAttribute('data-flight-index');
+      
+      // Verify we have required attributes
+      if (!action || !sectionId) return;
+      
+      // CRITICAL: Verify ID starts with user_airplane_ to prevent modifying generated content
+      if (!sectionId.startsWith('user_airplane_')) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`Attempted to ${action} on non-user airplane section: ${sectionId}`);
+        }
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+      
+      // Prevent default and stop propagation
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Route to appropriate handler
+      switch (action) {
+        case 'edit-flight': {
+          const flightIndex = flightIndexStr ? parseInt(flightIndexStr, 10) : null;
+          if (flightIndex === null || isNaN(flightIndex)) {
+            console.error('Invalid flight index for edit-flight action');
+            return;
+          }
+          setEditingAirplaneId(sectionId);
+          setEditingFlightIndex(flightIndex);
+          setShowEditFlightModal(true);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Opening edit flight modal for section ${sectionId}, flight ${flightIndex}`);
+          }
+          break;
+        }
+        case 'remove-flight': {
+          const flightIndex = flightIndexStr ? parseInt(flightIndexStr, 10) : null;
+          if (flightIndex === null || isNaN(flightIndex)) {
+            console.error('Invalid flight index for remove-flight action');
+            return;
+          }
+          handleRemoveFlight(sectionId, flightIndex);
+          break;
+        }
+        case 'add-flight': {
+          handleAddFlight(sectionId);
+          break;
+        }
+        case 'edit-section': {
+          setEditingAirplaneId(sectionId);
+          setEditingFlightIndex(null);
+          setShowEditSectionModal(true);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Opening edit section modal for section ${sectionId}`);
+          }
+          break;
+        }
+        case 'delete-section': {
+          handleDeleteSection(sectionId);
+          break;
+        }
+        default:
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`Unknown airplane section action: ${action}`);
+          }
+      }
+    };
+    
+    container.addEventListener('click', handleAirplaneSectionClick);
+    
+    return () => {
+      container.removeEventListener('click', handleAirplaneSectionClick);
+    };
+  }, [code]);
+  
+  // Handler functions for airplane section actions
+  const handleRemoveFlight = useCallback((id: string, flightIndex: number) => {
+    try {
+      // CRITICAL: Verify ID prefix - this is the primary isolation guard
+      if (!id.startsWith('user_airplane_')) {
+        const errorMsg = `SECURITY: Attempted to remove flight from non-user airplane section: ${id}. Only user_airplane_* sections can be modified.`;
+        console.error(errorMsg);
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+      
+      // Additional guard using contentGuards utility
+      guardGeneratedContent(id, 'remove flight from');
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[AIRPLANE CRUD] Removing flight ${flightIndex} from airplane section ${id}`);
+        console.log(`[ISOLATION CHECK] ID prefix verified: user_airplane_`);
+      }
+      
+      const section = findAirplaneSection(codeRef.current, id);
+      if (!section) {
+        alert('Airplane section not found');
+        return;
+      }
+      
+      // Log what we're about to modify (for debugging)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[AIRPLANE CRUD] Found section at index ${section.startIndex}-${section.endIndex}`);
+        console.log(`[ISOLATION CHECK] Component contains ID: ${section.component.includes(id)}`);
+      }
+      
+      const updatedComponent = removeFlightFromComponent(section.component, flightIndex);
+      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
+        updatedComponent + 
+        codeRef.current.substring(section.endIndex);
+      
+      // Verify the updated code still doesn't contain any generated table deletions
+      if (process.env.NODE_ENV === 'development') {
+        const originalTableCount = (codeRef.current.match(/<DynamicTable/g) || []).length;
+        const updatedTableCount = (updatedCode.match(/<DynamicTable/g) || []).length;
+        if (originalTableCount !== updatedTableCount) {
+          console.warn(`[ISOLATION WARNING] Table count changed: ${originalTableCount} -> ${updatedTableCount}`);
+        } else {
+          console.log(`[ISOLATION CHECK] Table count preserved: ${originalTableCount}`);
+        }
+      }
+      
+      setCode(updatedCode);
+    } catch (error) {
+      console.error('[AIRPLANE CRUD ERROR] Error removing flight:', error);
+      if (error instanceof Error && error.message.includes('generated content')) {
+        alert('Cannot modify generated content. This operation is blocked for security.');
+      } else {
+        alert(error instanceof Error ? error.message : 'Failed to remove flight');
+      }
+    }
+  }, []);
+  
+  const handleAddFlight = useCallback((id: string) => {
+    try {
+      // CRITICAL: Verify ID prefix
+      if (!id.startsWith('user_airplane_')) {
+        const errorMsg = `SECURITY: Attempted to add flight to non-user airplane section: ${id}`;
+        console.error(errorMsg);
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+      
+      guardGeneratedContent(id, 'add flight to');
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[AIRPLANE CRUD] Adding flight to airplane section ${id}`);
+      }
+      
+      const section = findAirplaneSection(codeRef.current, id);
+      if (!section) {
+        alert('Airplane section not found');
+        return;
+      }
+      
+      const newFlight: FlightData = {
+        date: new Date().toISOString().split('T')[0],
+        fromAirport: "",
+        toAirport: "",
+        travelers: { adults: 1, children: 0, infants: 0 },
+        luggage: "20 كيلو"
+      };
+      const updatedComponent = addFlightToComponent(section.component, newFlight);
+      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
+        updatedComponent + 
+        codeRef.current.substring(section.endIndex);
+      setCode(updatedCode);
+    } catch (error) {
+      console.error('[AIRPLANE CRUD ERROR] Error adding flight:', error);
+      if (error instanceof Error && error.message.includes('generated content')) {
+        alert('Cannot modify generated content. This operation is blocked for security.');
+      } else {
+        alert(error instanceof Error ? error.message : 'Failed to add flight');
+      }
+    }
+  }, []);
+  
+  const handleDeleteSection = useCallback((id: string) => {
+    // CRITICAL: Verify ID prefix - primary isolation guard
+    if (!id.startsWith('user_airplane_')) {
+      const errorMsg = `SECURITY: Attempted to delete non-user airplane section: ${id}`;
+      console.error(errorMsg);
+      alert('Cannot delete generated content. Only user-created sections can be deleted.');
+      return;
+    }
+    
+    // Additional guard
+    try {
+      guardGeneratedContent(id, 'delete');
+    } catch (error) {
+      console.error('[ISOLATION GUARD]', error);
+      alert('Cannot delete generated content. This operation is blocked.');
+      return;
+    }
+    
+    if (!confirm('Are you sure you want to delete this airplane section?')) {
+      return;
+    }
+    
+    try {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[AIRPLANE CRUD] Deleting airplane section ${id}`);
+        console.log(`[ISOLATION CHECK] ID prefix verified: user_airplane_`);
+        
+        // Count tables before deletion
+        const originalTableCount = (codeRef.current.match(/<DynamicTable/g) || []).length;
+        const originalSectionCount = (codeRef.current.match(/<AirplaneSection/g) || []).length;
+        console.log(`[ISOLATION CHECK] Before deletion - Tables: ${originalTableCount}, AirplaneSections: ${originalSectionCount}`);
+      }
+      
+      const section = findAirplaneSection(codeRef.current, id);
+      if (!section) {
+        alert('Airplane section not found');
+        return;
+      }
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[AIRPLANE CRUD] Found section to delete at index ${section.startIndex}-${section.endIndex}`);
+        console.log(`[ISOLATION CHECK] Component preview: ${section.component.substring(0, 100)}...`);
+      }
+      
+      const updatedCode = removeAirplaneSection(codeRef.current, id);
+      
+      // Verify isolation after deletion
+      if (process.env.NODE_ENV === 'development') {
+        const updatedTableCount = (updatedCode.match(/<DynamicTable/g) || []).length;
+        const updatedSectionCount = (updatedCode.match(/<AirplaneSection/g) || []).length;
+        console.log(`[ISOLATION CHECK] After deletion - Tables: ${updatedTableCount}, AirplaneSections: ${updatedSectionCount}`);
+        
+        if (updatedTableCount !== (codeRef.current.match(/<DynamicTable/g) || []).length) {
+          console.error(`[ISOLATION ERROR] Table count changed during airplane section deletion!`);
+          console.error(`Original: ${(codeRef.current.match(/<DynamicTable/g) || []).length}, Updated: ${updatedTableCount}`);
+          alert('ERROR: Deletion affected generated tables. Operation cancelled.');
+          return;
+        }
+        
+        if (updatedSectionCount !== (codeRef.current.match(/<AirplaneSection/g) || []).length - 1) {
+          console.warn(`[ISOLATION WARNING] AirplaneSection count mismatch. Expected: ${(codeRef.current.match(/<AirplaneSection/g) || []).length - 1}, Got: ${updatedSectionCount}`);
+        }
+      }
+      
+      setCode(updatedCode);
+    } catch (error) {
+      console.error('[AIRPLANE CRUD ERROR] Error deleting section:', error);
+      if (error instanceof Error && error.message.includes('generated content')) {
+        alert('Cannot delete generated content. This operation is blocked for security.');
+      } else {
+        alert(error instanceof Error ? error.message : 'Failed to delete section');
+      }
+    }
+  }, []);
+  
+  // Handler for editing a flight
+  const handleEditFlightSubmit = useCallback((updatedFlight: FlightData) => {
+    if (!editingAirplaneId || editingFlightIndex === null) {
+      return;
+    }
+    
+    try {
+      // CRITICAL: Verify ID prefix
+      if (!editingAirplaneId.startsWith('user_airplane_')) {
+        const errorMsg = `SECURITY: Attempted to edit flight in non-user airplane section: ${editingAirplaneId}`;
+        console.error(errorMsg);
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+      
+      guardGeneratedContent(editingAirplaneId, 'edit flight in');
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[AIRPLANE CRUD] Updating flight ${editingFlightIndex} in airplane section ${editingAirplaneId}`);
+      }
+      
+      const section = findAirplaneSection(codeRef.current, editingAirplaneId);
+      if (!section) {
+        alert('Airplane section not found');
+        return;
+      }
+      
+      const updatedComponent = updateFlightInComponent(section.component, editingFlightIndex, updatedFlight);
+      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
+        updatedComponent + 
+        codeRef.current.substring(section.endIndex);
+      setCode(updatedCode);
+      
+      setShowEditFlightModal(false);
+      setEditingAirplaneId(null);
+      setEditingFlightIndex(null);
+    } catch (error) {
+      console.error('[AIRPLANE CRUD ERROR] Error updating flight:', error);
+      if (error instanceof Error && error.message.includes('generated content')) {
+        alert('Cannot modify generated content. This operation is blocked for security.');
+      } else {
+        alert(error instanceof Error ? error.message : 'Failed to update flight');
+      }
+    }
+  }, [editingAirplaneId, editingFlightIndex]);
+  
+  // Handler for editing section properties
+  const handleEditSectionSubmit = useCallback((props: {
+    title?: string;
+    showTitle?: boolean;
+    noticeMessage?: string;
+    showNotice?: boolean;
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+  }) => {
+    if (!editingAirplaneId) {
+      return;
+    }
+    
+    try {
+      // CRITICAL: Verify ID prefix
+      if (!editingAirplaneId.startsWith('user_airplane_')) {
+        const errorMsg = `SECURITY: Attempted to edit non-user airplane section: ${editingAirplaneId}`;
+        console.error(errorMsg);
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+      
+      guardGeneratedContent(editingAirplaneId, 'edit');
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[AIRPLANE CRUD] Updating section properties for airplane section ${editingAirplaneId}`);
+      }
+      
+      const section = findAirplaneSection(codeRef.current, editingAirplaneId);
+      if (!section) {
+        alert('Airplane section not found');
+        return;
+      }
+      
+      const updatedComponent = updateAirplaneSectionProps(section.component, props);
+      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
+        updatedComponent + 
+        codeRef.current.substring(section.endIndex);
+      setCode(updatedCode);
+      
+      setShowEditSectionModal(false);
+      setEditingAirplaneId(null);
+    } catch (error) {
+      console.error('[AIRPLANE CRUD ERROR] Error updating section:', error);
+      if (error instanceof Error && error.message.includes('generated content')) {
+        alert('Cannot modify generated content. This operation is blocked for security.');
+      } else {
+        alert(error instanceof Error ? error.message : 'Failed to update section');
+      }
+    }
+  }, [editingAirplaneId]);
+  
+  // Get initial flight data for edit modal
+  const getInitialFlightData = useCallback((): FlightData | null => {
+    if (!editingAirplaneId || editingFlightIndex === null) {
+      return null;
+    }
+    
+    try {
+      const section = findAirplaneSection(codeRef.current, editingAirplaneId);
+      if (!section) {
+        return null;
+      }
+      
+      const flights = extractFlightsFromComponent(section.component);
+      if (editingFlightIndex >= 0 && editingFlightIndex < flights.length) {
+        return flights[editingFlightIndex];
+      }
+    } catch (error) {
+      console.error('Error extracting flight data:', error);
+    }
+    
+    return null;
+  }, [editingAirplaneId, editingFlightIndex]);
+  
+  // Get initial section data for edit modal
+  const getInitialSectionData = useCallback((): {
+    title?: string;
+    showTitle?: boolean;
+    noticeMessage?: string;
+    showNotice?: boolean;
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+  } | null => {
+    if (!editingAirplaneId) {
+      return null;
+    }
+    
+    try {
+      const section = findAirplaneSection(codeRef.current, editingAirplaneId);
+      if (!section) {
+        return null;
+      }
+      
+      const component = section.component;
+      const data: any = {};
+      
+      // Extract title
+      const titleMatch = component.match(/title=["']([^"']*)["']/);
+      if (titleMatch) {
+        data.title = titleMatch[1].replace(/\\"/g, '"');
+      }
+      
+      // Extract showTitle
+      const showTitleMatch = component.match(/showTitle=\{?([^}]*)\}?/);
+      if (showTitleMatch) {
+        data.showTitle = showTitleMatch[1].trim() === 'true';
+      }
+      
+      // Extract noticeMessage
+      const noticeMatch = component.match(/noticeMessage=["']([^"']*)["']/);
+      if (noticeMatch) {
+        data.noticeMessage = noticeMatch[1].replace(/\\"/g, '"');
+      }
+      
+      // Extract showNotice
+      const showNoticeMatch = component.match(/showNotice=\{?([^}]*)\}?/);
+      if (showNoticeMatch) {
+        data.showNotice = showNoticeMatch[1].trim() === 'true';
+      }
+      
+      // Extract direction
+      const directionMatch = component.match(/direction=["']([^"']*)["']/);
+      if (directionMatch) {
+        data.direction = directionMatch[1] as "rtl" | "ltr";
+      }
+      
+      // Extract language
+      const languageMatch = component.match(/language=["']([^"']*)["']/);
+      if (languageMatch) {
+        data.language = languageMatch[1] as "ar" | "en";
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error extracting section data:', error);
+    }
+    
+    return null;
+  }, [editingAirplaneId]);
   
   // Keep code ref updated
   useEffect(() => {
@@ -564,6 +1035,216 @@ function CodePageContent() {
     }
   }, []);
 
+  const handleAddAirplaneClick = useCallback(() => {
+    setShowAddAirplaneModal(true);
+    setShowMenuDropdown(false);
+  }, []);
+
+  const handleAddAirplaneSubmit = useCallback((data: {
+    title?: string;
+    showTitle?: boolean;
+    noticeMessage?: string;
+    showNotice?: boolean;
+    flights: FlightData[];
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+  }) => {
+    // Generate unique ID for user element
+    const elementId = `user_airplane_${Date.now()}`;
+    
+    let updatedCode = code;
+    
+    // Check if import already exists, if not add it
+    if (!updatedCode.includes("import AirplaneSection")) {
+      // Find the last import statement or function declaration
+      const importMatch = updatedCode.match(/^(\s*import[^;]+;[\s\S]*?)(const|export|function)/m);
+      if (importMatch) {
+        updatedCode = updatedCode.replace(importMatch[1], 
+          importMatch[1] + `\nimport AirplaneSection from '@/app/Templates/airplaneSection';\n`);
+      } else {
+        // Add at the beginning if no imports found
+        updatedCode = `import AirplaneSection from '@/app/Templates/airplaneSection';\n` + updatedCode;
+      }
+    }
+    
+    // Format flights data for JSX
+    const flightsString = data.flights.map(flight => `{
+            date: "${flight.date}",
+            fromAirport: "${flight.fromAirport.replace(/"/g, '\\"')}",
+            toAirport: "${flight.toAirport.replace(/"/g, '\\"')}",
+            travelers: { adults: ${flight.travelers.adults}, children: ${flight.travelers.children}, infants: ${flight.travelers.infants} },
+            luggage: "${flight.luggage.replace(/"/g, '\\"')}"
+          }`).join(',\n          ');
+    
+    // Create the component JSX
+    const airplaneComponent = `        <AirplaneSection
+          id="${elementId}"
+          editable={true}
+          flights={[\n          ${flightsString}\n          ]}
+          ${data.title ? `title="${data.title.replace(/"/g, '\\"')}"` : ''}
+          showTitle={${data.showTitle !== false}}
+          ${data.noticeMessage ? `noticeMessage="${data.noticeMessage.replace(/"/g, '\\"')}"` : ''}
+          showNotice={${data.showNotice !== false}}
+          direction="${data.direction || 'rtl'}"
+          language="${data.language || 'ar'}"
+        />`;
+    
+    // Try to find header image to insert after it
+    // Pattern 1: Look for img tag with header in src/alt (most common pattern)
+    let insertionPoint = -1;
+    let indent = '        ';
+    
+    // Pattern 1: After header image tag (happylifeHeader, headerImage, etc.)
+    const headerImagePatterns = [
+      /(<img[^>]*(?:src=["'][^"']*(?:header|Header|happylifeHeader)[^"']*["']|alt=["'][^"']*(?:header|Header)[^"']*["'])[^>]*\/?>)/i,
+      /(<img[^>]*\/?>)/  // Any img tag as fallback
+    ];
+    
+    for (const pattern of headerImagePatterns) {
+      const headerImageMatch = updatedCode.match(pattern);
+      if (headerImageMatch && headerImageMatch.index !== undefined) {
+        insertionPoint = headerImageMatch.index + headerImageMatch[0].length;
+        // Get the indentation from the line after the image
+        const afterImage = updatedCode.substring(insertionPoint);
+        const nextLineMatch = afterImage.match(/^\s*\n(\s*)/);
+        if (nextLineMatch && nextLineMatch[1]) {
+          indent = nextLineMatch[1];
+        }
+        break;
+      }
+    }
+    
+    // Pattern 2: If no image found, look for header div or comment
+    if (insertionPoint === -1) {
+      const headerCommentPattern = /(\{\/\*.*Header.*\*\/[\s\S]*?<\/div>[\s\S]*?\n)/i;
+      const headerCommentMatch = updatedCode.match(headerCommentPattern);
+      if (headerCommentMatch && headerCommentMatch.index !== undefined) {
+        insertionPoint = headerCommentMatch.index + headerCommentMatch[0].length;
+        indent = '        ';
+      }
+    }
+    
+    // Pattern 3: Look for BaseTemplate children area (after opening tag)
+    if (insertionPoint === -1) {
+      const baseTemplatePattern = /<BaseTemplate[^>]*>\s*\n(\s*)/;
+      const baseTemplateMatch = updatedCode.match(baseTemplatePattern);
+      if (baseTemplateMatch && baseTemplateMatch.index !== undefined) {
+        insertionPoint = baseTemplateMatch.index + baseTemplateMatch[0].length;
+        indent = baseTemplateMatch[1] || '        ';
+      }
+    }
+    
+    // Pattern 4: Find first main content div after return statement
+    if (insertionPoint === -1) {
+      const returnMatch = updatedCode.match(/return\s*\(/);
+      if (returnMatch && returnMatch.index !== undefined) {
+        const afterReturn = updatedCode.substring(returnMatch.index + returnMatch[0].length);
+        // Find first div with content/main/px classes (typical content area)
+        const contentDivMatch = afterReturn.match(/(\s*<div[^>]*className=["'][^"']*(?:content|main|px-|py-|w-\[794px\])[^"']*["'][^>]*>)/);
+        if (contentDivMatch && contentDivMatch.index !== undefined) {
+          insertionPoint = returnMatch.index + returnMatch[0].length + contentDivMatch.index + contentDivMatch[0].length;
+          indent = '        ';
+        }
+      }
+    }
+    
+    if (insertionPoint !== -1) {
+      // Insert after header image/div
+      const before = updatedCode.substring(0, insertionPoint);
+      const after = updatedCode.substring(insertionPoint);
+      // Add proper newline and indent, then insert component
+      updatedCode = before + '\n' + indent + airplaneComponent + after;
+    } else {
+      // Fallback: Insert after the return statement's first div
+      const returnMatch = updatedCode.match(/(return\s*\([\s\S]*?<div[^>]*>[\s\S]*?<\/div>[\s\S]*?\n)/);
+      if (returnMatch && returnMatch.index !== undefined) {
+        insertionPoint = returnMatch.index + returnMatch[0].length;
+        updatedCode = updatedCode.substring(0, insertionPoint) + 
+          indent + airplaneComponent + '\n' + 
+          updatedCode.substring(insertionPoint);
+      } else {
+        // Last resort: append before the last closing div
+        const lastDivIndex = updatedCode.lastIndexOf('</div>');
+        if (lastDivIndex !== -1) {
+          updatedCode = updatedCode.slice(0, lastDivIndex) + 
+            `\n        ${airplaneComponent}\n      ` + 
+            updatedCode.slice(lastDivIndex);
+        }
+      }
+    }
+    
+    setCode(updatedCode);
+    setShowAddAirplaneModal(false);
+  }, [code]);
+
+  const handleAddHotel = useCallback(() => {
+    // Generate unique ID for user element
+    const elementId = `user_hotel_${Date.now()}`;
+    
+    let updatedCode = code;
+    
+    // Check if import already exists, if not add it
+    if (!updatedCode.includes("import HotelsSection")) {
+      // Find the last import statement or function declaration
+      const importMatch = updatedCode.match(/^(\s*import[^;]+;[\s\S]*?)(const|export|function)/m);
+      if (importMatch) {
+        updatedCode = updatedCode.replace(importMatch[1], 
+          importMatch[1] + `\nimport HotelsSection from '@/app/Templates/HotelsSection';\n`);
+      } else {
+        // Add at the beginning if no imports found
+        updatedCode = `import HotelsSection from '@/app/Templates/HotelsSection';\n` + updatedCode;
+      }
+    }
+    
+    // Create the component JSX
+    const hotelComponent = `        <HotelsSection
+          id="${elementId}"
+          editable={true}
+          hotels={[
+            {
+              city: "المدينة",
+              nights: 1,
+              cityBadge: "المدينة الاولى",
+              hotelName: "اسم الفندق",
+              hasDetailsLink: false,
+              roomDescription: {
+                includesAll: "شامل الافطار",
+                bedType: "سرير اضافي/ عدد: 2",
+                roomType: "غرفة"
+              },
+              checkInDate: "${new Date().toISOString().split('T')[0]}",
+              checkOutDate: "${new Date(Date.now() + 86400000).toISOString().split('T')[0]}",
+              dayInfo: {
+                checkInDay: "اليوم الاول",
+                checkOutDay: "اليوم الثاني"
+              }
+            }
+          ]}
+          title="حجز الفنادق"
+          showTitle={true}
+          direction="rtl"
+          language="ar"
+        />`;
+    
+    // Find the return statement and insert before the last closing tag
+    const returnMatch = updatedCode.match(/(return\s*\([\s\S]*?)(<\/div>)/);
+    if (returnMatch) {
+      updatedCode = updatedCode.replace(returnMatch[0], 
+        returnMatch[1] + `\n${hotelComponent}\n      ` + returnMatch[2]);
+    } else {
+      // Fallback: append before the last closing brace
+      const lastDivIndex = updatedCode.lastIndexOf('</div>');
+      if (lastDivIndex !== -1) {
+        updatedCode = updatedCode.slice(0, lastDivIndex) + 
+          `\n${hotelComponent}\n      ` + 
+          updatedCode.slice(lastDivIndex);
+      }
+    }
+    
+    setCode(updatedCode);
+    setShowMenuDropdown(false);
+  }, [code]);
+
   const handleSave = useCallback(async () => {
     if (!isAuthenticated()) {
       alert("Please login to save documents");
@@ -716,86 +1397,168 @@ function CodePageContent() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
-            {isAuthenticated() && documentId && totalVersions > 1 && (
+            {/* Menu Dropdown */}
+            <div className="relative">
               <button
-                onClick={() => setShowVersionHistory(true)}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm"
-                title="View version history"
+                onClick={() => setShowMenuDropdown(!showMenuDropdown)}
+                className="px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-lg font-medium hover:from-gray-800 hover:to-gray-900 transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm"
+                title="Menu"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
-                Versions
+                Menu
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
-            )}
-            {isAuthenticated() && (
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className={`px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm ${
-                  saveStatus === "success"
-                    ? "bg-green-500 text-white"
-                    : saveStatus === "error"
-                    ? "bg-red-500 text-white"
-                    : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {isSaving ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
-                  </>
-                ) : saveStatus === "success" ? (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Saved!
-                  </>
-                ) : saveStatus === "error" ? (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Failed
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                    </svg>
-                    Save
-                  </>
-                )}
-              </button>
-            )}
-            <button
-              onClick={handleExportCode}
-              className="px-4 py-2 bg-linear-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-cyan-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-              </svg>
-              Export Code
-            </button>
-            <button
-              onClick={handleExportPDF}
-              className="export-pdf-btn px-4 py-2 bg-linear-to-r from-[#A4C639] to-[#8FB02E] text-white rounded-lg font-medium hover:from-[#8FB02E] hover:to-[#7A9124] transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export PDF
-            </button>
+              
+              {showMenuDropdown && (
+                <>
+                  {/* Backdrop to close dropdown */}
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowMenuDropdown(false)}
+                  />
+                  {/* Dropdown Menu */}
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                    {/* Add Airplane */}
+                    <button
+                      onClick={handleAddAirplaneClick}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                      </svg>
+                      <span>Add Airplane</span>
+                    </button>
+                    
+                    {/* Add Hotel */}
+                    <button
+                      onClick={handleAddHotel}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.006 3.705a.75.75 0 00-.512-1.41L6 6.838V3a.75.75 0 00-.75-.75h-1.5A.75.75 0 003 3v4.93l-1.006.365a.75.75 0 00.512 1.41l16.5-6z" />
+                        <path fillRule="evenodd" d="M3.019 11.115L18 5.667V9.09l4.006 1.456a.75.75 0 11-.512 1.41l-.494-.18v8.475h.75a.75.75 0 010 1.5H2.25a.75.75 0 010-1.5H3v-9.129l.019-.007zM18 20.25v-9.565l1.5.545v9.02H18zm-9-6a.75.75 0 00-.75.75v4.5c0 .414.336.75.75.75h3a.75.75 0 00.75-.75V15a.75.75 0 00-.75-.75H9z" clipRule="evenodd" />
+                      </svg>
+                      <span>Add Hotel</span>
+                    </button>
+                    
+                    <div className="border-t border-gray-200 my-1"></div>
+                    
+                    {/* Export Code */}
+                    <button
+                      onClick={() => {
+                        handleExportCode();
+                        setShowMenuDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                      </svg>
+                      <span>Export Code</span>
+                    </button>
+                    
+                    {/* Export PDF */}
+                    <button
+                      onClick={() => {
+                        handleExportPDF();
+                        setShowMenuDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>Export PDF</span>
+                    </button>
+                    
+                    {/* Versions - only show if authenticated and has versions */}
+                    {isAuthenticated() && documentId && totalVersions > 1 && (
+                      <>
+                        <div className="border-t border-gray-200 my-1"></div>
+                        <button
+                          onClick={() => {
+                            setShowVersionHistory(true);
+                            setShowMenuDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors"
+                        >
+                          <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Versions</span>
+                          <span className="ml-auto px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-semibold">
+                            v{currentVersion}/{totalVersions}
+                          </span>
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* Save - only show if authenticated */}
+                    {isAuthenticated() && (
+                      <>
+                        <div className="border-t border-gray-200 my-1"></div>
+                        <button
+                          onClick={() => {
+                            handleSave();
+                            setShowMenuDropdown(false);
+                          }}
+                          disabled={isSaving}
+                          className={`w-full text-left px-4 py-2 text-sm flex items-center gap-3 transition-colors ${
+                            saveStatus === "success"
+                              ? "text-green-700 bg-green-50 hover:bg-green-100"
+                              : saveStatus === "error"
+                              ? "text-red-700 bg-red-50 hover:bg-red-100"
+                              : "text-purple-700 hover:bg-gray-100"
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {isSaving ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              <span>Saving...</span>
+                            </>
+                          ) : saveStatus === "success" ? (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              <span>Saved!</span>
+                            </>
+                          ) : saveStatus === "error" ? (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              <span>Failed</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                              </svg>
+                              <span>Save</span>
+                            </>
+                          )}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            
             <ToggleSwitch mode={mode} onChange={(next: Mode) => setMode(next)} />
           </div>
         </div>
       </div>
     </div>
-  ), [mode, handleExportCode, handleExportPDF, handleSave, sourceMetadata, isSaving, saveStatus]);
+  ), [mode, handleExportCode, handleExportPDF, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotel, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-cyan-50 via-blue-50 to-lime-50 text-gray-900">
@@ -920,6 +1683,36 @@ function CodePageContent() {
           onRestore={handleRestore}
         />
       )}
+
+      {/* Add Airplane Modal */}
+      <AddAirplaneModal
+        isOpen={showAddAirplaneModal}
+        onClose={() => setShowAddAirplaneModal(false)}
+        onSubmit={handleAddAirplaneSubmit}
+      />
+      
+      {/* Edit Flight Modal */}
+      <EditFlightModal
+        isOpen={showEditFlightModal}
+        onClose={() => {
+          setShowEditFlightModal(false);
+          setEditingAirplaneId(null);
+          setEditingFlightIndex(null);
+        }}
+        onSubmit={handleEditFlightSubmit}
+        initialFlight={getInitialFlightData()}
+      />
+      
+      {/* Edit Airplane Section Modal */}
+      <EditAirplaneSectionModal
+        isOpen={showEditSectionModal}
+        onClose={() => {
+          setShowEditSectionModal(false);
+          setEditingAirplaneId(null);
+        }}
+        onSubmit={handleEditSectionSubmit}
+        initialData={getInitialSectionData()}
+      />
 
       <style jsx>{`
         @keyframes slide-in {

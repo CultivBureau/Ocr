@@ -59,6 +59,7 @@ export interface AirplaneSectionProps {
   onRemoveFlight?: (flightIndex: number) => void;
   onAddFlight?: () => void;
   onEditSection?: () => void;
+  onDeleteSection?: () => void;
   
   // Customization
   className?: string;
@@ -96,6 +97,7 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
   onRemoveFlight,
   onAddFlight,
   onEditSection,
+  onDeleteSection,
   className = "",
   style
 }) => {
@@ -195,16 +197,45 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
               </svg>
             </div>
           </div>
-          {editable && onEditSection && (
-            <button
-              onClick={onEditSection}
-              className={`absolute top-1/2 -translate-y-1/2 p-2.5 bg-[#4A5568] text-white rounded-full hover:bg-[#2D3748] transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 z-10 ${direction === 'rtl' ? 'right-0' : 'left-0'}`}
-              title={language === 'ar' ? 'تعديل القسم' : 'Edit Section'}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
+          {editable && (
+            <div className={`absolute top-1/2 -translate-y-1/2 flex gap-2 z-10 ${direction === 'rtl' ? 'right-0' : 'left-0'}`}>
+              <button
+                onClick={(e) => {
+                  // Support prop handler if provided (for backward compatibility)
+                  // Event delegation will handle this when rendered in preview
+                  if (onEditSection) {
+                    e.stopPropagation();
+                    onEditSection();
+                  }
+                }}
+                data-action="edit-section"
+                data-airplane-section-id={sectionIdValue}
+                className="p-2.5 bg-[#4A5568] text-white rounded-full hover:bg-[#2D3748] transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                title={language === 'ar' ? 'تعديل القسم' : 'Edit Section'}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button
+                onClick={(e) => {
+                  // Support prop handler if provided (for backward compatibility)
+                  // Event delegation will handle this when rendered in preview
+                  if (onDeleteSection) {
+                    e.stopPropagation();
+                    onDeleteSection();
+                  }
+                }}
+                data-action="delete-section"
+                data-airplane-section-id={sectionIdValue}
+                className="p-2.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                title={language === 'ar' ? 'حذف القسم' : 'Delete Section'}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -251,22 +282,40 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                 {editable && (
                     <td className="px-3 py-4 border-r-2 border-white/50">
                       <div className="flex flex-col gap-2 items-center">
-                      {onEditFlight && (
+                      <button
+                        onClick={(e) => {
+                          // Support prop handler if provided (for backward compatibility)
+                          // Event delegation will handle this when rendered in preview
+                          if (onEditFlight) {
+                            e.stopPropagation();
+                            onEditFlight(index);
+                          }
+                        }}
+                        data-action="edit-flight"
+                        data-airplane-section-id={sectionIdValue}
+                        data-flight-index={index}
+                        className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                        title={language === 'ar' ? 'تعديل' : 'Edit'}
+                      >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      {flights.length > 1 && (
                         <button
-                          onClick={() => onEditFlight(index)}
-                            className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
-                            title={language === 'ar' ? 'تعديل' : 'Edit'}
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                      )}
-                      {onRemoveFlight && flights.length > 1 && (
-                        <button
-                          onClick={() => onRemoveFlight(index)}
-                            className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
-                            title={language === 'ar' ? 'حذف' : 'Delete'}
+                          onClick={(e) => {
+                            // Support prop handler if provided (for backward compatibility)
+                            // Event delegation will handle this when rendered in preview
+                            if (onRemoveFlight) {
+                              e.stopPropagation();
+                              onRemoveFlight(index);
+                            }
+                          }}
+                          data-action="remove-flight"
+                          data-airplane-section-id={sectionIdValue}
+                          data-flight-index={index}
+                          className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                          title={language === 'ar' ? 'حذف' : 'Delete'}
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -327,12 +376,21 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                 </td>
               </tr>
             ))}
-            {editable && onAddFlight && (
+            {editable && (
                 <tr className="bg-gray-50 hover:bg-gray-100 transition-colors">
                   <td colSpan={editable ? 6 : 5} className="px-4 py-5 text-center">
                   <button
-                    onClick={onAddFlight}
-                      className="px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 text-sm md:text-base font-medium flex items-center gap-2 mx-auto shadow-md hover:shadow-lg hover:scale-105"
+                    onClick={(e) => {
+                      // Support prop handler if provided (for backward compatibility)
+                      // Event delegation will handle this when rendered in preview
+                      if (onAddFlight) {
+                        e.stopPropagation();
+                        onAddFlight();
+                      }
+                    }}
+                    data-action="add-flight"
+                    data-airplane-section-id={sectionIdValue}
+                    className="px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 text-sm md:text-base font-medium flex items-center gap-2 mx-auto shadow-md hover:shadow-lg hover:scale-105"
                   >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

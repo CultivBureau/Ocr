@@ -147,13 +147,17 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
       import('../Templates/baseTemplate').then(m => m.default).catch(() => null),
       import('../Templates/sectionTemplate').then(m => m.default).catch(() => null),
       import('../Templates/dynamicTableTemplate').then(m => m.default).catch(() => null),
-    ]).then(([BaseTemplate, SectionTemplate, DynamicTableTemplate]) => {
+      import('../Templates/airplaneSection').then(m => m.default).catch(() => null),
+      import('../Templates/HotelsSection').then(m => m.default).catch(() => null),
+    ]).then(([BaseTemplate, SectionTemplate, DynamicTableTemplate, AirplaneSection, HotelsSection]) => {
       if (!isMounted) return;
       
       const components: any = {};
       if (BaseTemplate) components.BaseTemplate = BaseTemplate;
       if (SectionTemplate) components.SectionTemplate = SectionTemplate;
       if (DynamicTableTemplate) components.DynamicTableTemplate = DynamicTableTemplate;
+      if (AirplaneSection) components.AirplaneSection = AirplaneSection;
+      if (HotelsSection) components.HotelsSection = HotelsSection;
       
       setTemplateComponents(components);
       setComponentsLoading(false);
@@ -177,6 +181,8 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
     setValue,
     Fragment: React.Fragment,
     ...(templateComponents || {}),
+    // Add global handlers for airplane section actions
+    __airplaneSectionHandlers: typeof window !== 'undefined' ? (window as any).__airplaneSectionHandlers : null,
   }), [setValue, templateComponents]);
 
   // Transform user code for noInline mode:
@@ -206,6 +212,47 @@ export default function PreviewRenderer({ code, values, setValue }: PreviewRende
     // Remove "use client" directive (not needed in react-live)
     src = src.replace(/^"use client";?\s*/gm, '');
     src = src.replace(/^'use client';?\s*/gm, '');
+    
+    // Inject handlers into AirplaneSection components with editable={true}
+    // Find AirplaneSection components and add handlers if editable
+    // Only do this if the component exists and has editable prop
+    // NOTE: Temporarily disabled to debug syntax errors - handlers will be added via props in future
+    // try {
+    //   src = src.replace(
+    //     /<AirplaneSection\s+([^>]*id=["']([^"']+)["'][^>]*editable=\{?true\}?[^>]*)(\/?)>/gi,
+    //     (match, attrs, id, selfClose) => {
+    //       // Validate ID exists
+    //       if (!id || id.trim() === '') {
+    //         return match; // Skip if no valid ID
+    //       }
+    //       
+    //       // Check if handlers are already present
+    //       if (attrs.includes('onEditFlight') || attrs.includes('onRemoveFlight')) {
+    //         return match;
+    //       }
+    //       
+    //       // Create handler functions - use arrow functions wrapped properly for react-live
+    //       // Escape the ID properly to prevent injection issues
+    //       const safeId = String(id).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'");
+    //       
+    //       // Use simpler handler pattern that react-live can handle
+    //       const handlerAttrs = ` onEditFlight={function(idx){var h=__airplaneSectionHandlers;if(h)h.onEditFlight("${safeId}",idx);}} onRemoveFlight={function(idx){var h=__airplaneSectionHandlers;if(h)h.onRemoveFlight("${safeId}",idx);}} onAddFlight={function(){var h=__airplaneSectionHandlers;if(h)h.onAddFlight("${safeId}");}} onEditSection={function(){var h=__airplaneSectionHandlers;if(h)h.onEditSection("${safeId}");}} onDeleteSection={function(){var h=__airplaneSectionHandlers;if(h)h.onDeleteSection("${safeId}");}}`;
+    //       
+    //       // Handle both self-closing and opening tags
+    //       if (selfClose === '/') {
+    //         // Self-closing tag: <AirplaneSection ... />
+    //         return `<AirplaneSection ${attrs.trim()}${handlerAttrs} />`;
+    //       } else {
+    //         // Opening tag: <AirplaneSection ... >
+    //         return `<AirplaneSection ${attrs.trim()}${handlerAttrs}>`;
+    //       }
+    //     }
+    //   );
+    // } catch (error) {
+    //   // If handler injection fails, log but don't break the code
+    //   console.warn('Failed to inject airplane section handlers:', error);
+    // }
+    
     // Clean up multiple blank lines
     src = src.replace(/\n\s*\n\s*\n+/g, '\n\n');
     src = src.trim();

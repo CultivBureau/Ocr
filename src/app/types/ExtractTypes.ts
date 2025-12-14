@@ -85,3 +85,93 @@ export interface FixJSXResponse {
   metadata: Record<string, any>;
 }
 
+// User-created content types
+export interface AirplaneSectionData {
+  flights?: {
+    date: string;
+    fromAirport: string;
+    toAirport: string;
+    travelers: {
+      adults: number;
+      children: number;
+      infants: number;
+    };
+    luggage: string;
+  }[];
+  title?: string;
+  showTitle?: boolean;
+  noticeMessage?: string;
+  showNotice?: boolean;
+  direction?: "rtl" | "ltr";
+  language?: "ar" | "en";
+  columnLabels?: {
+    date: string;
+    fromAirport: string;
+    toAirport: string;
+    travelers: string;
+    luggage: string;
+  };
+  [key: string]: any;
+}
+
+export interface HotelsSectionData {
+  hotels?: {
+    city: string;
+    nights: number;
+    cityBadge?: string;
+    hotelName: string;
+    hasDetailsLink?: boolean;
+    detailsLink?: string;
+    roomDescription: {
+      includesAll: string;
+      bedType: string;
+      roomType?: string;
+    };
+    checkInDate: string;
+    checkOutDate: string;
+    dayInfo: {
+      checkInDay: string;
+      checkOutDay: string;
+    };
+  }[];
+  title?: string;
+  showTitle?: boolean;
+  direction?: "rtl" | "ltr";
+  language?: "ar" | "en";
+  labels?: {
+    nights: string;
+    includes: string;
+    checkIn: string;
+    checkOut: string;
+    details: string;
+    count: string;
+  };
+  [key: string]: any;
+}
+
+export interface UserElement {
+  id: string;  // user_airplane_* or user_hotel_*
+  type: "airplane" | "hotel";
+  data: AirplaneSectionData | HotelsSectionData;
+  created_at?: string;
+  order?: number;
+}
+
+export interface SeparatedStructure {
+  generated: {
+    sections: Section[];
+    tables: Table[];
+  };
+  user: {
+    elements: UserElement[];
+  };
+  layout: string[];  // Order: ["gen_sec_1", "user_airplane_1", ...]
+  meta: {
+    generated_at?: string;
+    sections_count?: number;
+    tables_count?: number;
+    structure_version?: number;
+    [key: string]: any;
+  };
+}
+
