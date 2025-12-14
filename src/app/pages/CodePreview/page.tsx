@@ -2044,6 +2044,20 @@ function CodePageContent() {
                       <span>Add Hotel</span>
                     </button>
                     
+                    {/* New Table */}
+                    <button
+                      onClick={() => {
+                        setIsCreateTableModalOpen(true);
+                        setShowMenuDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span>New Table</span>
+                    </button>
+                    
                     <div className="border-t border-gray-200 my-1"></div>
                     
                     {/* Export Code */}
@@ -2222,18 +2236,6 @@ function CodePageContent() {
           </div>
         ) : (
           <div className="min-h-[70vh] bg-white rounded-xl shadow-lg p-8 max-w-full overflow-hidden relative">
-            {/* Create New Table Button */}
-            <button
-              onClick={() => setIsCreateTableModalOpen(true)}
-              className="absolute top-4 right-4 z-10 px-4 py-2 bg-gradient-to-r from-[#A4C639] to-[#8FB02E] text-white rounded-lg font-medium hover:from-[#8FB02E] hover:to-[#7A9124] transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm"
-              title="Create a new table"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              New Table
-            </button>
-
             {/* Success Toast */}
             {showTableCreatedToast && (
               <div className="fixed top-24 right-6 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in">
