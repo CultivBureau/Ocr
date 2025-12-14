@@ -124,50 +124,119 @@ export function extractHotelsFromComponent(component: string): Hotel[] {
     return [];
   }
   
-  const hotelsString = hotelsMatch[1];
+  const hotelsString = hotelsMatch[1].trim();
+  if (!hotelsString) {
+    return [];
+  }
+  
   const hotels: Hotel[] = [];
   
-  // Parse hotel objects from the string (handles multiline)
-  // Pattern: { city: "...", nights: 1, hotelName: "...", roomDescription: { ... }, checkInDate: "...", checkOutDate: "...", dayInfo: { ... } }
-  // Match across multiple lines using [\s\S]*?
-  const hotelRegex = /\{\s*city\s*:\s*["']((?:[^"']|\\")*)["'][\s\S]*?nights\s*:\s*(\d+)[\s\S]*?hotelName\s*:\s*["']((?:[^"']|\\")*)["'][\s\S]*?roomDescription\s*:\s*\{\s*includesAll\s*:\s*["']((?:[^"']|\\")*)["'][\s\S]*?bedType\s*:\s*["']((?:[^"']|\\")*)["'][\s\S]*?(?:roomType\s*:\s*["']((?:[^"']|\\")*)["'])?[\s\S]*?\}[\s\S]*?checkInDate\s*:\s*["']([^"']*)["'][\s\S]*?checkOutDate\s*:\s*["']([^"']*)["'][\s\S]*?dayInfo\s*:\s*\{\s*checkInDay\s*:\s*["']((?:[^"']|\\")*)["'][\s\S]*?checkOutDay\s*:\s*["']((?:[^"']|\\")*)["'][\s\S]*?\}[\s\S]*?\}/g;
+  // Split by hotel object boundaries - look for complete hotel objects
+  // Each hotel object starts with { and ends with }
+  // We need to handle nested objects (roomDescription, dayInfo)
+  let depth = 0;
+  let start = -1;
+  const hotelObjects: string[] = [];
   
-  let match;
-  while ((match = hotelRegex.exec(hotelsString)) !== null) {
-    const hotel: Hotel = {
-      city: match[1].replace(/\\"/g, '"'),
-      nights: parseInt(match[2], 10),
-      hotelName: match[3].replace(/\\"/g, '"'),
-      roomDescription: {
-        includesAll: match[4].replace(/\\"/g, '"'),
-        bedType: match[5].replace(/\\"/g, '"'),
-        roomType: match[6] ? match[6].replace(/\\"/g, '"') : undefined
-      },
-      checkInDate: match[7],
-      checkOutDate: match[8],
-      dayInfo: {
-        checkInDay: match[9].replace(/\\"/g, '"'),
-        checkOutDay: match[10].replace(/\\"/g, '"')
+  for (let i = 0; i < hotelsString.length; i++) {
+    const char = hotelsString[i];
+    const prevChar = i > 0 ? hotelsString[i - 1] : '';
+    
+    if (char === '{' && prevChar !== '\\') {
+      if (depth === 0) {
+        start = i;
       }
-    };
-    
-    // Try to extract optional fields
-    const cityBadgeMatch = match[0].match(/cityBadge\s*:\s*["']((?:[^"']|\\")*)["']/);
-    if (cityBadgeMatch) {
-      hotel.cityBadge = cityBadgeMatch[1].replace(/\\"/g, '"');
+      depth++;
+    } else if (char === '}' && prevChar !== '\\') {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        hotelObjects.push(hotelsString.substring(start, i + 1));
+        start = -1;
+      }
     }
-    
-    const hasDetailsLinkMatch = match[0].match(/hasDetailsLink\s*:\s*(true|false)/);
-    if (hasDetailsLinkMatch) {
-      hotel.hasDetailsLink = hasDetailsLinkMatch[1] === 'true';
+  }
+  
+  // Parse each hotel object
+  for (const hotelStr of hotelObjects) {
+    try {
+      const hotel: Hotel = {
+        city: '',
+        nights: 1,
+        hotelName: '',
+        hasDetailsLink: false,
+        roomDescription: {
+          includesAll: '',
+          bedType: ''
+        },
+        checkInDate: '',
+        checkOutDate: '',
+        dayInfo: {
+          checkInDay: '',
+          checkOutDay: ''
+        }
+      };
+      
+      // Extract city
+      const cityMatch = hotelStr.match(/city\s*:\s*["']((?:[^"']|\\")*)["']/);
+      if (cityMatch) hotel.city = cityMatch[1].replace(/\\"/g, '"');
+      
+      // Extract nights
+      const nightsMatch = hotelStr.match(/nights\s*:\s*(\d+)/);
+      if (nightsMatch) hotel.nights = parseInt(nightsMatch[1], 10);
+      
+      // Extract cityBadge
+      const cityBadgeMatch = hotelStr.match(/cityBadge\s*:\s*["']((?:[^"']|\\")*)["']/);
+      if (cityBadgeMatch) hotel.cityBadge = cityBadgeMatch[1].replace(/\\"/g, '"');
+      
+      // Extract hotelName
+      const hotelNameMatch = hotelStr.match(/hotelName\s*:\s*["']((?:[^"']|\\")*)["']/);
+      if (hotelNameMatch) hotel.hotelName = hotelNameMatch[1].replace(/\\"/g, '"');
+      
+      // Extract hasDetailsLink
+      const hasDetailsLinkMatch = hotelStr.match(/hasDetailsLink\s*:\s*(true|false)/);
+      if (hasDetailsLinkMatch) hotel.hasDetailsLink = hasDetailsLinkMatch[1] === 'true';
+      
+      // Extract detailsLink
+      const detailsLinkMatch = hotelStr.match(/detailsLink\s*:\s*["']((?:[^"']|\\")*)["']/);
+      if (detailsLinkMatch) hotel.detailsLink = detailsLinkMatch[1].replace(/\\"/g, '"');
+      
+      // Extract roomDescription
+      const roomDescMatch = hotelStr.match(/roomDescription\s*:\s*\{([\s\S]*?)\}/);
+      if (roomDescMatch) {
+        const roomDescStr = roomDescMatch[1];
+        const includesAllMatch = roomDescStr.match(/includesAll\s*:\s*["']((?:[^"']|\\")*)["']/);
+        if (includesAllMatch) hotel.roomDescription.includesAll = includesAllMatch[1].replace(/\\"/g, '"');
+        
+        const bedTypeMatch = roomDescStr.match(/bedType\s*:\s*["']((?:[^"']|\\")*)["']/);
+        if (bedTypeMatch) hotel.roomDescription.bedType = bedTypeMatch[1].replace(/\\"/g, '"');
+        
+        const roomTypeMatch = roomDescStr.match(/roomType\s*:\s*["']((?:[^"']|\\")*)["']/);
+        if (roomTypeMatch) hotel.roomDescription.roomType = roomTypeMatch[1].replace(/\\"/g, '"');
+      }
+      
+      // Extract checkInDate
+      const checkInMatch = hotelStr.match(/checkInDate\s*:\s*["']([^"']*)["']/);
+      if (checkInMatch) hotel.checkInDate = checkInMatch[1];
+      
+      // Extract checkOutDate
+      const checkOutMatch = hotelStr.match(/checkOutDate\s*:\s*["']([^"']*)["']/);
+      if (checkOutMatch) hotel.checkOutDate = checkOutMatch[1];
+      
+      // Extract dayInfo
+      const dayInfoMatch = hotelStr.match(/dayInfo\s*:\s*\{([\s\S]*?)\}/);
+      if (dayInfoMatch) {
+        const dayInfoStr = dayInfoMatch[1];
+        const checkInDayMatch = dayInfoStr.match(/checkInDay\s*:\s*["']((?:[^"']|\\")*)["']/);
+        if (checkInDayMatch) hotel.dayInfo.checkInDay = checkInDayMatch[1].replace(/\\"/g, '"');
+        
+        const checkOutDayMatch = dayInfoStr.match(/checkOutDay\s*:\s*["']((?:[^"']|\\")*)["']/);
+        if (checkOutDayMatch) hotel.dayInfo.checkOutDay = checkOutDayMatch[1].replace(/\\"/g, '"');
+      }
+      
+      hotels.push(hotel);
+    } catch (error) {
+      console.error('Error parsing hotel object:', error, hotelStr);
     }
-    
-    const detailsLinkMatch = match[0].match(/detailsLink\s*:\s*["']((?:[^"']|\\")*)["']/);
-    if (detailsLinkMatch) {
-      hotel.detailsLink = detailsLinkMatch[1].replace(/\\"/g, '"');
-    }
-    
-    hotels.push(hotel);
   }
   
   return hotels;

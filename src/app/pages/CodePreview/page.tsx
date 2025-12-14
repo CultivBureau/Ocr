@@ -244,7 +244,12 @@ function CodePageContent() {
       const hotelIndexStr = button.getAttribute('data-hotel-index');
       
       // Verify we have required attributes
-      if (!action || !sectionId) return;
+      if (!action || !sectionId) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[HOTEL CLICK] Missing action or sectionId', { action, sectionId });
+        }
+        return;
+      }
       
       // CRITICAL: Verify ID starts with user_hotel_ to prevent modifying generated content
       if (!sectionId.startsWith('user_hotel_')) {
@@ -258,6 +263,10 @@ function CodePageContent() {
       // Prevent default and stop propagation
       e.preventDefault();
       e.stopPropagation();
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[HOTEL CLICK] Action: ${action}, Section: ${sectionId}, Hotel Index: ${hotelIndexStr}`);
+      }
       
       // Route to appropriate handler
       switch (action) {
