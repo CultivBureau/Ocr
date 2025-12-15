@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 /**
  * Customizable Section Template Component
@@ -66,6 +66,9 @@ export interface SectionTemplateProps {
   // Additional customization
   className?: string;
   style?: React.CSSProperties;
+  
+  // Text Splitting Configuration
+  enableTextSplitting?: boolean;
 }
 
 const SectionTemplate: React.FC<SectionTemplateProps> = ({
@@ -112,7 +115,16 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   // Additional
   className = "",
   style,
+  // Text Splitting
+  enableTextSplitting = true,
 }) => {
+  // Text selection and splitting state
+  const [selectedText, setSelectedText] = useState<string>("");
+  const [selectionRange, setSelectionRange] = useState<Range | null>(null);
+  const [showSplitButton, setShowSplitButton] = useState(false);
+  const [splitButtonPosition, setSplitButtonPosition] = useState({ top: 0, left: 0 });
+  const contentContainerRef = useRef<HTMLDivElement>(null);
+  
   // Determine heading tag
   const HeadingTag = `h${titleLevel}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 
@@ -170,6 +182,175 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   };
 
   const containerClasses = getSectionClasses();
+
+  // Detect text selection
+  useEffect(() => {
+    const handleMouseUp = (e: MouseEvent) => {
+      // Small delay to ensure selection is complete
+      setTimeout(() => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim() && enableTextSplitting) {
+          const selectedText = selection.toString().trim();
+          
+          if (selectedText.length > 0) {
+            setSelectedText(selectedText);
+            
+            try {
+              const range = selection.getRangeAt(0);
+              setSelectionRange(range.cloneRange());
+              
+              // Get position for split button (near selection)
+              const rect = range.getBoundingClientRect();
+              const containerRect = contentContainerRef.current?.getBoundingClientRect();
+              
+              if (containerRect) {
+                setSplitButtonPosition({
+                  top: rect.top - containerRect.top - 40,
+                  left: rect.left - containerRect.left + rect.width / 2,
+                });
+                setShowSplitButton(true);
+              }
+            } catch (err) {
+              console.error('Error getting selection range:', err);
+              setShowSplitButton(false);
+            }
+          } else {
+            setShowSplitButton(false);
+          }
+        } else {
+          setShowSplitButton(false);
+        }
+      }, 10);
+    };
+    
+    // Also listen for selection changes
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (!selection || !selection.toString().trim()) {
+        setShowSplitButton(false);
+      }
+    };
+    
+    if (enableTextSplitting && contentContainerRef.current) {
+      const container = contentContainerRef.current;
+      container.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('selectionchange', handleSelectionChange);
+      
+      return () => {
+        container.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('selectionchange', handleSelectionChange);
+      };
+    }
+  }, [enableTextSplitting]);
+  
+  // Handle text splitting
+  const handleSplitText = () => {
+    if (!selectedText) {
+      return;
+    }
+    
+    if (typeof content !== 'string') {
+      return;
+    }
+    
+    // Keep selected text as a single bullet item (don't split into words)
+    // User selected a sentence/phrase, keep it together as one bullet point
+    const trimmedText = selectedText.trim();
+    
+    if (trimmedText.length === 0) {
+      setShowSplitButton(false);
+      return;
+    }
+    
+    // Convert selected text to a single bullet item on a new line
+    const bulletItems = `\n• ${trimmedText}`;
+    
+    // If onContentChange is not provided, try fallback DOM update
+    if (!onContentChange) {
+      // Try to update content directly if editable is true
+      if (editable) {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          try {
+            // Create a text node with the bullet items
+            const textNode = document.createTextNode(bulletItems);
+            range.deleteContents();
+            range.insertNode(textNode);
+            // Clear selection
+            window.getSelection()?.removeAllRanges();
+            setShowSplitButton(false);
+            setSelectedText("");
+            setSelectionRange(null);
+            return;
+          } catch (err) {
+            console.error('Error updating DOM directly:', err);
+          }
+        }
+      }
+      setShowSplitButton(false);
+      return;
+    }
+    
+    // Get the current selection
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const range = selection.getRangeAt(0);
+    
+    // Get text content from the container to find position
+    const contentElement = contentContainerRef.current;
+    if (!contentElement) return;
+    
+    // Create a range that covers all content before selection
+    const beforeRange = document.createRange();
+    beforeRange.selectNodeContents(contentElement);
+    beforeRange.setEnd(range.startContainer, range.startOffset);
+    const textBefore = beforeRange.toString();
+    
+    // Find the position in the original content string
+    // Use the text before selection to find exact position
+    let position = -1;
+    
+    // Try to find position by matching text before selection
+    // Match last portion of text before to avoid duplicates
+    const beforeText = textBefore.trim();
+    if (beforeText.length > 0) {
+      // Find the last occurrence of the last part of beforeText in content
+      const searchText = beforeText.slice(-Math.min(100, beforeText.length));
+      const lastIndex = content.lastIndexOf(searchText);
+      if (lastIndex !== -1) {
+        position = lastIndex + searchText.length;
+      }
+    }
+    
+    // Fallback: find by selected text if position not found
+    if (position === -1) {
+      position = content.indexOf(selectedText);
+    }
+    
+    let newContent = content;
+    
+    if (position !== -1) {
+      // Replace selected text with bullet items
+      newContent = 
+        content.substring(0, position) + 
+        bulletItems + 
+        content.substring(position + selectedText.length);
+    } else {
+      // If we can't find exact position, try simple replace (first occurrence)
+      newContent = content.replace(selectedText, bulletItems);
+    }
+    
+    // Update content
+    onContentChange(newContent);
+    
+    // Clear selection
+    window.getSelection()?.removeAllRanges();
+    setShowSplitButton(false);
+    setSelectedText("");
+    setSelectionRange(null);
+  };
 
   // Build underline classes
   const underlineClasses = [
@@ -386,8 +567,58 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       )}
 
       {/* Section Content */}
-      <div className={contentClasses}>
+      <div 
+        ref={contentContainerRef}
+        className={`${contentClasses} relative`}
+        onMouseLeave={() => {
+          // Hide split button when mouse leaves content area
+          setTimeout(() => {
+            if (!window.getSelection()?.toString().trim()) {
+              setShowSplitButton(false);
+            }
+          }, 100);
+        }}
+      >
         {renderContent()}
+        
+        {/* Split Text Button - Appears when text is selected */}
+        {/* Hide during PDF export to avoid color parsing issues */}
+        {enableTextSplitting && showSplitButton && selectedText && !document.querySelector('.pdf-exporting') && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleSplitText();
+            }}
+            onMouseDown={(e) => e.preventDefault()} // Prevent losing selection
+            className="absolute z-50 p-2 rounded-lg shadow-lg active:scale-95 transition-all duration-200 flex items-center gap-1.5 text-xs font-medium cursor-pointer no-pdf-export"
+            style={{
+              top: `${Math.max(0, splitButtonPosition.top)}px`,
+              left: `${splitButtonPosition.left}px`,
+              transform: 'translateX(-50%)',
+              backgroundColor: '#A4C639', // Use inline style instead of Tailwind class to avoid lab() colors
+              color: '#ffffff',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#8FB02E';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#A4C639';
+            }}
+            title="Split into bullet points"
+            aria-label="Split selected text into bullet points"
+          >
+            <svg 
+              className="w-4 h-4" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span>Split</span>
+          </button>
+        )}
       </div>
 
       {/* Bottom Divider */}

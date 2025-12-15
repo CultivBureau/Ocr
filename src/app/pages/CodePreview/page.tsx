@@ -22,7 +22,7 @@ import AddHotelModal from "../../components/AddHotelModal";
 import EditHotelModal from "../../components/EditHotelModal";
 import EditHotelSectionModal from "../../components/EditHotelSectionModal";
 import { getElementInfo } from "../../utils/jsxParser";
-import { addSection, addNewTable, updateTableCell, updateTableColumnHeader } from "../../utils/codeManipulator";
+import { addSection, addNewTable, updateTableCell, updateTableColumnHeader, updateSectionContent } from "../../utils/codeManipulator";
 import { extractAllTablesFromDOM, updateCodeWithTableData } from "../../utils/extractTableData";
 import { 
   findAirplaneSection, 
@@ -1809,6 +1809,90 @@ function CodePageContent() {
       let updatedExtractedData = null;
       
       try {
+        // Extract sections from DOM (including split text changes)
+        const sectionElements = previewContainerRef.current?.querySelectorAll('section');
+        if (sectionElements && sectionElements.length > 0) {
+          try {
+            const { parseJSXCode } = require('../../utils/jsxParser');
+            const parsed = parseJSXCode(updatedCode);
+            
+            // Update sections in code with content from DOM
+            if (parsed.sections && Array.isArray(parsed.sections)) {
+              sectionElements.forEach((sectionEl, index) => {
+                if (index < parsed.sections.length) {
+                  // Extract title (from heading, not contentEditable title)
+                  const titleEl = sectionEl.querySelector('h1, h2, h3, h4, h5, h6');
+                  if (titleEl && titleEl.textContent) {
+                    const newTitle = titleEl.textContent.trim();
+                    // Only update if title actually changed
+                    if (newTitle && newTitle !== parsed.sections[index].title) {
+                      const { updateSectionTitle } = require('../../utils/codeManipulator');
+                      updatedCode = updateSectionTitle(updatedCode || code, index, newTitle);
+                    }
+                  }
+                  
+                  // Extract content - look for contentEditable elements that are NOT titles
+                  // Content is usually in .content, div.content, or direct contentEditable that's not a heading
+                  const contentEl = sectionEl.querySelector(
+                    '.content[contenteditable="true"], ' +
+                    'div[contenteditable="true"]:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6), ' +
+                    '[contenteditable="true"]:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not([class*="title"])'
+                  );
+                  
+                  // If no contentEditable found, try to get content from list items or paragraphs
+                  if (!contentEl) {
+                    const listItems = sectionEl.querySelectorAll('ul li, ol li');
+                    if (listItems.length > 0) {
+                      // Reconstruct bullet list content
+                      const bulletContent = Array.from(listItems)
+                        .map(li => `• ${li.textContent?.trim() || ''}`)
+                        .filter(item => item.trim() !== '•')
+                        .join('\n');
+                      
+                      if (bulletContent && bulletContent !== parsed.sections[index].content) {
+                        updatedCode = updateSectionContent(updatedCode || code, index, bulletContent);
+                      }
+                    } else {
+                      // Try paragraphs
+                      const paragraphs = sectionEl.querySelectorAll('p');
+                      if (paragraphs.length > 0) {
+                        const paragraphContent = Array.from(paragraphs)
+                          .map(p => p.textContent?.trim() || '')
+                          .filter(p => p)
+                          .join('\n\n');
+                        
+                        if (paragraphContent && paragraphContent !== parsed.sections[index].content) {
+                          updatedCode = updateSectionContent(updatedCode || code, index, paragraphContent);
+                        }
+                      }
+                    }
+                  } else {
+                    // Get the text content (preserves line breaks and bullet points)
+                    const newContent = contentEl.textContent || contentEl.innerText || '';
+                    if (newContent.trim()) {
+                      // Preserve formatting (bullet points, line breaks)
+                      // Don't filter empty lines - they might be intentional spacing
+                      const formattedContent = newContent
+                        .split('\n')
+                        .map(line => line.trim())
+                        .join('\n')
+                        .replace(/\n{3,}/g, '\n\n'); // Max 2 consecutive newlines
+                      
+                      // Only update if content actually changed
+                      if (formattedContent !== parsed.sections[index].content) {
+                        updatedCode = updateSectionContent(updatedCode || code, index, formattedContent);
+                      }
+                    }
+                  }
+                }
+              });
+            }
+          } catch (sectionError) {
+            console.error("Error extracting section content:", sectionError);
+            // Continue with save even if section extraction fails
+          }
+        }
+        
         // Extract tables from the preview container
         const extractedTables = extractAllTablesFromDOM(previewContainerRef.current);
         
@@ -1863,7 +1947,7 @@ function CodePageContent() {
           }
           
           // Update JSX code with extracted table data using updateTableCell function
-          updatedCode = updateCodeWithTableData(code, extractedTables, updateTableCell, updateTableColumnHeader);
+          updatedCode = updateCodeWithTableData(updatedCode, extractedTables, updateTableCell, updateTableColumnHeader);
           
           // Also update extracted_data structure if it exists
           const extractedDataStr = sessionStorage.getItem("codePreview.extractedData");
