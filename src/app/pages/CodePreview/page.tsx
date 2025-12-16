@@ -2485,58 +2485,60 @@ function CodePageContent() {
                     }
                   }
                   
-                  // Extract content - look for contentEditable elements that are NOT titles
-                  // Content is usually in .content, div.content, or direct contentEditable that's not a heading
-                  const contentEl = sectionEl.querySelector(
-                    '.content[contenteditable="true"], ' +
-                    'div[contenteditable="true"]:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6), ' +
-                    '[contenteditable="true"]:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not([class*="title"])'
-                  );
+                  // Extract content - look for .content div first (where SectionTemplate renders content)
+                  const contentDiv = sectionEl.querySelector('.content');
+                  let extractedContent = '';
                   
-                  // If no contentEditable found, try to get content from list items or paragraphs
-                  if (!contentEl) {
-                    const listItems = sectionEl.querySelectorAll('ul li, ol li');
+                  if (contentDiv) {
+                    // Check if content has bullet list
+                    const listItems = contentDiv.querySelectorAll('ul li, ol li');
                     if (listItems.length > 0) {
-                      // Reconstruct bullet list content
-                      const bulletContent = Array.from(listItems)
-                        .map(li => `• ${li.textContent?.trim() || ''}`)
+                      // Reconstruct bullet list content with HTML preserved
+                      extractedContent = Array.from(listItems)
+                        .map(li => {
+                          const html = li.innerHTML?.trim() || '';
+                          return html ? `• ${html}` : '';
+                        })
                         .filter(item => item.trim() !== '•')
                         .join('\n');
-                      
-                      if (bulletContent && bulletContent !== parsed.sections[index].content) {
-                        updatedCode = updateSectionContent(updatedCode || code, index, bulletContent);
-                      }
                     } else {
-                      // Try paragraphs
-                      const paragraphs = sectionEl.querySelectorAll('p');
+                      // Check for paragraphs
+                      const paragraphs = contentDiv.querySelectorAll('p');
                       if (paragraphs.length > 0) {
-                        const paragraphContent = Array.from(paragraphs)
-                          .map(p => p.textContent?.trim() || '')
+                        // Extract paragraphs with HTML preserved
+                        extractedContent = Array.from(paragraphs)
+                          .map(p => {
+                            const html = p.innerHTML?.trim() || '';
+                            return html;
+                          })
                           .filter(p => p)
                           .join('\n\n');
-                        
-                        if (paragraphContent && paragraphContent !== parsed.sections[index].content) {
-                          updatedCode = updateSectionContent(updatedCode || code, index, paragraphContent);
-                        }
+                      } else {
+                        // Direct content (no bullets or paragraphs) - get full innerHTML
+                        // This preserves all HTML including bold tags
+                        extractedContent = contentDiv.innerHTML?.trim() || '';
                       }
                     }
                   } else {
-                    // Get the text content (preserves line breaks and bullet points)
-                    const newContent = contentEl.textContent || contentEl.innerText || '';
-                    if (newContent.trim()) {
-                      // Preserve formatting (bullet points, line breaks)
-                      // Don't filter empty lines - they might be intentional spacing
-                      const formattedContent = newContent
-                        .split('\n')
-                        .map(line => line.trim())
-                        .join('\n')
-                        .replace(/\n{3,}/g, '\n\n'); // Max 2 consecutive newlines
-                      
-                      // Only update if content actually changed
-                      if (formattedContent !== parsed.sections[index].content) {
-                        updatedCode = updateSectionContent(updatedCode || code, index, formattedContent);
-                      }
+                    // Fallback: look for contentEditable elements that are NOT titles
+                    const contentEl = sectionEl.querySelector(
+                      '.content[contenteditable="true"], ' +
+                      'div[contenteditable="true"]:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6), ' +
+                      '[contenteditable="true"]:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not([class*="title"])'
+                    );
+                    
+                    if (contentEl) {
+                      // Get the HTML content to preserve formatting (including bold tags)
+                      extractedContent = contentEl.innerHTML || '';
                     }
+                  }
+                  
+                  // Always update content to ensure HTML formatting is preserved
+                  // We extract the content and update it to ensure all HTML (including bold tags) is saved
+                  if (extractedContent !== undefined && extractedContent !== null) {
+                    // Always update to ensure HTML formatting is preserved
+                    // This ensures bold tags and other HTML are saved correctly
+                    updatedCode = updateSectionContent(updatedCode || code, index, extractedContent);
                   }
                 }
               });

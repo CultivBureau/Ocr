@@ -25,20 +25,17 @@ function generateSectionObject(section: { title?: string; content: string; type?
   }
   
   if (section.title !== undefined) {
-    const escapedTitle = (section.title || '')
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n');
-    props.push(`"title": "${escapedTitle}"`);
+    // Use template literal (backticks) to avoid escaping issues - simpler and safer
+    const title = (section.title || '').replace(/`/g, '\\`').replace(/\${/g, '\\${');
+    props.push(`"title": \`${title}\``);
   } else {
     props.push(`"title": ""`);
   }
   
-  const escapedContent = (section.content || '')
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n');
-  props.push(`"content": "${escapedContent}"`);
+  // Use template literal (backticks) for content to avoid escaping issues with HTML quotes
+  // This is simpler and safer - template literals can contain any characters including quotes
+  const content = (section.content || '').replace(/`/g, '\\`').replace(/\${/g, '\\${');
+  props.push(`"content": \`${content}\``);
   
   props.push(`"order": ${section.order !== undefined ? section.order : 0}`);
   props.push(`"parent_id": ${section.parent_id !== undefined && section.parent_id !== null ? `"${section.parent_id.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"` : 'null'}`);
@@ -111,18 +108,15 @@ function generateSectionJSX(section: { title?: string; content: string; type?: s
   const props: string[] = [];
   
   if (section.title) {
-    const escapedTitle = section.title
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n');
-    props.push(`title="${escapedTitle}"`);
+    // Use template literal for JSX attributes - escape backticks and ${} to prevent issues
+    const title = section.title.replace(/`/g, '\\`').replace(/\${/g, '\\${');
+    props.push(`title={\`${title}\`}`);
   }
   
-  const escapedContent = section.content
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n');
-  props.push(`content="${escapedContent}"`);
+  // Use template literal for JSX content attribute - escape backticks and ${} to prevent issues
+  // This avoids all quote escaping problems
+  const content = section.content.replace(/`/g, '\\`').replace(/\${/g, '\\${');
+  props.push(`content={\`${content}\`}`);
   
   if (section.type && section.type !== 'section') {
     props.push(`type="${section.type}"`);

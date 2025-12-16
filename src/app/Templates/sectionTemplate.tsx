@@ -352,6 +352,144 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     setSelectionRange(null);
   };
 
+  // Handle bold text formatting
+  const handleBoldText = () => {
+    if (!selectedText) {
+      return;
+    }
+    
+    if (typeof content !== 'string') {
+      return;
+    }
+    
+    const trimmedText = selectedText.trim();
+    
+    if (trimmedText.length === 0) {
+      setShowSplitButton(false);
+      return;
+    }
+    
+    // Wrap selected text in strong tag with font-weight 900
+    const boldText = `<strong style="font-weight: 900">${trimmedText}</strong>`;
+    
+    // If onContentChange is not provided, try fallback DOM update
+    if (!onContentChange) {
+      // Try to update content directly if editable is true
+      if (editable) {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          try {
+            // Create a strong element with bold text
+            const strongElement = document.createElement('strong');
+            strongElement.style.fontWeight = '900';
+            strongElement.textContent = trimmedText;
+            range.deleteContents();
+            range.insertNode(strongElement);
+            // Clear selection
+            window.getSelection()?.removeAllRanges();
+            setShowSplitButton(false);
+            setSelectedText("");
+            setSelectionRange(null);
+            return;
+          } catch (err) {
+            console.error('Error updating DOM directly:', err);
+          }
+        }
+      }
+      setShowSplitButton(false);
+      return;
+    }
+    
+    // Get the current selection
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const range = selection.getRangeAt(0);
+    
+    // Get text content from the container
+    const contentElement = contentContainerRef.current;
+    if (!contentElement) return;
+    
+    // Try to use the actual DOM range for more accurate HTML handling
+    // This works better when content already contains HTML
+    try {
+      // Create strong element and insert it directly in the DOM
+      const strongElement = document.createElement('strong');
+      strongElement.style.fontWeight = '900';
+      strongElement.textContent = trimmedText;
+      
+      // Delete the selected content and insert the bold element
+      range.deleteContents();
+      range.insertNode(strongElement);
+      
+      // Get the updated HTML from the content element
+      const updatedHTML = contentElement.innerHTML;
+      
+      // Update content via callback
+      onContentChange(updatedHTML);
+      
+      // Clear selection
+      window.getSelection()?.removeAllRanges();
+      setShowSplitButton(false);
+      setSelectedText("");
+      setSelectionRange(null);
+      return;
+    } catch (err) {
+      console.error('Error with direct DOM manipulation, falling back to string replacement:', err);
+    }
+    
+    // Fallback to string-based replacement
+    // Create a range that covers all content before selection
+    const beforeRange = document.createRange();
+    beforeRange.selectNodeContents(contentElement);
+    beforeRange.setEnd(range.startContainer, range.startOffset);
+    const textBefore = beforeRange.toString();
+    
+    // Find the position in the original content string
+    // Use the text before selection to find exact position
+    let position = -1;
+    
+    // Try to find position by matching text before selection
+    // Match last portion of text before to avoid duplicates
+    const beforeText = textBefore.trim();
+    if (beforeText.length > 0) {
+      // Find the last occurrence of the last part of beforeText in content
+      const searchText = beforeText.slice(-Math.min(100, beforeText.length));
+      const lastIndex = content.lastIndexOf(searchText);
+      if (lastIndex !== -1) {
+        position = lastIndex + searchText.length;
+      }
+    }
+    
+    // Fallback: find by selected text if position not found
+    if (position === -1) {
+      position = content.indexOf(selectedText);
+    }
+    
+    let newContent = content;
+    
+    if (position !== -1) {
+      // Replace selected text with bold-wrapped version
+      newContent = 
+        content.substring(0, position) + 
+        boldText + 
+        content.substring(position + selectedText.length);
+    } else {
+      // If we can't find exact position, try simple replace (first occurrence)
+      newContent = content.replace(selectedText, boldText);
+    }
+    
+    // Update content
+    onContentChange(newContent);
+    
+    // Clear selection
+    window.getSelection()?.removeAllRanges();
+    setShowSplitButton(false);
+    setSelectedText("");
+    setSelectionRange(null);
+  };
+
   // Build underline classes
   const underlineClasses = [
     "h-1",
@@ -364,9 +502,23 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       : "bg-gradient-to-r from-[#A4C639] to-[#8FB02E]",
   ].filter(Boolean).join(" ");
 
+  // Helper function to check if content contains HTML
+  const hasHTML = (text: string): boolean => {
+    return /<[^>]+>/.test(text);
+  };
+
+  // Helper function to extract text from HTML for bullet reconstruction
+  const extractTextFromHTML = (html: string): string => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  };
+
   // Format content with bullet points and line breaks - Enhanced for our JSON structure
   const renderContent = () => {
     if (typeof content === "string") {
+      const containsHTML = hasHTML(content);
+      
       if (parseParagraphs) {
         // First, check if content has bullet points (•, -, *, or numbered lists)
         const hasBullets = content.includes('•') || /^[\s]*[\-\*]|^\d+\./m.test(content);
@@ -417,6 +569,8 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                   
                   if (!cleanItem) return null;
                   
+                  const itemHasHTML = hasHTML(cleanItem);
+                  
                   return (
                     <li 
                       key={index} 
@@ -424,19 +578,21 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                       style={{ fontSize: '11px', lineHeight: '1.4' }}
                       contentEditable={editable}
                       suppressContentEditableWarning={true}
+                      {...(itemHasHTML ? { dangerouslySetInnerHTML: { __html: cleanItem } } : { children: cleanItem })}
                       onBlur={(e) => {
                         if (editable && onContentChange) {
                           // Get all list items and reconstruct content
                           const ul = e.currentTarget.parentElement;
                           if (ul) {
-                            const items = Array.from(ul.children).map((li) => `• ${li.textContent}`).join('\n');
+                            const items = Array.from(ul.children).map((li) => {
+                              const html = li.innerHTML;
+                              return `• ${html}`;
+                            }).join('\n');
                             onContentChange(items);
                           }
                         }
                       }}
-                    >
-                      {cleanItem}
-                    </li>
+                    />
                   );
                 })}
               </ul>
@@ -458,27 +614,31 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                 if (trimmed.includes('\n') && !hasBullets) {
                   return (
                     <div key={pIndex} className="mb-2 last:mb-0">
-                      {trimmed.split(/\n/).filter(p => p.trim()).map((p, idx) => (
-                        <p 
-                          key={idx} 
-                          className="mb-1 last:mb-0 text-sm leading-snug text-gray-700" 
-                          style={{ fontSize: '11px', lineHeight: '1.4' }}
-                          contentEditable={editable}
-                          suppressContentEditableWarning={true}
-                          onBlur={(e) => {
-                            if (editable && onContentChange) {
-                              onContentChange(e.currentTarget.textContent || '');
-                            }
-                          }}
-                        >
-                          {p.trim()}
-                        </p>
-                      ))}
+                      {trimmed.split(/\n/).filter(p => p.trim()).map((p, idx) => {
+                        const pText = p.trim();
+                        const pHasHTML = hasHTML(pText);
+                        return (
+                          <p 
+                            key={idx} 
+                            className="mb-1 last:mb-0 text-sm leading-snug text-gray-700" 
+                            style={{ fontSize: '11px', lineHeight: '1.4' }}
+                            contentEditable={editable}
+                            suppressContentEditableWarning={true}
+                            {...(pHasHTML ? { dangerouslySetInnerHTML: { __html: pText } } : { children: pText })}
+                            onBlur={(e) => {
+                              if (editable && onContentChange) {
+                                onContentChange(e.currentTarget.innerHTML || '');
+                              }
+                            }}
+                          />
+                        );
+                      })}
                     </div>
                   );
                 }
                 
                 // Regular paragraph
+                const paragraphHasHTML = hasHTML(trimmed);
                 return (
                   <p
                     key={pIndex}
@@ -486,14 +646,13 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                     style={{ fontSize: '11px', lineHeight: '1.4' }}
                     contentEditable={editable}
                     suppressContentEditableWarning={true}
+                    {...(paragraphHasHTML ? { dangerouslySetInnerHTML: { __html: trimmed } } : { children: trimmed })}
                     onBlur={(e) => {
                       if (editable && onContentChange) {
-                        onContentChange(e.currentTarget.textContent || '');
+                        onContentChange(e.currentTarget.innerHTML || '');
                       }
                     }}
-                  >
-                    {trimmed}
-                  </p>
+                  />
                 );
               })}
             </div>
@@ -507,14 +666,13 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           style={{ fontSize: '11px', lineHeight: '1.4' }}
           contentEditable={editable}
           suppressContentEditableWarning={true}
+          {...(containsHTML ? { dangerouslySetInnerHTML: { __html: content } } : { children: content })}
           onBlur={(e) => {
             if (editable && onContentChange) {
-              onContentChange(e.currentTarget.textContent || '');
+              onContentChange(e.currentTarget.innerHTML || '');
             }
           }}
-        >
-          {content}
-        </div>
+        />
       );
     }
     return (
@@ -524,7 +682,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
         suppressContentEditableWarning={true}
         onBlur={(e) => {
           if (editable && onContentChange) {
-            onContentChange(e.currentTarget.textContent || '');
+            onContentChange(e.currentTarget.innerHTML || '');
           }
         }}
       >
@@ -581,43 +739,82 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       >
         {renderContent()}
         
-        {/* Split Text Button - Appears when text is selected */}
+        {/* Split and Bold Buttons - Appear when text is selected */}
         {/* Hide during PDF export to avoid color parsing issues */}
         {enableTextSplitting && showSplitButton && selectedText && !document.querySelector('.pdf-exporting') && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleSplitText();
-            }}
-            onMouseDown={(e) => e.preventDefault()} // Prevent losing selection
-            className="absolute z-50 p-2 rounded-lg shadow-lg active:scale-95 transition-all duration-200 flex items-center gap-1.5 text-xs font-medium cursor-pointer no-pdf-export"
+          <div
+            className="absolute z-50 flex items-center gap-2 no-pdf-export"
             style={{
               top: `${Math.max(0, splitButtonPosition.top)}px`,
               left: `${splitButtonPosition.left}px`,
               transform: 'translateX(-50%)',
-              backgroundColor: '#A4C639', // Use inline style instead of Tailwind class to avoid lab() colors
-              color: '#ffffff',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#8FB02E';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#A4C639';
-            }}
-            title="Split into bullet points"
-            aria-label="Split selected text into bullet points"
           >
-            <svg 
-              className="w-4 h-4" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
+            {/* Split Button */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSplitText();
+              }}
+              onMouseDown={(e) => e.preventDefault()} // Prevent losing selection
+              className="p-2 rounded-lg shadow-lg active:scale-95 transition-all duration-200 flex items-center gap-1.5 text-xs font-medium cursor-pointer"
+              style={{
+                backgroundColor: '#A4C639', // Use inline style instead of Tailwind class to avoid lab() colors
+                color: '#ffffff',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#8FB02E';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#A4C639';
+              }}
+              title="Split into bullet points"
+              aria-label="Split selected text into bullet points"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-            </svg>
-            <span>Split</span>
-          </button>
+              <svg 
+                className="w-4 h-4" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              <span>Split</span>
+            </button>
+            
+            {/* Bold Button */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleBoldText();
+              }}
+              onMouseDown={(e) => e.preventDefault()} // Prevent losing selection
+              className="p-2 rounded-lg shadow-lg active:scale-95 transition-all duration-200 flex items-center gap-1.5 text-xs font-medium cursor-pointer"
+              style={{
+                backgroundColor: '#A4C639', // Use inline style instead of Tailwind class to avoid lab() colors
+                color: '#ffffff',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#8FB02E';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#A4C639';
+              }}
+              title="Make text bold (font-weight: 900)"
+              aria-label="Make selected text bold"
+            >
+              <svg 
+                className="w-4 h-4" 
+                fill="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path d="M15.6 10.79c.97-.67 1.65-1.77 1.65-2.79 0-2.26-1.75-4-4-4H7v14h7.04c2.09 0 3.71-1.7 3.71-3.79 0-1.52-.86-2.82-2.15-3.42zM10 6.5h3c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-3v-3zm3.5 9H10v-3h3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5z"/>
+              </svg>
+              <span>Bold</span>
+            </button>
+          </div>
         )}
       </div>
 
