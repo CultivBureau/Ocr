@@ -85,9 +85,10 @@ export async function uploadFile(file) {
 }
 
 /**
- * Extract structured data (sections and tables) from uploaded PDF
+ * Extract structured data from uploaded PDF
+ * Returns v2 format: { generated: { sections, tables }, user: { elements }, layout, meta }
  * @param {string} filePath - Path returned from uploadFile
- * @returns {Promise<{sections: Array, tables: Array, meta: Object}>}
+ * @returns {Promise<{generated: {sections: Array, tables: Array}, user: {elements: Array}, layout: Array, meta: Object}>}
  */
 export async function extractStructured(filePath) {
   return request("/extract/structured", {
@@ -97,108 +98,4 @@ export async function extractStructured(filePath) {
     },
     body: JSON.stringify({ file_path: filePath }),
   });
-}
-
-
-/**
- * Legacy functions - kept for backward compatibility
- * These may not match backend endpoints exactly
- */
-export async function generateNextJs(extractedText) {
-  console.warn("[PdfApi] generateNextJs is deprecated. Use static structureToJsx utility instead.");
-  // This endpoint doesn't exist in backend - return error
-  throw new Error("generateNextJs endpoint not available. Use structureToJsx utility with structured data instead.");
-}
-
-export async function repairTable(tableData) {
-  console.warn("[PdfApi] repairTable endpoint not available in backend API.");
-  throw new Error("repairTable endpoint not available in backend API.");
-}
-
-export async function updateTable(updateData) {
-  console.warn("[PdfApi] updateTable endpoint not available in backend API.");
-  throw new Error("updateTable endpoint not available in backend API.");
-}
-
-export async function tableToJsx(table) {
-  console.warn("[PdfApi] tableToJsx endpoint not available in backend API.");
-  throw new Error("tableToJsx endpoint not available in backend API.");
-}
-
-// Note: generateNextJs, repairTable, updateTable, tableToJsx are not part of the backend API
-// These functions are kept for backward compatibility but may not work
-
-/**
- * Validate JSX syntax using basic checks
- * This is a lightweight validation - for full validation, use Babel in the browser
- * 
- * @param {string} jsxCode - JSX code to validate
- * @returns {{isValid: boolean, errors: string[]}} Validation result with isValid and errors
- */
-export function validateJsxSyntax(jsxCode) {
-  const errors = [];
-  
-  if (!jsxCode || typeof jsxCode !== 'string') {
-    return { isValid: false, errors: ['JSX code is empty or invalid'] };
-  }
-  
-  // Check for balanced braces
-  const openBraces = (jsxCode.match(/\{/g) || []).length;
-  const closeBraces = (jsxCode.match(/\}/g) || []).length;
-  if (openBraces !== closeBraces) {
-    errors.push(`Unbalanced braces: ${openBraces} open, ${closeBraces} close`);
-  }
-  
-  // Check for balanced parentheses
-  const openParens = (jsxCode.match(/\(/g) || []).length;
-  const closeParens = (jsxCode.match(/\)/g) || []).length;
-  if (openParens !== closeParens) {
-    errors.push(`Unbalanced parentheses: ${openParens} open, ${closeParens} close`);
-  }
-  
-  // Check for unclosed tags (basic check)
-  const openTags = (jsxCode.match(/<[A-Za-z][A-Za-z0-9]*[^>]*>/g) || []).length;
-  const closeTags = (jsxCode.match(/<\/[A-Za-z][A-Za-z0-9]*>/g) || []).length;
-  const selfClosingTags = (jsxCode.match(/<[A-Za-z][A-Za-z0-9]*[^>]*\/>/g) || []).length;
-  
-  // Rough estimate: if we have significantly more opening tags than closing + self-closing, might be incomplete
-  if (openTags > closeTags + selfClosingTags + 5) {
-    errors.push(`Possible unclosed tags: ${openTags} opening tags vs ${closeTags} closing + ${selfClosingTags} self-closing`);
-  }
-  
-  // Check for common syntax errors
-  if (jsxCode.includes('className\n=') || jsxCode.includes('className\\n=')) {
-    errors.push('Newline found between attribute name and equals sign (e.g., className\\n=)');
-  }
-  
-  // Check for unclosed EditableText tags (should be self-closing)
-  const editableTextMatches = jsxCode.match(/<EditableText[^>]*>/g) || [];
-  editableTextMatches.forEach((tag, index) => {
-    if (!tag.includes('/>') && !tag.endsWith('>')) {
-      errors.push(`EditableText tag at position ${index} may not be properly closed`);
-    }
-  });
-  
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
-}
-
-/**
- * Validate JSX syntax (client-side only, no API calls)
- * 
- * @param {string} jsxCode - JSX code to validate
- * @returns {Object} Validation result with isValid, errors, and warnings
- */
-export function validateAndFixJsx(jsxCode) {
-  const validation = validateJsxSyntax(jsxCode);
-  
-  return {
-    jsx: jsxCode,
-    warnings: validation.isValid ? [] : [`JSX validation issues: ${validation.errors.join(', ')}`],
-    fixed: false,
-    errors: validation.errors,
-    isValid: validation.isValid,
-  };
 }

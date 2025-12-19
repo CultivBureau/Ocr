@@ -10,11 +10,7 @@ import React, {
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import CodeEditor from "../../components/CodeEditor";
-import PreviewRenderer from "../../components/PreviewRenderer";
 import StructureRenderer from "../../components/StructureRenderer";
-import ToggleSwitch from "../../components/ToggleSwitch";
-import CustomizationPanel, { PanelContext } from "../../components/CustomizationPanel";
 import CreateTableModal from "../../components/CreateTableModal";
 import AddAirplaneModal, { FlightData } from "../../components/AddAirplaneModal";
 import EditFlightModal from "../../components/EditFlightModal";
@@ -26,128 +22,33 @@ import AddTransportModal from "../../components/AddTransportModal";
 import EditTransportRowModal from "../../components/EditTransportRowModal";
 import EditTransportTableModal from "../../components/EditTransportTableModal";
 import EditTransportSectionModal from "../../components/EditTransportSectionModal";
-import { getElementInfo } from "../../utils/jsxParser";
-import { addSection, addNewTable, updateTableCell, updateTableColumnHeader, updateSectionContent } from "../../utils/codeManipulator";
-import { extractAllTablesFromDOM, updateCodeWithTableData } from "../../utils/extractTableData";
-import { 
-  findAirplaneSection, 
-  updateFlightInComponent, 
-  addFlightToComponent, 
-  removeFlightFromComponent,
-  removeAirplaneSection,
-  updateAirplaneSectionProps,
-  extractFlightsFromComponent
-} from "../../utils/airplaneSectionManipulator";
-import {
-  findHotelSection,
-  updateHotelInComponent,
-  addHotelToComponent,
-  removeHotelFromComponent,
-  removeHotelSection,
-  updateHotelSectionProps,
-  extractHotelsFromComponent
-} from "../../utils/hotelSectionManipulator";
-import {
-  findTransportSection,
-  updateTransportRowInComponent,
-  addTransportRowToComponent,
-  removeTransportRowFromComponent,
-  updateTransportTableInComponent,
-  addTransportTableToComponent,
-  removeTransportTableFromComponent,
-  removeTransportSection,
-  updateTransportSectionProps,
-  extractTransportSectionData,
-  extractTransportTablesFromComponent
-} from "../../utils/transportSectionManipulator";
 import { Hotel } from "../../Templates/HotelsSection";
-import { guardGeneratedContent } from "../../utils/contentGuards";
 import { isAuthenticated } from "../../services/AuthApi";
 import { saveDocument, updateDocument, getDocument } from "../../services/HistoryApi";
 import ProtectedRoute from "../../components/ProtectedRoute";
 import VersionHistoryModal from "../../components/VersionHistoryModal";
-import type { ExtractResponse, Structure } from "../../types/ExtractTypes";
+import type { SeparatedStructure, UserElement } from "../../types/ExtractTypes";
 
-type Mode = "code" | "preview" | "split";
-
-// Enhanced starter template showcasing DynamicTable, Section, and Header components
-// Import components at the top of the generated template
-const STARTER_TEMPLATE = `export default function Template() {
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="mx-auto w-[794px] bg-white text-gray-900 shadow-lg print:shadow-none">
-        {/* Header */}
-        <div className="bg-linear-to-r from-[#A4C639] to-[#8FB02E] px-10 py-6">
-          <div className="flex items-center justify-between">
-            <div className="bg-white px-4 py-2 rounded">
-              <h1 className="text-2xl font-bold text-[#A4C639]">
-                HappyLife Travel & Tourism
-              </h1>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Title */}
-        <div className="text-center py-6 px-10">
-          <h1 className="text-3xl font-bold text-[#A4C639] underline decoration-2">
-            Travel Package Template
-          </h1>
-          <p className="text-sm text-gray-600 mt-2">
-            Start editing this template or upload a PDF to generate a custom one
-          </p>
-        </div>
-
-        {/* Content Section */}
-        <div className="px-10 pb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Welcome to the Template Editor
-          </h2>
-          <p className="text-gray-700 mb-4">
-            This is a simple starter template. You can:
-          </p>
-          <ul className="list-disc pl-6 text-gray-700 space-y-2">
-            <li>Edit this code directly in the Code view</li>
-            <li>Upload a PDF to generate a custom template with editable fields</li>
-            <li>Export your template as code or PDF</li>
-          </ul>
-        </div>
-
-        {/* Example Content */}
-        <div className="px-10 pb-8">
-          <h3 className="font-bold text-gray-900 mb-3">
-            Example Section
-          </h3>
-          <p className="text-sm text-gray-700">
-            Replace this with your own content. When you upload a PDF, 
-            the AI will generate a template with your content and add 
-            interactive editing features automatically.
-          </p>
-        </div>
-
-        {/* Footer */}
-        <div className="bg-gray-100 px-10 py-4 text-center text-xs text-gray-600">
-          <p>Created with HappyLife PDF Template Generator</p>
-        </div>
-      </div>
-    </div>
-  );
-}`;
+// Default empty structure
+const defaultStructure: SeparatedStructure = {
+  generated: {
+    sections: [],
+    tables: []
+  },
+  user: {
+    elements: []
+  },
+  layout: [],
+  meta: {}
+};
 
 function CodePageContent() {
   const searchParams = useSearchParams();
-  const [mode, setMode] = useState<Mode>("preview");
-  const [code, setCode] = useState<string>(STARTER_TEMPLATE);
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [externalWarnings, setExternalWarnings] = useState<string[]>([]);
+  const [structure, setStructure] = useState<SeparatedStructure>(defaultStructure);
   const [sourceMetadata, setSourceMetadata] = useState<{
     filename?: string;
     uploadedAt?: string;
   } | null>(null);
-  const [processedTables, setProcessedTables] = useState<Array<{
-    tableId: string;
-    jsx: string;
-  }>>([]);
-  const [panelContext, setPanelContext] = useState<PanelContext>(null);
   const [isCreateTableModalOpen, setIsCreateTableModalOpen] = useState(false);
   const [showTableCreatedToast, setShowTableCreatedToast] = useState(false);
   const [documentId, setDocumentId] = useState<string | null>(null);
@@ -174,14 +75,7 @@ function CodePageContent() {
   const [showEditTransportRowModal, setShowEditTransportRowModal] = useState(false);
   const [showEditTransportTableModal, setShowEditTransportTableModal] = useState(false);
   const [showEditTransportSectionModal, setShowEditTransportSectionModal] = useState(false);
-  const [structuredData, setStructuredData] = useState<ExtractResponse | null>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
-  const codeRef = useRef<string>(code);
-  
-  // Update codeRef when code changes
-  useEffect(() => {
-    codeRef.current = code;
-  }, [code]);
   
   // Event delegation for airplane section actions
   useEffect(() => {
@@ -476,63 +370,48 @@ function CodePageContent() {
       container.removeEventListener('click', handleHotelSectionClick);
       container.removeEventListener('click', handleTransportSectionClick);
     };
-  }, [code]);
+  }, []);
   
-  // Handler functions for airplane section actions
+  // Handler functions for airplane section actions - Updated to work with JSON structure
   const handleRemoveFlight = useCallback((id: string, flightIndex: number) => {
     try {
-      // CRITICAL: Verify ID prefix - this is the primary isolation guard
+      // Verify ID prefix
       if (!id.startsWith('user_airplane_')) {
-        const errorMsg = `SECURITY: Attempted to remove flight from non-user airplane section: ${id}. Only user_airplane_* sections can be modified.`;
-        console.error(errorMsg);
         alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
         return;
       }
       
-      // Additional guard using contentGuards utility
-      guardGeneratedContent(id, 'remove flight from');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[AIRPLANE CRUD] Removing flight ${flightIndex} from airplane section ${id}`);
-        console.log(`[ISOLATION CHECK] ID prefix verified: user_airplane_`);
-      }
-      
-      const section = findAirplaneSection(codeRef.current, id);
-      if (!section) {
+      // Find the user element in JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'airplane');
+        if (userElementIndex === -1) {
         alert('Airplane section not found');
-        return;
-      }
-      
-      // Log what we're about to modify (for debugging)
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[AIRPLANE CRUD] Found section at index ${section.startIndex}-${section.endIndex}`);
-        console.log(`[ISOLATION CHECK] Component contains ID: ${section.component.includes(id)}`);
-      }
-      
-      const updatedComponent = removeFlightFromComponent(section.component, flightIndex);
-      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
-        updatedComponent + 
-        codeRef.current.substring(section.endIndex);
-      
-      // Verify the updated code still doesn't contain any generated table deletions
-      if (process.env.NODE_ENV === 'development') {
-        const originalTableCount = (codeRef.current.match(/<DynamicTable/g) || []).length;
-        const updatedTableCount = (updatedCode.match(/<DynamicTable/g) || []).length;
-        if (originalTableCount !== updatedTableCount) {
-          console.warn(`[ISOLATION WARNING] Table count changed: ${originalTableCount} -> ${updatedTableCount}`);
-        } else {
-          console.log(`[ISOLATION CHECK] Table count preserved: ${originalTableCount}`);
+          return prev;
         }
-      }
-      
-      setCode(updatedCode);
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const flights = [...(element.data.flights || [])];
+        flights.splice(flightIndex, 1);
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            flights
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
     } catch (error) {
-      console.error('[AIRPLANE CRUD ERROR] Error removing flight:', error);
-      if (error instanceof Error && error.message.includes('generated content')) {
-        alert('Cannot modify generated content. This operation is blocked for security.');
-      } else {
+      console.error('Error removing flight:', error);
         alert(error instanceof Error ? error.message : 'Failed to remove flight');
-      }
     }
   }, []);
   
@@ -546,16 +425,8 @@ function CodePageContent() {
         return;
       }
       
-      guardGeneratedContent(id, 'add flight to');
-      
       if (process.env.NODE_ENV === 'development') {
         console.log(`[AIRPLANE CRUD] Adding flight to airplane section ${id}`);
-      }
-      
-      const section = findAirplaneSection(codeRef.current, id);
-      if (!section) {
-        alert('Airplane section not found');
-        return;
       }
       
       const newFlight: FlightData = {
@@ -565,11 +436,34 @@ function CodePageContent() {
         travelers: { adults: 1, children: 0, infants: 0 },
         luggage: "20 كيلو"
       };
-      const updatedComponent = addFlightToComponent(section.component, newFlight);
-      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
-        updatedComponent + 
-        codeRef.current.substring(section.endIndex);
-      setCode(updatedCode);
+      
+      // Add flight to JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'airplane');
+        if (userElementIndex === -1) {
+          alert('Airplane section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const flights = [...(element.data.flights || []), newFlight];
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            flights
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
     } catch (error) {
       console.error('[AIRPLANE CRUD ERROR] Error adding flight:', error);
       if (error instanceof Error && error.message.includes('generated content')) {
@@ -581,77 +475,36 @@ function CodePageContent() {
   }, []);
   
   const handleDeleteSection = useCallback((id: string) => {
-    // CRITICAL: Verify ID prefix - primary isolation guard
-    if (!id.startsWith('user_airplane_')) {
-      const errorMsg = `SECURITY: Attempted to delete non-user airplane section: ${id}`;
-      console.error(errorMsg);
+    // Verify ID prefix - only user-created elements can be deleted
+    if (!id.startsWith('user_')) {
       alert('Cannot delete generated content. Only user-created sections can be deleted.');
       return;
     }
     
-    // Additional guard
-    try {
-      guardGeneratedContent(id, 'delete');
-    } catch (error) {
-      console.error('[ISOLATION GUARD]', error);
-      alert('Cannot delete generated content. This operation is blocked.');
-      return;
-    }
-    
-    if (!confirm('Are you sure you want to delete this airplane section?')) {
+    if (!confirm('Are you sure you want to delete this section?')) {
       return;
     }
     
     try {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[AIRPLANE CRUD] Deleting airplane section ${id}`);
-        console.log(`[ISOLATION CHECK] ID prefix verified: user_airplane_`);
+      // Remove from JSON structure
+      setStructure(prev => {
+        // Remove from user.elements
+        const updatedElements = prev.user.elements.filter(el => el.id !== id);
         
-        // Count tables before deletion
-        const originalTableCount = (codeRef.current.match(/<DynamicTable/g) || []).length;
-        const originalSectionCount = (codeRef.current.match(/<AirplaneSection/g) || []).length;
-        console.log(`[ISOLATION CHECK] Before deletion - Tables: ${originalTableCount}, AirplaneSections: ${originalSectionCount}`);
-      }
-      
-      const section = findAirplaneSection(codeRef.current, id);
-      if (!section) {
-        alert('Airplane section not found');
-        return;
-      }
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[AIRPLANE CRUD] Found section to delete at index ${section.startIndex}-${section.endIndex}`);
-        console.log(`[ISOLATION CHECK] Component preview: ${section.component.substring(0, 100)}...`);
-      }
-      
-      const updatedCode = removeAirplaneSection(codeRef.current, id);
-      
-      // Verify isolation after deletion
-      if (process.env.NODE_ENV === 'development') {
-        const updatedTableCount = (updatedCode.match(/<DynamicTable/g) || []).length;
-        const updatedSectionCount = (updatedCode.match(/<AirplaneSection/g) || []).length;
-        console.log(`[ISOLATION CHECK] After deletion - Tables: ${updatedTableCount}, AirplaneSections: ${updatedSectionCount}`);
+        // Remove from layout
+        const updatedLayout = prev.layout.filter(layoutId => layoutId !== id);
         
-        if (updatedTableCount !== (codeRef.current.match(/<DynamicTable/g) || []).length) {
-          console.error(`[ISOLATION ERROR] Table count changed during airplane section deletion!`);
-          console.error(`Original: ${(codeRef.current.match(/<DynamicTable/g) || []).length}, Updated: ${updatedTableCount}`);
-          alert('ERROR: Deletion affected generated tables. Operation cancelled.');
-          return;
-        }
-        
-        if (updatedSectionCount !== (codeRef.current.match(/<AirplaneSection/g) || []).length - 1) {
-          console.warn(`[ISOLATION WARNING] AirplaneSection count mismatch. Expected: ${(codeRef.current.match(/<AirplaneSection/g) || []).length - 1}, Got: ${updatedSectionCount}`);
-        }
-      }
-      
-      setCode(updatedCode);
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          },
+          layout: updatedLayout
+        };
+      });
     } catch (error) {
-      console.error('[AIRPLANE CRUD ERROR] Error deleting section:', error);
-      if (error instanceof Error && error.message.includes('generated content')) {
-        alert('Cannot delete generated content. This operation is blocked for security.');
-      } else {
+      console.error('Error deleting section:', error);
         alert(error instanceof Error ? error.message : 'Failed to delete section');
-      }
     }
   }, []);
   
@@ -662,42 +515,50 @@ function CodePageContent() {
     }
     
     try {
-      // CRITICAL: Verify ID prefix
+      // Verify ID prefix
       if (!editingAirplaneId.startsWith('user_airplane_')) {
-        const errorMsg = `SECURITY: Attempted to edit flight in non-user airplane section: ${editingAirplaneId}`;
-        console.error(errorMsg);
         alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
         return;
       }
       
-      guardGeneratedContent(editingAirplaneId, 'edit flight in');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[AIRPLANE CRUD] Updating flight ${editingFlightIndex} in airplane section ${editingAirplaneId}`);
-      }
-      
-      const section = findAirplaneSection(codeRef.current, editingAirplaneId);
-      if (!section) {
-        alert('Airplane section not found');
-        return;
-      }
-      
-      const updatedComponent = updateFlightInComponent(section.component, editingFlightIndex, updatedFlight);
-      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
-        updatedComponent + 
-        codeRef.current.substring(section.endIndex);
-      setCode(updatedCode);
+      // Update flight in JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingAirplaneId && el.type === 'airplane'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Airplane section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const flights = [...(element.data.flights || [])];
+        flights[editingFlightIndex] = updatedFlight;
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            flights
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
       
       setShowEditFlightModal(false);
       setEditingAirplaneId(null);
       setEditingFlightIndex(null);
     } catch (error) {
-      console.error('[AIRPLANE CRUD ERROR] Error updating flight:', error);
-      if (error instanceof Error && error.message.includes('generated content')) {
-        alert('Cannot modify generated content. This operation is blocked for security.');
-      } else {
+      console.error('Error updating flight:', error);
         alert(error instanceof Error ? error.message : 'Failed to update flight');
-      }
     }
   }, [editingAirplaneId, editingFlightIndex]);
   
@@ -715,57 +576,66 @@ function CodePageContent() {
     }
     
     try {
-      // CRITICAL: Verify ID prefix
+      // Verify ID prefix
       if (!editingAirplaneId.startsWith('user_airplane_')) {
-        const errorMsg = `SECURITY: Attempted to edit non-user airplane section: ${editingAirplaneId}`;
-        console.error(errorMsg);
         alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
         return;
       }
       
-      guardGeneratedContent(editingAirplaneId, 'edit');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[AIRPLANE CRUD] Updating section properties for airplane section ${editingAirplaneId}`);
-      }
-      
-      const section = findAirplaneSection(codeRef.current, editingAirplaneId);
-      if (!section) {
-        alert('Airplane section not found');
-        return;
-      }
-      
-      const updatedComponent = updateAirplaneSectionProps(section.component, props);
-      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
-        updatedComponent + 
-        codeRef.current.substring(section.endIndex);
-      setCode(updatedCode);
+      // Update section properties in JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingAirplaneId && el.type === 'airplane'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Airplane section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            ...props
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
       
       setShowEditSectionModal(false);
       setEditingAirplaneId(null);
     } catch (error) {
-      console.error('[AIRPLANE CRUD ERROR] Error updating section:', error);
-      if (error instanceof Error && error.message.includes('generated content')) {
-        alert('Cannot modify generated content. This operation is blocked for security.');
-      } else {
+      console.error('Error updating section:', error);
         alert(error instanceof Error ? error.message : 'Failed to update section');
-      }
     }
   }, [editingAirplaneId]);
   
-  // Get initial flight data for edit modal
+  // Get initial flight data for edit modal - Updated to read from JSON structure
   const getInitialFlightData = useCallback((): FlightData | null => {
     if (!editingAirplaneId || editingFlightIndex === null) {
       return null;
     }
     
     try {
-      const section = findAirplaneSection(codeRef.current, editingAirplaneId);
-      if (!section) {
+      const element = structure.user.elements.find(
+        el => el.id === editingAirplaneId && el.type === 'airplane'
+      );
+      
+      if (!element || !element.data.flights) {
         return null;
       }
       
-      const flights = extractFlightsFromComponent(section.component);
+      const flights = element.data.flights;
       if (editingFlightIndex >= 0 && editingFlightIndex < flights.length) {
         return flights[editingFlightIndex];
       }
@@ -774,9 +644,9 @@ function CodePageContent() {
     }
     
     return null;
-  }, [editingAirplaneId, editingFlightIndex]);
+  }, [editingAirplaneId, editingFlightIndex, structure]);
   
-  // Get initial section data for edit modal
+  // Get initial section data for edit modal - Updated to read from JSON structure
   const getInitialSectionData = useCallback((): {
     title?: string;
     showTitle?: boolean;
@@ -790,135 +660,78 @@ function CodePageContent() {
     }
     
     try {
-      const section = findAirplaneSection(codeRef.current, editingAirplaneId);
-      if (!section) {
+      const element = structure.user.elements.find(
+        el => el.id === editingAirplaneId && el.type === 'airplane'
+      );
+      
+      if (!element) {
         return null;
       }
       
-      const component = section.component;
-      const data: any = {};
-      
-      // Extract title
-      const titleMatch = component.match(/title=["']([^"']*)["']/);
-      if (titleMatch) {
-        data.title = titleMatch[1].replace(/\\"/g, '"');
-      }
-      
-      // Extract showTitle
-      const showTitleMatch = component.match(/showTitle=\{?([^}]*)\}?/);
-      if (showTitleMatch) {
-        data.showTitle = showTitleMatch[1].trim() === 'true';
-      }
-      
-      // Extract noticeMessage
-      const noticeMatch = component.match(/noticeMessage=["']([^"']*)["']/);
-      if (noticeMatch) {
-        data.noticeMessage = noticeMatch[1].replace(/\\"/g, '"');
-      }
-      
-      // Extract showNotice
-      const showNoticeMatch = component.match(/showNotice=\{?([^}]*)\}?/);
-      if (showNoticeMatch) {
-        data.showNotice = showNoticeMatch[1].trim() === 'true';
-      }
-      
-      // Extract direction
-      const directionMatch = component.match(/direction=["']([^"']*)["']/);
-      if (directionMatch) {
-        data.direction = directionMatch[1] as "rtl" | "ltr";
-      }
-      
-      // Extract language
-      const languageMatch = component.match(/language=["']([^"']*)["']/);
-      if (languageMatch) {
-        data.language = languageMatch[1] as "ar" | "en";
-      }
-      
-      return data;
+      // Read directly from JSON structure
+      return {
+        title: element.data.title,
+        showTitle: element.data.showTitle,
+        noticeMessage: element.data.noticeMessage,
+        showNotice: element.data.showNotice,
+        direction: element.data.direction,
+        language: element.data.language
+      };
     } catch (error) {
       console.error('Error extracting section data:', error);
     }
     
     return null;
-  }, [editingAirplaneId]);
+  }, [editingAirplaneId, structure]);
 
-  // Handler functions for hotel section actions
+  // Handler functions for hotel section actions - Updated to work with JSON structure
   const handleRemoveHotel = useCallback((id: string, hotelIndex: number) => {
     try {
-      // CRITICAL: Verify ID prefix - this is the primary isolation guard
+      // Verify ID prefix
       if (!id.startsWith('user_hotel_')) {
-        const errorMsg = `SECURITY: Attempted to remove hotel from non-user hotel section: ${id}. Only user_hotel_* sections can be modified.`;
-        console.error(errorMsg);
         alert('Cannot modify generated content. Only user-created hotel sections can be edited.');
         return;
       }
       
-      // Additional guard using contentGuards utility
-      guardGeneratedContent(id, 'remove hotel from');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[HOTEL CRUD] Removing hotel ${hotelIndex} from hotel section ${id}`);
-        console.log(`[ISOLATION CHECK] ID prefix verified: user_hotel_`);
-      }
-      
-      const section = findHotelSection(codeRef.current, id);
-      if (!section) {
+      // Remove hotel from JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'hotel');
+        if (userElementIndex === -1) {
         alert('Hotel section not found');
-        return;
-      }
-      
-      // Log what we're about to modify (for debugging)
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[HOTEL CRUD] Found section at index ${section.startIndex}-${section.endIndex}`);
-        console.log(`[ISOLATION CHECK] Component contains ID: ${section.component.includes(id)}`);
-      }
-      
-      const updatedComponent = removeHotelFromComponent(section.component, hotelIndex);
-      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
-        updatedComponent + 
-        codeRef.current.substring(section.endIndex);
-      
-      // Verify the updated code still doesn't contain any generated table deletions
-      if (process.env.NODE_ENV === 'development') {
-        const originalTableCount = (codeRef.current.match(/<DynamicTable/g) || []).length;
-        const updatedTableCount = (updatedCode.match(/<DynamicTable/g) || []).length;
-        if (originalTableCount !== updatedTableCount) {
-          console.warn(`[ISOLATION WARNING] Table count changed: ${originalTableCount} -> ${updatedTableCount}`);
-        } else {
-          console.log(`[ISOLATION CHECK] Table count preserved: ${originalTableCount}`);
+          return prev;
         }
-      }
-      
-      setCode(updatedCode);
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const hotels = [...(element.data.hotels || [])];
+        hotels.splice(hotelIndex, 1);
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            hotels
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
     } catch (error) {
-      console.error('[HOTEL CRUD ERROR] Error removing hotel:', error);
-      if (error instanceof Error && error.message.includes('generated content')) {
-        alert('Cannot modify generated content. This operation is blocked for security.');
-      } else {
+      console.error('Error removing hotel:', error);
         alert(error instanceof Error ? error.message : 'Failed to remove hotel');
-      }
     }
   }, []);
   
   const handleAddHotel = useCallback((id: string) => {
     try {
-      // CRITICAL: Verify ID prefix
+      // Verify ID prefix
       if (!id.startsWith('user_hotel_')) {
-        const errorMsg = `SECURITY: Attempted to add hotel to non-user hotel section: ${id}`;
-        console.error(errorMsg);
         alert('Cannot modify generated content. Only user-created hotel sections can be edited.');
-        return;
-      }
-      
-      guardGeneratedContent(id, 'add hotel to');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[HOTEL CRUD] Adding hotel to hotel section ${id}`);
-      }
-      
-      const section = findHotelSection(codeRef.current, id);
-      if (!section) {
-        alert('Hotel section not found');
         return;
       }
       
@@ -939,36 +752,44 @@ function CodePageContent() {
           checkOutDay: "اليوم الثاني"
         }
       };
-      const updatedComponent = addHotelToComponent(section.component, newHotel);
-      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
-        updatedComponent + 
-        codeRef.current.substring(section.endIndex);
-      setCode(updatedCode);
+      
+      // Add hotel to JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'hotel');
+        if (userElementIndex === -1) {
+          alert('Hotel section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const hotels = [...(element.data.hotels || []), newHotel];
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            hotels
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
     } catch (error) {
-      console.error('[HOTEL CRUD ERROR] Error adding hotel:', error);
-      if (error instanceof Error && error.message.includes('generated content')) {
-        alert('Cannot modify generated content. This operation is blocked for security.');
-      } else {
+      console.error('Error adding hotel:', error);
         alert(error instanceof Error ? error.message : 'Failed to add hotel');
-      }
     }
   }, []);
   
   const handleDeleteHotelSection = useCallback((id: string) => {
-    // CRITICAL: Verify ID prefix - primary isolation guard
+    // Verify ID prefix - only user-created elements can be deleted
     if (!id.startsWith('user_hotel_')) {
-      const errorMsg = `SECURITY: Attempted to delete non-user hotel section: ${id}`;
-      console.error(errorMsg);
       alert('Cannot delete generated content. Only user-created sections can be deleted.');
-      return;
-    }
-    
-    // Additional guard
-    try {
-      guardGeneratedContent(id, 'delete');
-    } catch (error) {
-      console.error('[ISOLATION GUARD]', error);
-      alert('Cannot delete generated content. This operation is blocked.');
       return;
     }
     
@@ -977,55 +798,22 @@ function CodePageContent() {
     }
     
     try {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[HOTEL CRUD] Deleting hotel section ${id}`);
-        console.log(`[ISOLATION CHECK] ID prefix verified: user_hotel_`);
+      // Remove from JSON structure (same as handleDeleteSection, but keeping separate for clarity)
+      setStructure(prev => {
+        const updatedElements = prev.user.elements.filter(el => el.id !== id);
+        const updatedLayout = prev.layout.filter(layoutId => layoutId !== id);
         
-        // Count tables before deletion
-        const originalTableCount = (codeRef.current.match(/<DynamicTable/g) || []).length;
-        const originalSectionCount = (codeRef.current.match(/<HotelsSection/g) || []).length;
-        console.log(`[ISOLATION CHECK] Before deletion - Tables: ${originalTableCount}, HotelsSections: ${originalSectionCount}`);
-      }
-      
-      const section = findHotelSection(codeRef.current, id);
-      if (!section) {
-        alert('Hotel section not found');
-        return;
-      }
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[HOTEL CRUD] Found section to delete at index ${section.startIndex}-${section.endIndex}`);
-        console.log(`[ISOLATION CHECK] Component preview: ${section.component.substring(0, 100)}...`);
-      }
-      
-      const updatedCode = removeHotelSection(codeRef.current, id);
-      
-      // Verify isolation after deletion
-      if (process.env.NODE_ENV === 'development') {
-        const updatedTableCount = (updatedCode.match(/<DynamicTable/g) || []).length;
-        const updatedSectionCount = (updatedCode.match(/<HotelsSection/g) || []).length;
-        console.log(`[ISOLATION CHECK] After deletion - Tables: ${updatedTableCount}, HotelsSections: ${updatedSectionCount}`);
-        
-        if (updatedTableCount !== (codeRef.current.match(/<DynamicTable/g) || []).length) {
-          console.error(`[ISOLATION ERROR] Table count changed during hotel section deletion!`);
-          console.error(`Original: ${(codeRef.current.match(/<DynamicTable/g) || []).length}, Updated: ${updatedTableCount}`);
-          alert('ERROR: Deletion affected generated tables. Operation cancelled.');
-          return;
-        }
-        
-        if (updatedSectionCount !== (codeRef.current.match(/<HotelsSection/g) || []).length - 1) {
-          console.warn(`[ISOLATION WARNING] HotelsSection count mismatch. Expected: ${(codeRef.current.match(/<HotelsSection/g) || []).length - 1}, Got: ${updatedSectionCount}`);
-        }
-      }
-      
-      setCode(updatedCode);
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          },
+          layout: updatedLayout
+        };
+      });
     } catch (error) {
-      console.error('[HOTEL CRUD ERROR] Error deleting section:', error);
-      if (error instanceof Error && error.message.includes('generated content')) {
-        alert('Cannot delete generated content. This operation is blocked for security.');
-      } else {
+      console.error('Error deleting hotel section:', error);
         alert(error instanceof Error ? error.message : 'Failed to delete section');
-      }
     }
   }, []);
   
@@ -1036,42 +824,50 @@ function CodePageContent() {
     }
     
     try {
-      // CRITICAL: Verify ID prefix
+      // Verify ID prefix
       if (!editingHotelId.startsWith('user_hotel_')) {
-        const errorMsg = `SECURITY: Attempted to edit hotel in non-user hotel section: ${editingHotelId}`;
-        console.error(errorMsg);
         alert('Cannot modify generated content. Only user-created hotel sections can be edited.');
         return;
       }
       
-      guardGeneratedContent(editingHotelId, 'edit hotel in');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[HOTEL CRUD] Updating hotel ${editingHotelIndex} in hotel section ${editingHotelId}`);
-      }
-      
-      const section = findHotelSection(codeRef.current, editingHotelId);
-      if (!section) {
-        alert('Hotel section not found');
-        return;
-      }
-      
-      const updatedComponent = updateHotelInComponent(section.component, editingHotelIndex, updatedHotel);
-      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
-        updatedComponent + 
-        codeRef.current.substring(section.endIndex);
-      setCode(updatedCode);
+      // Update hotel in JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingHotelId && el.type === 'hotel'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Hotel section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const hotels = [...(element.data.hotels || [])];
+        hotels[editingHotelIndex] = updatedHotel;
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            hotels
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
       
       setShowEditHotelModal(false);
       setEditingHotelId(null);
       setEditingHotelIndex(null);
     } catch (error) {
-      console.error('[HOTEL CRUD ERROR] Error updating hotel:', error);
-      if (error instanceof Error && error.message.includes('generated content')) {
-        alert('Cannot modify generated content. This operation is blocked for security.');
-      } else {
+      console.error('Error updating hotel:', error);
         alert(error instanceof Error ? error.message : 'Failed to update hotel');
-      }
     }
   }, [editingHotelId, editingHotelIndex]);
   
@@ -1085,114 +881,118 @@ function CodePageContent() {
     }
     
     try {
-      // CRITICAL: Verify ID prefix
+      // Verify ID prefix
       if (!editingHotelId.startsWith('user_hotel_')) {
-        const errorMsg = `SECURITY: Attempted to edit non-user hotel section: ${editingHotelId}`;
-        console.error(errorMsg);
         alert('Cannot modify generated content. Only user-created hotel sections can be edited.');
         return;
       }
       
-      guardGeneratedContent(editingHotelId, 'edit');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[HOTEL CRUD] Updating section properties for hotel section ${editingHotelId}`);
-      }
-      
-      const section = findHotelSection(codeRef.current, editingHotelId);
-      if (!section) {
-        alert('Hotel section not found');
-        return;
-      }
-      
-      const updatedComponent = updateHotelSectionProps(section.component, props);
-      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
-        updatedComponent + 
-        codeRef.current.substring(section.endIndex);
-      setCode(updatedCode);
+      // Update section properties in JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingHotelId && el.type === 'hotel'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Hotel section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            ...props
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
       
       setShowEditHotelSectionModal(false);
       setEditingHotelId(null);
     } catch (error) {
-      console.error('[HOTEL CRUD ERROR] Error updating section:', error);
-      if (error instanceof Error && error.message.includes('generated content')) {
-        alert('Cannot modify generated content. This operation is blocked for security.');
-      } else {
+      console.error('Error updating hotel section:', error);
         alert(error instanceof Error ? error.message : 'Failed to update section');
-      }
     }
   }, [editingHotelId]);
 
-  // Handler functions for transport section actions
+  // Handler functions for transport section actions - Updated to work with JSON structure
   const handleRemoveTransportRow = useCallback((id: string, tableIndex: number, rowIndex: number) => {
     try {
       if (!id.startsWith('user_transport_')) {
-        const errorMsg = `SECURITY: Attempted to remove row from non-user transport section: ${id}`;
-        console.error(errorMsg);
         alert('Cannot modify generated content. Only user-created transport sections can be edited.');
         return;
       }
       
-      guardGeneratedContent(id, 'remove row from');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[TRANSPORT CRUD] Removing row ${rowIndex} from table ${tableIndex} in transport section ${id}`);
-      }
-      
-      // Explicitly convert to string as final safeguard
-      const idString = String(id);
-      
-      const section = findTransportSection(codeRef.current, idString);
-      if (!section) {
-        alert('Transport section not found');
-        return;
-      }
-      
-      const updatedCode = removeTransportRowFromComponent(codeRef.current, idString, tableIndex, rowIndex);
-      setCode(updatedCode);
+      // Remove row from JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
+        if (userElementIndex === -1) {
+          alert('Transport section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+        
+        if (tableIndex >= 0 && tableIndex < tables.length) {
+          const table = tables[tableIndex];
+          const rows = [...(table.rows || [])];
+          rows.splice(rowIndex, 1);
+          tables[tableIndex] = { ...table, rows };
+        }
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
     } catch (error) {
-      console.error('[TRANSPORT CRUD ERROR] Error removing row:', error);
+      console.error('Error removing transport row:', error);
       alert(error instanceof Error ? error.message : 'Failed to remove row');
     }
   }, []);
 
   const handleAddTransportRow = useCallback((id: string, tableIndex: number) => {
     try {
-      // Explicitly convert to string as final safeguard
-      const idString = String(id);
-      
-      // Type check: ensure id is a string
-      if (!idString || typeof idString !== 'string') {
-        console.error('[TRANSPORT CRUD ERROR] Invalid ID type:', typeof id, id);
-        alert('Invalid transport section ID');
-        return;
-      }
-      
-      if (!idString.startsWith('user_transport_')) {
-        const errorMsg = `SECURITY: Attempted to add row to non-user transport section: ${idString}`;
-        console.error(errorMsg);
+      if (!id.startsWith('user_transport_')) {
         alert('Cannot modify generated content. Only user-created transport sections can be edited.');
         return;
       }
       
-      guardGeneratedContent(idString, 'add row to');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[TRANSPORT CRUD] Adding row to table ${tableIndex} in transport section ${idString}`);
-      }
-      
-      const section = findTransportSection(codeRef.current, idString);
-      if (!section) {
+      // Add row to JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
+        if (userElementIndex === -1) {
         alert('Transport section not found');
-        return;
-      }
-      
-      const tables = extractTransportTablesFromComponent(section.component);
-      if (tableIndex < 0 || tableIndex >= tables.length) {
-        alert('Invalid table index');
-        return;
-      }
-      
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+        
+        if (tableIndex >= 0 && tableIndex < tables.length) {
       const table = tables[tableIndex];
       const newRow: any = {
         day: "",
@@ -1202,16 +1002,33 @@ function CodePageContent() {
       };
       
       // Initialize all column values
-      table.columns.forEach(col => {
+          (table.columns || []).forEach((col: any) => {
         if (!newRow[col.key]) {
           newRow[col.key] = "";
         }
       });
       
-      const updatedCode = addTransportRowToComponent(codeRef.current, idString, tableIndex, newRow);
-      setCode(updatedCode);
+          const rows = [...(table.rows || []), newRow];
+          tables[tableIndex] = { ...table, rows };
+        }
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
     } catch (error) {
-      console.error('[TRANSPORT CRUD ERROR] Error adding row:', error);
+      console.error('Error adding transport row:', error);
       alert(error instanceof Error ? error.message : 'Failed to add row');
     }
   }, []);
@@ -1219,46 +1036,51 @@ function CodePageContent() {
   const handleRemoveTransportTable = useCallback((id: string, tableIndex: number) => {
     try {
       if (!id.startsWith('user_transport_')) {
-        const errorMsg = `SECURITY: Attempted to remove table from non-user transport section: ${id}`;
-        console.error(errorMsg);
         alert('Cannot modify generated content. Only user-created transport sections can be edited.');
         return;
       }
-      
-      guardGeneratedContent(id, 'remove table from');
       
       if (!confirm('Are you sure you want to delete this table?')) {
         return;
       }
       
-      // Explicitly convert to string as final safeguard
-      const idString = String(id);
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[TRANSPORT CRUD] Removing table ${tableIndex} from transport section ${idString}`);
-      }
-      
-      const updatedCode = removeTransportTableFromComponent(codeRef.current, idString, tableIndex);
-      setCode(updatedCode);
+      // Remove table from JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
+        if (userElementIndex === -1) {
+          alert('Transport section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+        tables.splice(tableIndex, 1);
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
     } catch (error) {
-      console.error('[TRANSPORT CRUD ERROR] Error removing table:', error);
+      console.error('Error removing transport table:', error);
       alert(error instanceof Error ? error.message : 'Failed to remove table');
     }
   }, []);
 
   const handleDeleteTransportSection = useCallback((id: string) => {
     if (!id.startsWith('user_transport_')) {
-      const errorMsg = `SECURITY: Attempted to delete non-user transport section: ${id}`;
-      console.error(errorMsg);
       alert('Cannot delete generated content. Only user-created sections can be deleted.');
-      return;
-    }
-    
-    try {
-      guardGeneratedContent(id, 'delete');
-    } catch (error) {
-      console.error('[ISOLATION GUARD]', error);
-      alert('Cannot delete generated content. This operation is blocked.');
       return;
     }
     
@@ -1267,19 +1089,22 @@ function CodePageContent() {
     }
     
     try {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[TRANSPORT CRUD] Deleting transport section ${id}`);
-      }
-      
-      const updatedCode = removeTransportSection(codeRef.current, id);
-      setCode(updatedCode);
+      // Remove from JSON structure (same as handleDeleteSection)
+      setStructure(prev => {
+        const updatedElements = prev.user.elements.filter(el => el.id !== id);
+        const updatedLayout = prev.layout.filter(layoutId => layoutId !== id);
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          },
+          layout: updatedLayout
+        };
+      });
     } catch (error) {
-      console.error('[TRANSPORT CRUD ERROR] Error deleting section:', error);
-      if (error instanceof Error && error.message.includes('generated content')) {
-        alert('Cannot delete generated content. This operation is blocked for security.');
-      } else {
+      console.error('Error deleting transport section:', error);
         alert(error instanceof Error ? error.message : 'Failed to delete section');
-      }
     }
   }, []);
 
@@ -1297,36 +1122,52 @@ function CodePageContent() {
         return;
       }
       
-      guardGeneratedContent(editingTransportId, 'edit row in');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[TRANSPORT CRUD] Updating row ${editingTransportRowIndex} in table ${editingTransportTableIndex} of transport section ${editingTransportId}`);
-      }
-      
-      const section = findTransportSection(codeRef.current, editingTransportId);
-      if (!section) {
-        alert('Transport section not found');
-        return;
-      }
-      
-      const updatedComponent = updateTransportRowInComponent(
-        section.component, 
-        editingTransportId, 
-        editingTransportTableIndex, 
-        editingTransportRowIndex, 
-        updatedRow
-      );
-      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
-        updatedComponent + 
-        codeRef.current.substring(section.endIndex);
-      setCode(updatedCode);
+      // Update row in JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingTransportId && el.type === 'transport'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Transport section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+        
+        if (editingTransportTableIndex >= 0 && editingTransportTableIndex < tables.length) {
+          const table = tables[editingTransportTableIndex];
+          const rows = [...(table.rows || [])];
+          if (editingTransportRowIndex >= 0 && editingTransportRowIndex < rows.length) {
+            rows[editingTransportRowIndex] = updatedRow;
+            tables[editingTransportTableIndex] = { ...table, rows };
+          }
+        }
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
       
       setShowEditTransportRowModal(false);
       setEditingTransportId(null);
       setEditingTransportTableIndex(null);
       setEditingTransportRowIndex(null);
     } catch (error) {
-      console.error('[TRANSPORT CRUD ERROR] Error updating row:', error);
+      console.error('Error updating transport row:', error);
       alert(error instanceof Error ? error.message : 'Failed to update row');
     }
   }, [editingTransportId, editingTransportTableIndex, editingTransportRowIndex]);
@@ -1339,40 +1180,50 @@ function CodePageContent() {
     
     try {
       if (!editingTransportId.startsWith('user_transport_')) {
-        const errorMsg = `SECURITY: Attempted to edit table in non-user transport section: ${editingTransportId}`;
-        console.error(errorMsg);
         alert('Cannot modify generated content. Only user-created transport sections can be edited.');
         return;
       }
       
-      guardGeneratedContent(editingTransportId, 'edit table in');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[TRANSPORT CRUD] Updating table ${editingTransportTableIndex} in transport section ${editingTransportId}`);
-      }
-      
-      const section = findTransportSection(codeRef.current, editingTransportId);
-      if (!section) {
-        alert('Transport section not found');
-        return;
-      }
-      
-      const updatedComponent = updateTransportTableInComponent(
-        section.component, 
-        editingTransportId, 
-        editingTransportTableIndex, 
-        updatedTable
-      );
-      const updatedCode = codeRef.current.substring(0, section.startIndex) + 
-        updatedComponent + 
-        codeRef.current.substring(section.endIndex);
-      setCode(updatedCode);
+      // Update table in JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingTransportId && el.type === 'transport'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Transport section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+        
+        if (editingTransportTableIndex >= 0 && editingTransportTableIndex < tables.length) {
+          tables[editingTransportTableIndex] = updatedTable;
+        }
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
       
       setShowEditTransportTableModal(false);
       setEditingTransportId(null);
       setEditingTransportTableIndex(null);
     } catch (error) {
-      console.error('[TRANSPORT CRUD ERROR] Error updating table:', error);
+      console.error('Error updating transport table:', error);
       alert(error instanceof Error ? error.message : 'Failed to update table');
     }
   }, [editingTransportId, editingTransportTableIndex]);
@@ -1396,24 +1247,41 @@ function CodePageContent() {
         return;
       }
       
-      guardGeneratedContent(editingTransportId, 'edit');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[TRANSPORT CRUD] Updating section properties for transport section ${editingTransportId}`);
-      }
-      
-      const updatedCode = updateTransportSectionProps(codeRef.current, editingTransportId, props);
-      setCode(updatedCode);
+      // Update section properties in JSON structure
+      setStructure(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingTransportId && el.type === 'transport'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Transport section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            ...props
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
       
       setShowEditTransportSectionModal(false);
       setEditingTransportId(null);
     } catch (error) {
-      console.error('[TRANSPORT CRUD ERROR] Error updating section:', error);
-      if (error instanceof Error && error.message.includes('generated content')) {
-        alert('Cannot modify generated content. This operation is blocked for security.');
-      } else {
+      console.error('Error updating transport section:', error);
         alert(error instanceof Error ? error.message : 'Failed to update section');
-      }
     }
   }, [editingTransportId]);
 
@@ -1424,75 +1292,97 @@ function CodePageContent() {
     }
     
     try {
-      const section = findTransportSection(codeRef.current, editingTransportId);
-      if (!section) {
+      const element = structure.user.elements.find(
+        el => el.id === editingTransportId && el.type === 'transport'
+      );
+      
+      if (!element || !element.data.tables) {
         return null;
       }
       
-      const tables = extractTransportTablesFromComponent(section.component);
+      const tables = element.data.tables;
       if (editingTransportTableIndex >= 0 && editingTransportTableIndex < tables.length) {
         const table = tables[editingTransportTableIndex];
-        if (editingTransportRowIndex >= 0 && editingTransportRowIndex < table.rows.length) {
+        if (editingTransportRowIndex >= 0 && editingTransportRowIndex < (table.rows || []).length) {
           return table.rows[editingTransportRowIndex];
         }
       }
       return null;
     } catch (error) {
-      console.error('[TRANSPORT CRUD ERROR] Error getting initial row data:', error);
+      console.error('Error getting initial transport row data:', error);
       return null;
     }
-  }, [editingTransportId, editingTransportTableIndex, editingTransportRowIndex]);
+  }, [editingTransportId, editingTransportTableIndex, editingTransportRowIndex, structure]);
 
-  // Get initial transport table data for edit modal
+  // Get initial transport table data for edit modal - Updated to read from JSON structure
   const getInitialTransportTableData = useCallback((): any | null => {
     if (!editingTransportId || editingTransportTableIndex === null) {
       return null;
     }
     
     try {
-      const section = findTransportSection(codeRef.current, editingTransportId);
-      if (!section) {
+      const element = structure.user.elements.find(
+        el => el.id === editingTransportId && el.type === 'transport'
+      );
+      
+      if (!element || !element.data.tables) {
         return null;
       }
       
-      const tables = extractTransportTablesFromComponent(section.component);
+      const tables = element.data.tables;
       if (editingTransportTableIndex >= 0 && editingTransportTableIndex < tables.length) {
         return tables[editingTransportTableIndex];
       }
       return null;
     } catch (error) {
-      console.error('[TRANSPORT CRUD ERROR] Error getting initial table data:', error);
+      console.error('Error getting initial transport table data:', error);
       return null;
     }
-  }, [editingTransportId, editingTransportTableIndex]);
+  }, [editingTransportId, editingTransportTableIndex, structure]);
 
-  // Get initial transport section data for edit modal
+  // Get initial transport section data for edit modal - Updated to read from JSON structure
   const getInitialTransportSectionData = useCallback(() => {
     if (!editingTransportId) {
       return null;
     }
     
     try {
-      return extractTransportSectionData(codeRef.current, editingTransportId);
+      const element = structure.user.elements.find(
+        el => el.id === editingTransportId && el.type === 'transport'
+      );
+      
+      if (!element) {
+        return null;
+      }
+      
+      return {
+        title: element.data.title,
+        showTitle: element.data.showTitle,
+        direction: element.data.direction,
+        language: element.data.language
+      };
     } catch (error) {
-      console.error('[TRANSPORT CRUD ERROR] Error getting initial section data:', error);
+      console.error('Error getting initial transport section data:', error);
       return null;
     }
-  }, [editingTransportId]);
+  }, [editingTransportId, structure]);
   
-  // Get initial hotel data for edit modal
+  // Get initial hotel data for edit modal - Updated to read from JSON structure
   const getInitialHotelData = useCallback((): Hotel | null => {
     if (!editingHotelId || editingHotelIndex === null) {
       return null;
     }
     
     try {
-      const section = findHotelSection(codeRef.current, editingHotelId);
-      if (!section) {
+      const element = structure.user.elements.find(
+        el => el.id === editingHotelId && el.type === 'hotel'
+      );
+      
+      if (!element || !element.data.hotels) {
         return null;
       }
       
-      const hotels = extractHotelsFromComponent(section.component);
+      const hotels = element.data.hotels;
       if (editingHotelIndex >= 0 && editingHotelIndex < hotels.length) {
         return hotels[editingHotelIndex];
       }
@@ -1501,9 +1391,9 @@ function CodePageContent() {
     }
     
     return null;
-  }, [editingHotelId, editingHotelIndex]);
+  }, [editingHotelId, editingHotelIndex, structure]);
   
-  // Get initial section data for edit modal
+  // Get initial section data for edit modal - Updated to read from JSON structure
   const getInitialHotelSectionData = useCallback((): {
     title?: string;
     showTitle?: boolean;
@@ -1513,41 +1403,25 @@ function CodePageContent() {
     }
     
     try {
-      const section = findHotelSection(codeRef.current, editingHotelId);
-      if (!section) {
+      const element = structure.user.elements.find(
+        el => el.id === editingHotelId && el.type === 'hotel'
+      );
+      
+      if (!element) {
         return null;
       }
       
-      const component = section.component;
-      const data: {
-        title?: string;
-        showTitle?: boolean;
-      } = {};
-      
-      // Extract title
-      const titleMatch = component.match(/title=["']([^"']*)["']/);
-      if (titleMatch) {
-        data.title = titleMatch[1].replace(/\\"/g, '"');
-      }
-      
-      // Extract showTitle
-      const showTitleMatch = component.match(/showTitle=\{?([^}]*)\}?/);
-      if (showTitleMatch) {
-        data.showTitle = showTitleMatch[1].trim() === 'true';
-      }
-      
-      return data;
+      return {
+        title: element.data.title,
+        showTitle: element.data.showTitle
+      };
     } catch (error) {
       console.error('Error extracting hotel section data:', error);
     }
     
     return null;
-  }, [editingHotelId]);
+  }, [editingHotelId, structure]);
   
-  // Keep code ref updated
-  useEffect(() => {
-    codeRef.current = code;
-  }, [code]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1559,38 +1433,14 @@ function CodePageContent() {
       return;
     }
 
-    const storedCode = sessionStorage.getItem("codePreview.initialCode");
-    const storedWarnings = sessionStorage.getItem("codePreview.warnings");
-    const storedMetadata = sessionStorage.getItem("codePreview.metadata");
-    const storedTables = sessionStorage.getItem("codePreview.processedTables");
+    // Load from sessionStorage (from upload flow)
     const storedDocId = sessionStorage.getItem("codePreview.documentId");
-
     if (storedDocId) {
       setDocumentId(storedDocId);
       sessionStorage.removeItem("codePreview.documentId");
     }
 
-    if (storedCode) {
-      // Clean and fix import paths when loading from storage
-      import("../../utils/parseGptCode").then(({ cleanJSXCode }) => {
-        const cleanedCode = cleanJSXCode(storedCode);
-        setCode(cleanedCode);
-      });
-      sessionStorage.removeItem("codePreview.initialCode");
-    }
-
-    if (storedWarnings) {
-      try {
-        const parsed = JSON.parse(storedWarnings);
-        if (Array.isArray(parsed)) {
-          setExternalWarnings(parsed as string[]);
-        }
-      } catch {
-        // ignore parse errors
-      }
-      sessionStorage.removeItem("codePreview.warnings");
-    }
-
+    const storedMetadata = sessionStorage.getItem("codePreview.metadata");
     if (storedMetadata) {
       try {
         const parsed = JSON.parse(storedMetadata);
@@ -1601,29 +1451,35 @@ function CodePageContent() {
       sessionStorage.removeItem("codePreview.metadata");
     }
 
-    if (storedTables) {
-      try {
-        const parsed = JSON.parse(storedTables);
-        if (Array.isArray(parsed)) {
-          setProcessedTables(parsed);
-        }
-      } catch {
-        // ignore parse errors
-      }
-      sessionStorage.removeItem("codePreview.processedTables");
-    }
-
-    // Load structured data from sessionStorage
+    // Load structured data from sessionStorage (v2 format)
     const storedExtractedData = sessionStorage.getItem("codePreview.extractedData");
     if (storedExtractedData) {
       try {
         const parsed = JSON.parse(storedExtractedData);
-        if (parsed && (parsed.sections || parsed.tables)) {
-          setStructuredData(parsed as ExtractResponse);
+        // Ensure it's v2 format
+        if (parsed && parsed.generated && parsed.user && parsed.layout) {
+          setStructure(parsed as SeparatedStructure);
+        } else if (parsed && (parsed.sections || parsed.tables)) {
+          // Legacy format - migrate to v2
+          setStructure({
+            generated: {
+              sections: parsed.sections || [],
+              tables: parsed.tables || []
+            },
+            user: {
+              elements: []
+            },
+            layout: [
+              ...(parsed.sections || []).map((s: any) => s.id),
+              ...(parsed.tables || []).map((t: any) => t.id)
+            ],
+            meta: parsed.meta || {}
+          });
         }
       } catch {
         // ignore parse errors
       }
+      sessionStorage.removeItem("codePreview.extractedData");
     }
   }, [searchParams]);
 
@@ -1635,21 +1491,36 @@ function CodePageContent() {
       setDocumentId(doc.id);
       setCurrentVersion(doc.current_version || 1);
       setTotalVersions(doc.total_versions || 1);
-      if (doc.jsx_code) {
-        setCode(doc.jsx_code);
+      
+      // Load v2 structure from extracted_data
+      if (doc.extracted_data) {
+        // Ensure it's v2 format
+        if (doc.extracted_data.generated && doc.extracted_data.user && doc.extracted_data.layout) {
+          setStructure(doc.extracted_data as SeparatedStructure);
+        } else if (doc.extracted_data.sections || doc.extracted_data.tables) {
+          // Legacy format - migrate to v2
+          setStructure({
+            generated: {
+              sections: doc.extracted_data.sections || [],
+              tables: doc.extracted_data.tables || []
+            },
+            user: {
+              elements: []
+            },
+            layout: [
+              ...(doc.extracted_data.sections || []).map((s: any) => s.id),
+              ...(doc.extracted_data.tables || []).map((t: any) => t.id)
+            ],
+            meta: doc.extracted_data.meta || {}
+          });
+        }
       }
-      // Load structured data if available
-      if (doc.extracted_data && (doc.extracted_data.sections || doc.extracted_data.tables)) {
-        setStructuredData(doc.extracted_data as ExtractResponse);
-      }
+      
       if (doc.metadata) {
         setSourceMetadata({
           filename: doc.metadata.filename || doc.original_filename,
           uploadedAt: doc.created_at,
         });
-        if (doc.metadata.warnings) {
-          setExternalWarnings(doc.metadata.warnings);
-        }
       }
     } catch (err) {
       console.error("Failed to load document:", err);
@@ -1665,9 +1536,31 @@ function CodePageContent() {
       
       setCurrentVersion(doc.current_version || 1);
       setTotalVersions(doc.total_versions || 1);
-      if (doc.jsx_code) {
-        setCode(doc.jsx_code);
+      
+      // Reload structure - handle both v2 and legacy formats
+      if (doc.extracted_data) {
+        if (doc.extracted_data.generated && doc.extracted_data.user && doc.extracted_data.layout) {
+          // v2 format
+          setStructure(doc.extracted_data as SeparatedStructure);
+        } else if (doc.extracted_data.sections || doc.extracted_data.tables) {
+          // Legacy format - migrate to v2
+          setStructure({
+            generated: {
+              sections: doc.extracted_data.sections || [],
+              tables: doc.extracted_data.tables || []
+            },
+            user: {
+              elements: []
+            },
+            layout: [
+              ...(doc.extracted_data.sections || []).map((s: any) => s.id),
+              ...(doc.extracted_data.tables || []).map((t: any) => t.id)
+            ],
+            meta: doc.extracted_data.meta || {}
+          });
+        }
       }
+      
       if (doc.metadata) {
         setSourceMetadata({
           filename: doc.metadata.filename || doc.original_filename,
@@ -1679,318 +1572,58 @@ function CodePageContent() {
     }
   };
 
-  const setValue = useCallback((id: string, v: string) => {
-    setValues((prev) => ({ ...prev, [id]: v }));
-  }, []);
-
-  // Add data attributes to preview elements for the edit icons
-  useEffect(() => {
-    if (mode !== "preview" && mode !== "split") return;
-    
-    const container = previewContainerRef.current;
-    if (!container) return;
-    
-    const handleDoubleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target) return;
-      
-      // Don't trigger if clicking on add button
-      if (target.closest('.section-add-btn')) return;
-      
-      const elementInfo = getElementInfo(target);
-      
-      // Double click for sections only (not tables)
-      if (elementInfo.type === 'section' && elementInfo.sectionIndex !== undefined) {
-        setPanelContext({ type: 'section', index: elementInfo.sectionIndex });
-      }
-    };
-    
-    container.addEventListener('dblclick', handleDoubleClick);
-    
-    return () => {
-      container.removeEventListener('dblclick', handleDoubleClick);
-    };
-  }, [mode, code]);
-  useEffect(() => {
-    if (mode !== "preview" && mode !== "split") return;
-    
-    const container = previewContainerRef.current;
-    if (!container) return;
-    
-    // Wait for content to render
-    const timeout = setTimeout(() => {
-      // Parse code to get structure
-      import('../../utils/jsxParser').then(({ parseJSXCode }) => {
-        const parsed = parseJSXCode(code);
-        
-        // Clean up existing buttons and remove old event listeners
-        const existingButtons = container.querySelectorAll('.section-add-btn, .table-edit-btn');
-        existingButtons.forEach(btn => btn.remove());
-        
-        // Remove old setup flags and clone elements to remove event listeners
-        const existingSections = container.querySelectorAll('[data-section-setup]');
-        existingSections.forEach(section => {
-          (section as HTMLElement).removeAttribute('data-section-setup');
-        });
-        const existingTables = container.querySelectorAll('[data-table-setup]');
-        existingTables.forEach(table => {
-          (table as HTMLElement).removeAttribute('data-table-setup');
-        });
-        
-        // Find all sections (section elements or divs that look like sections)
-        const sections = container.querySelectorAll('section, [class*="section"]');
-        let sectionIndex = 0;
-        sections.forEach((section) => {
-          // Only mark as section if it's likely a SectionTemplate (has title or content structure)
-          const hasTitle = section.querySelector('h1, h2, h3, h4, h5, h6');
-          const hasContent = section.textContent && section.textContent.trim().length > 0;
-          
-          if (hasTitle || hasContent) {
-            if (sectionIndex < parsed.sections.length) {
-              const sectionEl = section as HTMLElement;
-              
-              sectionEl.setAttribute('data-section-index', sectionIndex.toString());
-              sectionEl.setAttribute('data-section-setup', 'true');
-              sectionEl.style.cursor = 'pointer';
-              sectionEl.style.position = 'relative';
-              sectionEl.style.transition = 'all 0.3s ease';
-              sectionEl.style.opacity = '1';
-              sectionEl.style.transform = 'translateY(0)';
-              sectionEl.style.marginBottom = '24px'; // Space for add button
-              sectionEl.title = 'Double-click to edit section';
-              
-              let addButton: HTMLButtonElement | null = null;
-              
-              // Add hover effect and "+" button
-              sectionEl.addEventListener('mouseenter', function() {
-                this.style.outline = '2px dashed #A4C639';
-                this.style.outlineOffset = '2px';
-                this.style.transform = 'translateY(-2px)';
-                
-                // Create and show add button
-                if (!addButton) {
-                  addButton = document.createElement('button');
-                  addButton.className = 'section-add-btn';
-                  addButton.style.cssText = 'position: absolute; left: 50%; bottom: -16px; transform: translate(-50%, 0) scale(0.8); width: 32px; height: 32px; background: #A4C639; color: white; border-radius: 50%; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; z-index: 10; opacity: 0; transition: all 0.3s ease; cursor: pointer; border: none;';
-                  addButton.innerHTML = '<svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
-                  addButton.title = 'Add new section';
-                  
-                  addButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    const sectionIdx = parseInt(sectionEl.getAttribute('data-section-index') || '0', 10);
-                    // Use current code from ref (always latest)
-                    const currentCode = codeRef.current;
-                    const newCode = addSection(currentCode, {
-                      title: "New Section",
-                      content: "Section content here",
-                      type: "section",
-                    }, sectionIdx + 1);
-                    setCode(newCode);
-                  });
-                  
-                  addButton.addEventListener('mouseenter', function() {
-                    this.style.background = '#8FB02E';
-                    this.style.transform = 'translate(-50%, 0) scale(1.1)';
-                  });
-                  
-                  addButton.addEventListener('mouseleave', function() {
-                    this.style.background = '#A4C639';
-                    this.style.transform = 'translate(-50%, 0) scale(1)';
-                  });
-                  
-                  sectionEl.appendChild(addButton);
-                }
-                addButton.style.opacity = '1';
-                addButton.style.transform = 'translate(-50%, 0) scale(1)';
-              });
-              
-              sectionEl.addEventListener('mouseleave', function(e) {
-                // Don't hide if mouse is moving to the add button
-                const relatedTarget = e.relatedTarget as HTMLElement;
-                if (relatedTarget && (relatedTarget === addButton || relatedTarget.closest('.section-add-btn'))) {
-                  return;
-                }
-                
-                this.style.outline = '';
-                this.style.outlineOffset = '';
-                this.style.transform = 'translateY(0)';
-                
-                // Hide add button
-                if (addButton) {
-                  addButton.style.opacity = '0';
-                  addButton.style.transform = 'translate(-50%, 0) scale(0.8)';
-                }
-              });
-              
-              // Keep button visible when hovering over it
-              if (addButton) {
-                addButton.addEventListener('mouseenter', function() {
-                  this.style.opacity = '1';
-                  this.style.transform = 'translate(-50%, 0) scale(1.1)';
-                });
-              }
-              
-              
-              sectionIndex++;
-            }
-          }
-        });
-        
-        // Find all tables (only actual table elements)
-        const tables = container.querySelectorAll('table');
-        console.log('Found', tables.length, 'table elements in DOM, parsed', parsed.tables.length, 'tables from code');
-        let tableIndex = 0;
-        tables.forEach((table, domIndex) => {
-          // Only process actual table elements
-          if (table.tagName === 'TABLE' && tableIndex < parsed.tables.length) {
-            const tableElement = table.closest('div') || table;
-            const tableEl = tableElement as HTMLElement;
-            
-            // Skip tables inside AirplaneSection component
-            const isInsideAirplaneSection = table.closest('[data-airplane-section-id]') !== null;
-            if (isInsideAirplaneSection) {
-              console.log(`Skipping table ${tableIndex} - inside AirplaneSection`);
-              tableIndex++;
-              return;
-            }
-            
-            // Skip tables inside TransportSection component
-            const isInsideTransportSection = table.closest('[data-transport-section-id]') !== null;
-            if (isInsideTransportSection) {
-              tableIndex++;
-              return;
-            }
-            
-            console.log(`Setting up table ${tableIndex} (DOM index ${domIndex})`);
-            tableEl.setAttribute('data-table-index', tableIndex.toString());
-            tableEl.setAttribute('data-table-setup', 'true');
-            tableEl.style.cursor = 'pointer';
-            tableEl.style.transition = 'all 0.3s ease';
-            tableEl.style.opacity = '1';
-            tableEl.style.position = 'relative';
-            tableEl.title = 'Click the gear icon to manage table';
-            let editButton: HTMLButtonElement | null = null;
-            
-            // Add hover effect and edit button
-            tableEl.addEventListener('mouseenter', function() {
-              this.style.outline = '2px dashed #A4C639';
-              this.style.outlineOffset = '2px';
-              this.style.transform = 'translateY(-2px)';
-              
-              // Create and show edit button
-              if (!editButton) {
-                editButton = document.createElement('button');
-                editButton.className = 'table-edit-btn';
-                editButton.style.cssText = 'position: absolute; right: 8px; top: 8px; width: 36px; height: 36px; background: #A4C639; color: white; border-radius: 50%; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; z-index: 20; opacity: 0; transition: all 0.3s ease; cursor: pointer; border: 2px solid white;';
-                editButton.innerHTML = '<svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>';
-                editButton.title = 'Edit table structure';
-                
-                editButton.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  const tblIdx = parseInt(tableEl.getAttribute('data-table-index') || '0', 10);
-                  console.log('Clicked table index:', tblIdx, 'Total tables:', parsed.tables.length);
-                  setPanelContext({ type: 'table', index: tblIdx });
-                });
-                
-                editButton.addEventListener('mouseenter', function() {
-                  this.style.background = '#8FB02E';
-                  this.style.transform = 'scale(1.1)';
-                });
-                
-                editButton.addEventListener('mouseleave', function() {
-                  this.style.background = '#A4C639';
-                  this.style.transform = 'scale(1)';
-                });
-                
-                tableEl.appendChild(editButton);
-              }
-              editButton.style.opacity = '1';
-            });
-            
-            tableEl.addEventListener('mouseleave', function(e) {
-              // Don't hide if mouse is moving to the edit button
-              const relatedTarget = e.relatedTarget as HTMLElement;
-              if (relatedTarget && (relatedTarget === editButton || relatedTarget.closest('.table-edit-btn'))) {
-                return;
-              }
-              
-              this.style.outline = '';
-              this.style.outlineOffset = '';
-              this.style.transform = 'translateY(0)';
-              
-              // Hide edit button
-              if (editButton) {
-                editButton.style.opacity = '0';
-              }
-            });
-            
-            // Keep button visible when hovering over it
-            if (editButton) {
-              editButton.addEventListener('mouseenter', function() {
-                this.style.opacity = '1';
-              });
-            }
-            
-            tableIndex++;
-          }
-        });
-      });
-    }, 300); // Increased timeout to ensure content is rendered
-    
-    return () => {
-      clearTimeout(timeout);
-      // Clean up add buttons and edit buttons on unmount
-      const container = previewContainerRef.current;
-      if (container) {
-        const existingButtons = container.querySelectorAll('.section-add-btn, .table-edit-btn');
-        existingButtons.forEach(btn => btn.remove());
-      }
-    };
-  }, [mode, code, values]);
-  
-  const handleCodeChange = useCallback((newCode: string) => {
-    setCode(newCode);
-  }, []);
+  // Old JSX code manipulation hooks removed - now using JSON structure
+  // Removed useEffect hooks that referenced mode, code, values, codeRef, parsed, setCode, etc.
 
   const handleCreateTable = useCallback((config: {
     title: string;
     columns: string[];
     rowCount: number;
   }) => {
-    const newCode = addNewTable(codeRef.current, config);
-    setCode(newCode);
+    // Add new table to JSON structure
+    const tableId = `gen_tbl_${Date.now()}`;
+    const newTable = {
+      id: tableId,
+      title: config.title,
+      columns: config.columns.map((col, idx) => ({
+        key: `col_${idx}`,
+        label: col
+      })),
+      rows: Array(config.rowCount).fill(null).map(() => 
+        config.columns.reduce((acc, _, idx) => {
+          acc[`col_${idx}`] = '';
+          return acc;
+        }, {} as Record<string, string>)
+      ),
+      order: structure.generated.tables.length
+    };
+    
+    setStructure(prev => ({
+      ...prev,
+      generated: {
+        ...prev.generated,
+        tables: [...prev.generated.tables, newTable]
+      },
+      layout: [...prev.layout, tableId]
+    }));
+    
     setShowTableCreatedToast(true);
     setTimeout(() => setShowTableCreatedToast(false), 3000);
-  }, []);
+  }, [structure]);
 
   const handleExportCode = useCallback(() => {
-    // Replace all default values in the code with current values
-    let updatedCode = code;
-    
-    Object.entries(values).forEach(([key, value]) => {
-      // Escape special regex characters in the key
-      const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      // Find and replace the default value with the new value
-      const regex = new RegExp(
-        `value={values\\['${escapedKey}'\\]\\s*\\|\\|\\s*['"]([^'"]*?)['"]`,
-        'g'
-      );
-      updatedCode = updatedCode.replace(regex, `value={values['${key}'] || '${value.replace(/'/g, "\\'")}'`);
-    });
-
-    // Create blob and download
-    const blob = new Blob([updatedCode], { type: 'text/javascript' });
+    // Export JSON structure
+    const jsonStr = JSON.stringify(structure, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `template-${new Date().toISOString().split('T')[0]}.jsx`;
+    a.download = `document-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [code, values]);
+  }, [structure]);
 
   const handleExportPDF = useCallback(async () => {
     // Use html2pdf.js for programmatic download (NO browser print dialog)
@@ -2043,130 +1676,31 @@ function CodePageContent() {
     // Generate unique ID for user element
     const elementId = `user_airplane_${Date.now()}`;
     
-    let updatedCode = code;
-    
-    // Check if import already exists, if not add it
-    if (!updatedCode.includes("import AirplaneSection")) {
-      // Find the last import statement or function declaration
-      const importMatch = updatedCode.match(/^(\s*import[^;]+;[\s\S]*?)(const|export|function)/m);
-      if (importMatch) {
-        updatedCode = updatedCode.replace(importMatch[1], 
-          importMatch[1] + `\nimport AirplaneSection from '@/app/Templates/airplaneSection';\n`);
-      } else {
-        // Add at the beginning if no imports found
-        updatedCode = `import AirplaneSection from '@/app/Templates/airplaneSection';\n` + updatedCode;
+    // Add to JSON structure
+    const newElement: UserElement = {
+      id: elementId,
+      type: "airplane",
+      data: {
+        flights: data.flights,
+        title: data.title,
+        showTitle: data.showTitle,
+        noticeMessage: data.noticeMessage,
+        showNotice: data.showNotice,
+        direction: data.direction || "rtl",
+        language: data.language || "ar"
       }
-    }
+    };
     
-    // Format flights data for JSX
-    const flightsString = data.flights.map(flight => `{
-            date: "${flight.date}",
-            fromAirport: "${flight.fromAirport.replace(/"/g, '\\"')}",
-            toAirport: "${flight.toAirport.replace(/"/g, '\\"')}",
-            travelers: { adults: ${flight.travelers.adults}, children: ${flight.travelers.children}, infants: ${flight.travelers.infants} },
-            luggage: "${flight.luggage.replace(/"/g, '\\"')}"
-          }`).join(',\n          ');
+    setStructure(prev => ({
+      ...prev,
+      user: {
+        elements: [...prev.user.elements, newElement]
+      },
+      layout: [...prev.layout, elementId]
+    }));
     
-    // Create the component JSX
-    const airplaneComponent = `        <AirplaneSection
-          id="${elementId}"
-          editable={true}
-          flights={[\n          ${flightsString}\n          ]}
-          ${data.title ? `title="${data.title.replace(/"/g, '\\"')}"` : ''}
-          showTitle={${data.showTitle !== false}}
-          ${data.noticeMessage ? `noticeMessage="${data.noticeMessage.replace(/"/g, '\\"')}"` : ''}
-          showNotice={${data.showNotice !== false}}
-          direction="${data.direction || 'rtl'}"
-          language="${data.language || 'ar'}"
-        />`;
-    
-    // Try to find header image to insert after it
-    // Pattern 1: Look for img tag with header in src/alt (most common pattern)
-    let insertionPoint = -1;
-    let indent = '        ';
-    
-    // Pattern 1: After header image tag (happylifeHeader, headerImage, etc.)
-    const headerImagePatterns = [
-      /(<img[^>]*(?:src=["'][^"']*(?:header|Header|happylifeHeader)[^"']*["']|alt=["'][^"']*(?:header|Header)[^"']*["'])[^>]*\/?>)/i,
-      /(<img[^>]*\/?>)/  // Any img tag as fallback
-    ];
-    
-    for (const pattern of headerImagePatterns) {
-      const headerImageMatch = updatedCode.match(pattern);
-      if (headerImageMatch && headerImageMatch.index !== undefined) {
-        insertionPoint = headerImageMatch.index + headerImageMatch[0].length;
-        // Get the indentation from the line after the image
-        const afterImage = updatedCode.substring(insertionPoint);
-        const nextLineMatch = afterImage.match(/^\s*\n(\s*)/);
-        if (nextLineMatch && nextLineMatch[1]) {
-          indent = nextLineMatch[1];
-        }
-        break;
-      }
-    }
-    
-    // Pattern 2: If no image found, look for header div or comment
-    if (insertionPoint === -1) {
-      const headerCommentPattern = /(\{\/\*.*Header.*\*\/[\s\S]*?<\/div>[\s\S]*?\n)/i;
-      const headerCommentMatch = updatedCode.match(headerCommentPattern);
-      if (headerCommentMatch && headerCommentMatch.index !== undefined) {
-        insertionPoint = headerCommentMatch.index + headerCommentMatch[0].length;
-        indent = '        ';
-      }
-    }
-    
-    // Pattern 3: Look for BaseTemplate children area (after opening tag)
-    if (insertionPoint === -1) {
-      const baseTemplatePattern = /<BaseTemplate[^>]*>\s*\n(\s*)/;
-      const baseTemplateMatch = updatedCode.match(baseTemplatePattern);
-      if (baseTemplateMatch && baseTemplateMatch.index !== undefined) {
-        insertionPoint = baseTemplateMatch.index + baseTemplateMatch[0].length;
-        indent = baseTemplateMatch[1] || '        ';
-      }
-    }
-    
-    // Pattern 4: Find first main content div after return statement
-    if (insertionPoint === -1) {
-      const returnMatch = updatedCode.match(/return\s*\(/);
-      if (returnMatch && returnMatch.index !== undefined) {
-        const afterReturn = updatedCode.substring(returnMatch.index + returnMatch[0].length);
-        // Find first div with content/main/px classes (typical content area)
-        const contentDivMatch = afterReturn.match(/(\s*<div[^>]*className=["'][^"']*(?:content|main|px-|py-|w-\[794px\])[^"']*["'][^>]*>)/);
-        if (contentDivMatch && contentDivMatch.index !== undefined) {
-          insertionPoint = returnMatch.index + returnMatch[0].length + contentDivMatch.index + contentDivMatch[0].length;
-          indent = '        ';
-        }
-      }
-    }
-    
-    if (insertionPoint !== -1) {
-      // Insert after header image/div
-      const before = updatedCode.substring(0, insertionPoint);
-      const after = updatedCode.substring(insertionPoint);
-      // Add proper newline and indent, then insert component
-      updatedCode = before + '\n' + indent + airplaneComponent + after;
-    } else {
-      // Fallback: Insert after the return statement's first div
-      const returnMatch = updatedCode.match(/(return\s*\([\s\S]*?<div[^>]*>[\s\S]*?<\/div>[\s\S]*?\n)/);
-      if (returnMatch && returnMatch.index !== undefined) {
-        insertionPoint = returnMatch.index + returnMatch[0].length;
-        updatedCode = updatedCode.substring(0, insertionPoint) + 
-          indent + airplaneComponent + '\n' + 
-          updatedCode.substring(insertionPoint);
-      } else {
-        // Last resort: append before the last closing div
-        const lastDivIndex = updatedCode.lastIndexOf('</div>');
-        if (lastDivIndex !== -1) {
-          updatedCode = updatedCode.slice(0, lastDivIndex) + 
-            `\n        ${airplaneComponent}\n      ` + 
-            updatedCode.slice(lastDivIndex);
-        }
-      }
-    }
-    
-    setCode(updatedCode);
     setShowAddAirplaneModal(false);
-  }, [code]);
+  }, []);
 
   const handleAddHotelClick = useCallback(() => {
     setShowAddHotelModal(true);
@@ -2191,141 +1725,32 @@ function CodePageContent() {
     // Generate unique ID for user element
     const elementId = `user_hotel_${Date.now()}`;
     
-    let updatedCode = code;
-    
-    // Check if import already exists, if not add it
-    if (!updatedCode.includes("import HotelsSection")) {
-      // Find the last import statement or function declaration
-      const importMatch = updatedCode.match(/^(\s*import[^;]+;[\s\S]*?)(const|export|function)/m);
-      if (importMatch) {
-        updatedCode = updatedCode.replace(importMatch[1], 
-          importMatch[1] + `\nimport HotelsSection from '@/app/Templates/HotelsSection';\n`);
-      } else {
-        // Add at the beginning if no imports found
-        updatedCode = `import HotelsSection from '@/app/Templates/HotelsSection';\n` + updatedCode;
+    // Add to JSON structure
+    const newElement: UserElement = {
+      id: elementId,
+      type: "hotel",
+      data: {
+        hotels: data.hotels,
+        title: data.title,
+        showTitle: data.showTitle,
+        direction: data.direction || "rtl",
+        language: data.language || "ar",
+        labels: data.labels
       }
-    }
+    };
     
-    // Format hotels data for JSX (matching airplane section pattern)
-    const hotelsString = data.hotels.map(hotel => {
-      const parts: string[] = [];
-      parts.push(`city: "${hotel.city.replace(/"/g, '\\"')}"`);
-      parts.push(`nights: ${hotel.nights}`);
-      if (hotel.cityBadge) {
-        parts.push(`cityBadge: "${hotel.cityBadge.replace(/"/g, '\\"')}"`);
-      }
-      parts.push(`hotelName: "${hotel.hotelName.replace(/"/g, '\\"')}"`);
-      if (hotel.hasDetailsLink !== undefined) {
-        parts.push(`hasDetailsLink: ${hotel.hasDetailsLink}`);
-      }
-      if (hotel.detailsLink) {
-        parts.push(`detailsLink: "${hotel.detailsLink.replace(/"/g, '\\"')}"`);
-      }
-      const roomTypePart = hotel.roomDescription.roomType 
-        ? `,\n              roomType: "${hotel.roomDescription.roomType.replace(/"/g, '\\"')}"`
-        : '';
-      parts.push(`roomDescription: {
-              includesAll: "${hotel.roomDescription.includesAll.replace(/"/g, '\\"')}",
-              bedType: "${hotel.roomDescription.bedType.replace(/"/g, '\\"')}"${roomTypePart}
-            }`);
-      parts.push(`checkInDate: "${hotel.checkInDate}"`);
-      parts.push(`checkOutDate: "${hotel.checkOutDate}"`);
-      parts.push(`dayInfo: {
-              checkInDay: "${hotel.dayInfo.checkInDay.replace(/"/g, '\\"')}",
-              checkOutDay: "${hotel.dayInfo.checkOutDay.replace(/"/g, '\\"')}"
-            }`);
-      
-      return `{\n            ${parts.join(',\n            ')}\n          }`;
-    }).join(',\n          ');
+    setStructure(prev => ({
+      ...prev,
+      user: {
+        elements: [...prev.user.elements, newElement]
+      },
+      layout: [...prev.layout, elementId]
+    }));
     
-    // Format labels for JSX - only include if provided (component has defaults based on language)
-    // Since HotelsSection has default labels, we can omit this prop to use defaults
-    // NOTE: We avoid using labels={{}} syntax because PreviewRenderer's fixDoubleBraces
-    // incorrectly transforms it. Since component has defaults, we simply don't include it.
-    const labelsProp = ''; // Always use component defaults to avoid fixDoubleBraces issue
-    
-    // Create the component JSX (matching airplane section pattern)
-    const titleProp = data.title ? `\n          title="${data.title.replace(/"/g, '\\"')}"` : '';
-    const hotelComponent = `        <HotelsSection
-          id="${elementId}"
-          editable={true}
-          hotels={[\n          ${hotelsString}\n          ]}${titleProp}
-          showTitle={${data.showTitle !== false}}${labelsProp}
-          direction="${data.direction || 'rtl'}"
-          language="${data.language || 'ar'}"
-        />`;
-    
-    // Try to find header image to insert after it (same pattern as airplane)
-    let insertionPoint = -1;
-    let indent = '        ';
-    
-    // Pattern 1: After header image tag
-    const headerImagePatterns = [
-      /(<img[^>]*(?:src=["'][^"']*(?:header|Header|happylifeHeader)[^"']*["']|alt=["'][^"']*(?:header|Header)[^"']*["'])[^>]*\/?>)/i,
-      /(<img[^>]*\/?>)/  // Any img tag as fallback
-    ];
-    
-    for (const pattern of headerImagePatterns) {
-      const headerImageMatch = updatedCode.match(pattern);
-      if (headerImageMatch && headerImageMatch.index !== undefined) {
-        insertionPoint = headerImageMatch.index + headerImageMatch[0].length;
-        const afterImage = updatedCode.substring(insertionPoint);
-        const nextLineMatch = afterImage.match(/^\s*\n(\s*)/);
-        if (nextLineMatch && nextLineMatch[1]) {
-          indent = nextLineMatch[1];
-        }
-        break;
-      }
-    }
-    
-    // Pattern 2: If no image found, look for header div or comment
-    if (insertionPoint === -1) {
-      const headerCommentPattern = /(\{\/\*.*Header.*\*\/[\s\S]*?<\/div>[\s\S]*?\n)/i;
-      const headerCommentMatch = updatedCode.match(headerCommentPattern);
-      if (headerCommentMatch && headerCommentMatch.index !== undefined) {
-        insertionPoint = headerCommentMatch.index + headerCommentMatch[0].length;
-        indent = '        ';
-      }
-    }
-    
-    // Pattern 3: Look for BaseTemplate children area
-    if (insertionPoint === -1) {
-      const baseTemplatePattern = /<BaseTemplate[^>]*>\s*\n(\s*)/;
-      const baseTemplateMatch = updatedCode.match(baseTemplatePattern);
-      if (baseTemplateMatch && baseTemplateMatch.index !== undefined) {
-        insertionPoint = baseTemplateMatch.index + baseTemplateMatch[0].length;
-        indent = baseTemplateMatch[1] || '        ';
-      }
-    }
-    
-    // Pattern 4: Look for return statement
-    if (insertionPoint === -1) {
-      const returnPattern = /return\s*\(\s*\n(\s*)/;
-      const returnMatch = updatedCode.match(returnPattern);
-      if (returnMatch && returnMatch.index !== undefined) {
-        insertionPoint = returnMatch.index + returnMatch[0].length;
-        indent = returnMatch[1] || '        ';
-      }
-    }
-    
-    // Insert the component
-    if (insertionPoint !== -1) {
-      const before = updatedCode.substring(0, insertionPoint);
-      const after = updatedCode.substring(insertionPoint);
-      updatedCode = before + '\n' + indent + hotelComponent + '\n' + after;
-    } else {
-      // Fallback: append at the end before closing tag
-      const lastBrace = updatedCode.lastIndexOf('}');
-      if (lastBrace !== -1) {
-        updatedCode = updatedCode.substring(0, lastBrace) + '\n        ' + hotelComponent + '\n' + updatedCode.substring(lastBrace);
-      } else {
-        updatedCode = updatedCode + '\n        ' + hotelComponent;
-      }
-    }
-    
-    setCode(updatedCode);
     setShowAddHotelModal(false);
-  }, [code]);
+    
+    /* OLD JSX CODE REMOVED - Now works with JSON structure */
+  }, []);
 
   const handleAddTransportClick = useCallback(() => {
     setShowAddTransportModal(true);
@@ -2342,131 +1767,31 @@ function CodePageContent() {
     // Generate unique ID for user element
     const elementId = `user_transport_${Date.now()}`;
     
-    let updatedCode = code;
-    
-    // Check if import already exists, if not add it
-    if (!updatedCode.includes("import TransportSection")) {
-      // Find the last import statement or function declaration
-      const importMatch = updatedCode.match(/^(\s*import[^;]+;[\s\S]*?)(const|export|function)/m);
-      if (importMatch) {
-        updatedCode = updatedCode.replace(importMatch[1], 
-          importMatch[1] + `\nimport TransportSection from '@/app/Templates/TransportSection';\n`);
-      } else {
-        // Add at the beginning if no imports found
-        updatedCode = `import TransportSection from '@/app/Templates/TransportSection';\n` + updatedCode;
+    // Add to JSON structure
+    const newElement: UserElement = {
+      id: elementId,
+      type: "transport",
+      data: {
+        title: data.title,
+        showTitle: data.showTitle,
+        tables: data.tables,
+        direction: data.direction || "rtl",
+        language: data.language || "ar"
       }
-    }
+    };
     
-    // Format tables data for JSX
-    const tablesString = data.tables.map(table => {
-      const columnsString = table.columns.map((col: any) => `{
-              key: "${col.key.replace(/"/g, '\\"')}",
-              label: "${col.label.replace(/"/g, '\\"')}"
-            }`).join(',\n            ');
-      
-      const rowsString = table.rows.map((row: any) => {
-        const rowData: string[] = [];
-        table.columns.forEach((col: any) => {
-          const value = row[col.key] || '';
-          rowData.push(`${col.key}: "${String(value).replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`);
-        });
-        if (row.note) {
-          rowData.push(`note: "${row.note.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`);
-        }
-        return `{\n              ${rowData.join(',\n              ')}\n            }`;
-      }).join(',\n          ');
-      
-      return `{
-            id: "${table.id}",
-            title: "${table.title.replace(/"/g, '\\"')}",
-            backgroundColor: "${table.backgroundColor}",
-            columns: [\n            ${columnsString}\n            ],
-            rows: [\n          ${rowsString}\n          ]
-          }`;
-    }).join(',\n          ');
+    setStructure(prev => ({
+      ...prev,
+      user: {
+        elements: [...prev.user.elements, newElement]
+      },
+      layout: [...prev.layout, elementId]
+    }));
     
-    // Create the component JSX
-    const titleProp = data.title ? `\n          title="${data.title.replace(/"/g, '\\"')}"` : '';
-    const transportComponent = `        <TransportSection
-          id="${elementId}"
-          editable={true}
-          tables={[\n          ${tablesString}\n          ]}${titleProp}
-          showTitle={${data.showTitle !== false}}
-          direction="${data.direction || 'rtl'}"
-          language="${data.language || 'ar'}"
-        />`;
-    
-    // Try to find header image to insert after it (same pattern as airplane/hotel)
-    let insertionPoint = -1;
-    let indent = '        ';
-    
-    // Pattern 1: After header image tag
-    const headerImagePatterns = [
-      /(<img[^>]*(?:src=["'][^"']*(?:header|Header|happylifeHeader)[^"']*["']|alt=["'][^"']*(?:header|Header)[^"']*["'])[^>]*\/?>)/i,
-      /(<img[^>]*\/?>)/  // Any img tag as fallback
-    ];
-    
-    for (const pattern of headerImagePatterns) {
-      const headerImageMatch = updatedCode.match(pattern);
-      if (headerImageMatch && headerImageMatch.index !== undefined) {
-        insertionPoint = headerImageMatch.index + headerImageMatch[0].length;
-        const afterImage = updatedCode.substring(insertionPoint);
-        const nextLineMatch = afterImage.match(/^\s*\n(\s*)/);
-        if (nextLineMatch && nextLineMatch[1]) {
-          indent = nextLineMatch[1];
-        }
-        break;
-      }
-    }
-    
-    // Pattern 2: If no image found, look for header div or comment
-    if (insertionPoint === -1) {
-      const headerCommentPattern = /(\{\/\*.*Header.*\*\/[\s\S]*?<\/div>[\s\S]*?\n)/i;
-      const headerCommentMatch = updatedCode.match(headerCommentPattern);
-      if (headerCommentMatch && headerCommentMatch.index !== undefined) {
-        insertionPoint = headerCommentMatch.index + headerCommentMatch[0].length;
-        indent = '        ';
-      }
-    }
-    
-    // Pattern 3: Look for BaseTemplate children area
-    if (insertionPoint === -1) {
-      const baseTemplatePattern = /<BaseTemplate[^>]*>\s*\n(\s*)/;
-      const baseTemplateMatch = updatedCode.match(baseTemplatePattern);
-      if (baseTemplateMatch && baseTemplateMatch.index !== undefined) {
-        insertionPoint = baseTemplateMatch.index + baseTemplateMatch[0].length;
-        indent = baseTemplateMatch[1] || '        ';
-      }
-    }
-    
-    // Pattern 4: Look for return statement
-    if (insertionPoint === -1) {
-      const returnPattern = /return\s*\(\s*\n(\s*)/;
-      const returnMatch = updatedCode.match(returnPattern);
-      if (returnMatch && returnMatch.index !== undefined) {
-        insertionPoint = returnMatch.index + returnMatch[0].length;
-        indent = returnMatch[1] || '        ';
-      }
-    }
-    
-    // Insert the component
-    if (insertionPoint !== -1) {
-      const before = updatedCode.substring(0, insertionPoint);
-      const after = updatedCode.substring(insertionPoint);
-      updatedCode = before + '\n' + indent + transportComponent + '\n' + after;
-    } else {
-      // Fallback: append at the end before closing tag
-      const lastBrace = updatedCode.lastIndexOf('}');
-      if (lastBrace !== -1) {
-        updatedCode = updatedCode.substring(0, lastBrace) + '\n        ' + transportComponent + '\n' + updatedCode.substring(lastBrace);
-      } else {
-        updatedCode = updatedCode + '\n        ' + transportComponent;
-      }
-    }
-    
-    setCode(updatedCode);
     setShowAddTransportModal(false);
-  }, [code]);
+    
+    /* OLD JSX CODE REMOVED - Now works with JSON structure */
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!isAuthenticated()) {
@@ -2478,205 +1803,19 @@ function CodePageContent() {
     setSaveStatus("idle");
 
     try {
-      // Extract table data from the rendered DOM to capture user edits
-      let updatedCode = code;
-      let updatedExtractedData = null;
-      
-      try {
-        // Extract sections from DOM (including split text changes)
-        const sectionElements = previewContainerRef.current?.querySelectorAll('section');
-        if (sectionElements && sectionElements.length > 0) {
-          try {
-            const { parseJSXCode } = require('../../utils/jsxParser');
-            const parsed = parseJSXCode(updatedCode);
-            
-            // Update sections in code with content from DOM
-            if (parsed.sections && Array.isArray(parsed.sections)) {
-              sectionElements.forEach((sectionEl, index) => {
-                if (index < parsed.sections.length) {
-                  // Extract title (from heading, not contentEditable title)
-                  const titleEl = sectionEl.querySelector('h1, h2, h3, h4, h5, h6');
-                  if (titleEl && titleEl.textContent) {
-                    const newTitle = titleEl.textContent.trim();
-                    // Only update if title actually changed
-                    if (newTitle && newTitle !== parsed.sections[index].title) {
-                      const { updateSectionTitle } = require('../../utils/codeManipulator');
-                      updatedCode = updateSectionTitle(updatedCode || code, index, newTitle);
-                    }
-                  }
-                  
-                  // Extract content - look for .content div first (where SectionTemplate renders content)
-                  const contentDiv = sectionEl.querySelector('.content');
-                  let extractedContent = '';
-                  
-                  if (contentDiv) {
-                    // Check if content has bullet list
-                    const listItems = contentDiv.querySelectorAll('ul li, ol li');
-                    if (listItems.length > 0) {
-                      // Reconstruct bullet list content with HTML preserved
-                      extractedContent = Array.from(listItems)
-                        .map(li => {
-                          const html = li.innerHTML?.trim() || '';
-                          return html ? `• ${html}` : '';
-                        })
-                        .filter(item => item.trim() !== '•')
-                        .join('\n');
-                    } else {
-                      // Check for paragraphs
-                      const paragraphs = contentDiv.querySelectorAll('p');
-                      if (paragraphs.length > 0) {
-                        // Extract paragraphs with HTML preserved
-                        extractedContent = Array.from(paragraphs)
-                          .map(p => {
-                            const html = p.innerHTML?.trim() || '';
-                            return html;
-                          })
-                          .filter(p => p)
-                          .join('\n\n');
-                      } else {
-                        // Direct content (no bullets or paragraphs) - get full innerHTML
-                        // This preserves all HTML including bold tags
-                        extractedContent = contentDiv.innerHTML?.trim() || '';
-                      }
-                    }
-                  } else {
-                    // Fallback: look for contentEditable elements that are NOT titles
-                    const contentEl = sectionEl.querySelector(
-                      '.content[contenteditable="true"], ' +
-                      'div[contenteditable="true"]:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6), ' +
-                      '[contenteditable="true"]:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not([class*="title"])'
-                    );
-                    
-                    if (contentEl) {
-                      // Get the HTML content to preserve formatting (including bold tags)
-                      extractedContent = contentEl.innerHTML || '';
-                    }
-                  }
-                  
-                  // Always update content to ensure HTML formatting is preserved
-                  // We extract the content and update it to ensure all HTML (including bold tags) is saved
-                  if (extractedContent !== undefined && extractedContent !== null) {
-                    // Always update to ensure HTML formatting is preserved
-                    // This ensures bold tags and other HTML are saved correctly
-                    updatedCode = updateSectionContent(updatedCode || code, index, extractedContent);
-                  }
-                }
-              });
-            }
-          } catch (sectionError) {
-            console.error("Error extracting section content:", sectionError);
-            // Continue with save even if section extraction fails
-          }
-        }
-        
-        // Extract tables from the preview container
-        const extractedTables = extractAllTablesFromDOM(previewContainerRef.current);
-        
-        // CRITICAL: Validate that only DynamicTable components were extracted
-        // Count DynamicTable components in the code to ensure alignment
-        let expectedTableCount = 0;
-        try {
-          const { parseJSXCode } = require('../../utils/jsxParser');
-          const parsed = parseJSXCode(code);
-          expectedTableCount = parsed.tables.length;
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`[SAVE VALIDATION] Expected ${expectedTableCount} DynamicTable(s) in code, extracted ${extractedTables.length} table(s)`);
-          }
-          
-          // Validation: Ensure extracted tables count matches DynamicTable components
-          if (extractedTables.length > expectedTableCount) {
-            const warningMsg = `[SAVE VALIDATION WARNING] Extracted ${extractedTables.length} tables but only ${expectedTableCount} DynamicTable components found in code. Some tables may be from AirplaneSection components.`;
-            console.warn(warningMsg);
-            if (process.env.NODE_ENV === 'development') {
-              alert(`Warning: ${extractedTables.length - expectedTableCount} extra table(s) detected. This may indicate airplane section tables were incorrectly extracted.`);
-            }
-            // Trim to expected count to prevent overwriting
-            extractedTables.splice(expectedTableCount);
-          } else if (extractedTables.length < expectedTableCount && extractedTables.length > 0) {
-            const warningMsg = `[SAVE VALIDATION WARNING] Only extracted ${extractedTables.length} tables but ${expectedTableCount} DynamicTable components found in code. Some tables may have been skipped.`;
-            console.warn(warningMsg);
-          }
-        } catch (parseError) {
-          console.warn('[SAVE VALIDATION] Could not parse JSX code to validate table count:', parseError);
-        }
-        
-        if (extractedTables.length > 0) {
-          // Additional validation: Ensure no airplane section tables were extracted
-          // This is a safety check - the extraction function should already filter these
-          const hasAirplaneSectionTables = extractedTables.some((table, index) => {
-            // Check if any extracted table has airplane section characteristics
-            // (This is a secondary check - the main filtering happens in extractAllTablesFromDOM)
-            if (process.env.NODE_ENV === 'development') {
-              const tableEl = previewContainerRef.current?.querySelectorAll('table')[index];
-              if (tableEl && tableEl.closest('[data-airplane-section-id]')) {
-                console.error(`[SAVE VALIDATION ERROR] Table ${index} appears to be inside AirplaneSection - this should have been filtered!`);
-                return true;
-              }
-            }
-            return false;
-          });
-          
-          if (hasAirplaneSectionTables) {
-            console.error('[SAVE VALIDATION ERROR] Airplane section tables detected in extracted tables! This should not happen.');
-            throw new Error('Airplane section tables were incorrectly extracted. Save aborted to prevent data corruption.');
-          }
-          
-          // Update JSX code with extracted table data using updateTableCell function
-          updatedCode = updateCodeWithTableData(updatedCode, extractedTables, updateTableCell, updateTableColumnHeader);
-          
-          // Also update extracted_data structure if it exists
-          const extractedDataStr = sessionStorage.getItem("codePreview.extractedData");
-          if (extractedDataStr) {
-            try {
-              updatedExtractedData = JSON.parse(extractedDataStr);
-              
-              // Update tables in extracted_data
-              if (updatedExtractedData.tables && Array.isArray(updatedExtractedData.tables)) {
-                extractedTables.forEach((extractedTable, index) => {
-                  if (index < updatedExtractedData.tables.length) {
-                    // Update headers and rows
-                    updatedExtractedData.tables[index].columns = extractedTable.headers;
-                    updatedExtractedData.tables[index].rows = extractedTable.rows;
-                    if (extractedTable.title) {
-                      updatedExtractedData.tables[index].title = extractedTable.title;
-                    }
-                  }
-                });
-              }
-            } catch (parseError) {
-              console.error("Error parsing extracted data:", parseError);
-            }
-          }
-          
-          // Update code state if it changed
-          if (updatedCode !== code) {
-            setCode(updatedCode);
-          }
-        }
-      } catch (extractError) {
-        console.error("Error extracting table data:", extractError);
-        // Continue with save even if extraction fails
-      }
-      
-      const extractedData = sessionStorage.getItem("codePreview.extractedData");
       const filePath = sessionStorage.getItem("codePreview.filePath");
       const originalFilename = sessionStorage.getItem("codePreview.originalFilename");
 
       if (documentId) {
-        // Prompt for version name if creating a new version
-        const versionName = prompt("Enter a name for this version (optional):");
-        
-        // Update existing document
+        // Update existing document with current structure
         const updateResponse = await updateDocument(documentId, {
-          jsx_code: updatedCode,
-          extracted_data: updatedExtractedData || (extractedData ? JSON.parse(extractedData) : {}),
+          extracted_data: structure, // Save full v2 structure
           metadata: {
             ...sourceMetadata,
             lastSaved: new Date().toISOString(),
-            ...(versionName && versionName.trim() ? { version_name: versionName.trim() } : {}),
           },
         });
+        
         // Update version info after save
         if (updateResponse.document) {
           setCurrentVersion(updateResponse.document.current_version || 1);
@@ -2689,8 +1828,7 @@ function CodePageContent() {
           title,
           original_filename: originalFilename || "document.pdf",
           file_path: filePath || "",
-          extracted_data: updatedExtractedData || (extractedData ? JSON.parse(extractedData) : {}),
-          jsx_code: updatedCode,
+          extracted_data: structure, // Save full v2 structure
           metadata: {
             ...sourceMetadata,
             savedAt: new Date().toISOString(),
@@ -2713,7 +1851,7 @@ function CodePageContent() {
     } finally {
       setIsSaving(false);
     }
-  }, [code, documentId, sourceMetadata]);
+  }, [structure, documentId, sourceMetadata]);
 
   const header = useMemo(() => (
     <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-md">
@@ -2937,75 +2075,16 @@ function CodePageContent() {
               )}
             </div>
             
-            <ToggleSwitch mode={mode} onChange={(next: Mode) => setMode(next)} />
           </div>
         </div>
       </div>
     </div>
-  ), [mode, handleExportCode, handleExportPDF, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown]);
+  ), [handleExportCode, handleExportPDF, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-cyan-50 via-blue-50 to-lime-50 text-gray-900">
       {header}
       <div className="mx-auto w-full max-w-7xl px-6 py-8">
-        {externalWarnings.length > 0 && (
-          <div className="mb-6 rounded border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-            <h2 className="text-sm font-semibold text-yellow-900">
-              Backend Validation Warnings
-            </h2>
-            <ul className="mt-1 list-disc space-y-1 pl-5">
-              {externalWarnings.map((warning, index) => (
-                <li key={index}>{warning}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {processedTables.length > 0 && (
-          <div className="mb-6 rounded border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800">
-            <h2 className="text-sm font-semibold text-green-900 flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Processed Tables ({processedTables.length})
-            </h2>
-            <p className="mt-2 text-green-700">
-              {processedTables.length} table(s) were automatically extracted, repaired, and converted to JSX during processing.
-            </p>
-            <details className="mt-3">
-              <summary className="cursor-pointer text-green-800 font-medium hover:text-green-900">
-                View processed table details
-              </summary>
-              <div className="mt-2 space-y-2">
-                {processedTables.map((table, index) => (
-                  <div key={index} className="bg-white rounded p-3 border border-green-200">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-green-900">{table.tableId}</span>
-                      <span className="text-xs text-green-600">
-                        {table.jsx.length} chars JSX
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </details>
-          </div>
-        )}
-        {mode === "code" ? (
-          <div className="rounded-xl border border-gray-200 shadow-lg overflow-hidden bg-white">
-            <div className="bg-linear-to-r from-gray-800 to-gray-900 px-6 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                </div>
-                <span className="ml-4 text-sm text-gray-300 font-mono">template.jsx</span>
-              </div>
-              <span className="text-xs text-gray-400">React Template</span>
-            </div>
-            <CodeEditor code={code} onChange={setCode} />
-          </div>
-        ) : (
           <div className="min-h-[70vh] bg-white rounded-xl shadow-lg p-8 max-w-full overflow-hidden relative">
             {/* Success Toast */}
             {showTableCreatedToast && (
@@ -3021,29 +2100,34 @@ function CodePageContent() {
               ref={previewContainerRef}
               className="preview-content max-w-full"
             >
-              {structuredData ? (
                 <StructureRenderer 
-                  structure={structuredData as Structure}
+              structure={structure}
                   showStats={false}
-                  editable={false}
-                />
-              ) : (
-                <PreviewRenderer code={code} values={values} setValue={setValue} />
-              )}
+              editable={true}
+              onUserElementEdit={(element) => {
+                // Handle user element edit
+                if (element.type === 'airplane') {
+                  setEditingAirplaneId(element.id);
+                  setShowEditSectionModal(true);
+                } else if (element.type === 'hotel') {
+                  setEditingHotelId(element.id);
+                  setShowEditHotelSectionModal(true);
+                }
+              }}
+              onUserElementDelete={(id) => {
+                // Remove element from structure
+                setStructure(prev => ({
+                  ...prev,
+                  user: {
+                    elements: prev.user.elements.filter(el => el.id !== id)
+                  },
+                  layout: prev.layout.filter(lid => lid !== id)
+                }));
+              }}
+            />
             </div>
           </div>
-        )}
       </div>
-      
-      {/* Customization Panel */}
-      {panelContext && (
-        <CustomizationPanel
-          code={code}
-          onCodeChange={handleCodeChange}
-          context={panelContext}
-          onClose={() => setPanelContext(null)}
-        />
-      )}
 
       {/* Create Table Modal */}
       <CreateTableModal
@@ -3145,11 +2229,13 @@ function CodePageContent() {
         columns={(() => {
           if (!editingTransportId || editingTransportTableIndex === null) return [];
           try {
-            const section = findTransportSection(codeRef.current, editingTransportId);
-            if (!section) return [];
-            const tables = extractTransportTablesFromComponent(section.component);
+            const element = structure.user.elements.find(
+              el => el.id === editingTransportId && el.type === 'transport'
+            );
+            if (!element || !element.data.tables) return [];
+            const tables = element.data.tables;
             if (editingTransportTableIndex >= 0 && editingTransportTableIndex < tables.length) {
-              return tables[editingTransportTableIndex].columns;
+              return tables[editingTransportTableIndex].columns || [];
             }
           } catch (error) {
             console.error('Error getting columns:', error);
@@ -3159,8 +2245,10 @@ function CodePageContent() {
         language={(() => {
           if (!editingTransportId) return 'ar';
           try {
-            const data = extractTransportSectionData(codeRef.current, editingTransportId);
-            return data?.language || 'ar';
+            const element = structure.user.elements.find(
+              el => el.id === editingTransportId && el.type === 'transport'
+            );
+            return element?.data?.language || 'ar';
           } catch {
             return 'ar';
           }
@@ -3180,8 +2268,10 @@ function CodePageContent() {
         language={(() => {
           if (!editingTransportId) return 'ar';
           try {
-            const data = extractTransportSectionData(codeRef.current, editingTransportId);
-            return data?.language || 'ar';
+            const element = structure.user.elements.find(
+              el => el.id === editingTransportId && el.type === 'transport'
+            );
+            return element?.data?.language || 'ar';
           } catch {
             return 'ar';
           }

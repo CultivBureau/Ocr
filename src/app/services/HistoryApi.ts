@@ -54,7 +54,7 @@ async function historyRequest(path: string, init: RequestInit = {}) {
   }
 }
 
-// Document types
+// Document types - v2 structure
 export interface Document {
   id: string;
   user_id: string;
@@ -62,11 +62,16 @@ export interface Document {
   original_filename: string;
   file_path: string;
   extracted_data: {
-    sections?: any[];
-    tables?: any[];
-    meta?: Record<string, any>;
+    generated: {
+      sections: any[];
+      tables: any[];
+    };
+    user: {
+      elements: any[];
+    };
+    layout: string[];
+    meta: Record<string, any>;
   };
-  jsx_code?: string;
   metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
@@ -94,15 +99,33 @@ export interface CreateDocumentRequest {
   title: string;
   original_filename: string;
   file_path: string;
-  extracted_data: any;
-  jsx_code?: string;
+  extracted_data: {
+    generated: {
+      sections: any[];
+      tables: any[];
+    };
+    user: {
+      elements: any[];
+    };
+    layout: string[];
+    meta: Record<string, any>;
+  };
   metadata?: Record<string, any>;
 }
 
 export interface UpdateDocumentRequest {
   title?: string;
-  extracted_data?: any;
-  jsx_code?: string;
+  extracted_data?: {
+    generated: {
+      sections: any[];
+      tables: any[];
+    };
+    user: {
+      elements: any[];
+    };
+    layout: string[];
+    meta: Record<string, any>;
+  };
   metadata?: Record<string, any>;
 }
 
@@ -118,18 +141,23 @@ export interface ShareDocumentResponse {
   public_link?: string;
 }
 
-// Version-related types
+// Version-related types - v2 structure
 export interface DocumentVersion {
   id: string;
   document_id: string;
   version_number: number;
   is_original: boolean;
   extracted_data: {
-    sections?: any[];
-    tables?: any[];
-    meta?: Record<string, any>;
+    generated: {
+      sections: any[];
+      tables: any[];
+    };
+    user: {
+      elements: any[];
+    };
+    layout: string[];
+    meta: Record<string, any>;
   };
-  jsx_code?: string;
   metadata: Record<string, any>;
   created_at: string;
   created_by: string;

@@ -6,11 +6,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { 
   uploadFile, 
-  extractStructured,
-  validateAndFixJsx 
+  extractStructured
 } from "../../services/PdfApi";
-import { structureToJsx } from "../../utils/structureToJsx";
-import type { ExtractResponse } from "../../types/ExtractTypes";
+import type { SeparatedStructure } from "../../types/ExtractTypes";
 import { isAuthenticated } from "../../services/AuthApi";
 import { saveDocument } from "../../services/HistoryApi";
 import ProtectedRoute from "../../components/ProtectedRoute";
@@ -44,52 +42,31 @@ const PdfConverterContent: React.FC = () => {
         throw new Error("Upload failed: No file path returned.");
       }
 
-      // Step 2: Extract structured data (sections and tables)
+      // Step 2: Extract structured data (v2 format: { generated, user, layout, meta })
       setStatus("Extracting content from PDF…");
-      const extractResponse: ExtractResponse = await extractStructured(uploadResponse.file_path);
+      const extractResponse: SeparatedStructure = await extractStructured(uploadResponse.file_path);
       
-      if (!extractResponse.sections && !extractResponse.tables) {
+      if (!extractResponse.generated || (!extractResponse.generated.sections?.length && !extractResponse.generated.tables?.length)) {
         throw new Error("Extraction returned no content.");
       }
 
-      // Step 3: Generate JSX from structure (static generation)
-      setStatus("Generating JSX code…");
-      const generatedCode = structureToJsx(extractResponse);
-      const allWarnings: string[] = [];
-
-      // Step 4: Validate JSX (client-side only)
-      setStatus("Validating JSX code…");
-      const validation = validateAndFixJsx(generatedCode);
-      
-      if (!validation.isValid) {
-        allWarnings.push(...(validation.warnings || []));
-        console.warn("JSX validation issues:", validation.errors);
-      }
-
-      // Store in sessionStorage for CodePreview page
+      // Store in sessionStorage for CodePreview page (v2 format)
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("codePreview.initialCode", generatedCode);
-        sessionStorage.setItem(
-          "codePreview.warnings",
-          JSON.stringify(allWarnings),
-        );
-        sessionStorage.setItem(
-          "codePreview.metadata",
-          JSON.stringify({
-            filename: uploadResponse.filename || selectedFile.name,
-            uploadedAt: new Date().toISOString(),
-            sectionsCount: extractResponse.sections?.length || 0,
-            tablesCount: extractResponse.tables?.length || 0,
-          }),
-        );
-        
-        // Store extracted data for auto-save
         sessionStorage.setItem(
           "codePreview.extractedData",
           JSON.stringify(extractResponse),
         );
         sessionStorage.setItem("codePreview.filePath", uploadResponse.file_path);
         sessionStorage.setItem("codePreview.originalFilename", uploadResponse.original_filename || selectedFile.name);
+        sessionStorage.setItem(
+          "codePreview.metadata",
+          JSON.stringify({
+            filename: uploadResponse.filename || selectedFile.name,
+            uploadedAt: new Date().toISOString(),
+            sectionsCount: extractResponse.generated.sections?.length || 0,
+            tablesCount: extractResponse.generated.tables?.length || 0,
+          }),
+        );
       }
 
       // Auto-save to history if user is authenticated
@@ -102,14 +79,12 @@ const PdfConverterContent: React.FC = () => {
             title: docTitle,
             original_filename: uploadResponse.original_filename || selectedFile.name,
             file_path: uploadResponse.file_path,
-            extracted_data: extractResponse,
-            jsx_code: generatedCode,
+            extracted_data: extractResponse, // Full v2 structure
             metadata: {
               filename: uploadResponse.filename || selectedFile.name,
               uploadedAt: new Date().toISOString(),
-              sectionsCount: extractResponse.sections?.length || 0,
-              tablesCount: extractResponse.tables?.length || 0,
-              warnings: allWarnings,
+              sectionsCount: extractResponse.generated.sections?.length || 0,
+              tablesCount: extractResponse.generated.tables?.length || 0,
             },
           });
           
