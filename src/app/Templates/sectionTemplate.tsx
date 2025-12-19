@@ -253,8 +253,6 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       return;
     }
     
-    // Keep selected text as a single bullet item (don't split into words)
-    // User selected a sentence/phrase, keep it together as one bullet point
     const trimmedText = selectedText.trim();
     
     if (trimmedText.length === 0) {
@@ -262,87 +260,96 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       return;
     }
     
-    // Convert selected text to a single bullet item on a new line
-    const bulletItems = `\n• ${trimmedText}`;
+    // Simple splitting: entire selected text becomes a new line with bullet
+    // Add newline before bullet so it appears on a new line
+    const replacementText = `\n• ${trimmedText}`;
     
-    // If onContentChange is not provided, try fallback DOM update
-    if (!onContentChange) {
-      // Try to update content directly if editable is true
-      if (editable) {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          try {
-            // Create a text node with the bullet items
-            const textNode = document.createTextNode(bulletItems);
-            range.deleteContents();
-            range.insertNode(textNode);
-            // Clear selection
-            window.getSelection()?.removeAllRanges();
-            setShowSplitButton(false);
-            setSelectedText("");
-            setSelectionRange(null);
-            return;
-          } catch (err) {
-            console.error('Error updating DOM directly:', err);
-          }
-        }
-      }
-      setShowSplitButton(false);
-      return;
-    }
-    
-    // Get the current selection
+    // Get the current selection and range
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
     
     const range = selection.getRangeAt(0);
-    
-    // Get text content from the container to find position
     const contentElement = contentContainerRef.current;
     if (!contentElement) return;
     
-    // Create a range that covers all content before selection
+    // Helper function to extract text from range while preserving newlines properly
+    const extractTextFromRange = (range: Range): string => {
+      const clone = range.cloneContents();
+      let text = '';
+      
+      // Walk through cloned nodes and extract text, converting block elements to \n
+      const walkNodes = (node: Node, parentTag?: string) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          text += node.textContent || '';
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const element = node as HTMLElement;
+          const tagName = element.tagName.toUpperCase();
+          
+          // Skip elements with no-pdf-export class (like Split/Bold buttons)
+          if (element.classList && element.classList.contains('no-pdf-export')) {
+            return;
+          }
+          
+          // Handle block-level elements that create line breaks
+          if (tagName === 'BR') {
+            text += '\n';
+          } else if (tagName === 'LI') {
+            // For list items, add newline BEFORE if not first item
+            if (text.length > 0 && !text.endsWith('\n')) {
+              text += '\n';
+            }
+            
+            // Process children to get the content
+            for (let i = 0; i < element.childNodes.length; i++) {
+              walkNodes(element.childNodes[i], tagName);
+            }
+            
+            // DON'T add newline after - it will be added by the next LI
+          } else if (['DIV', 'P'].includes(tagName)) {
+            // For DIV and P, add newline before content if not first element
+            if (text.length > 0 && !text.endsWith('\n')) {
+              text += '\n';
+            }
+            
+            // Process children
+            for (let i = 0; i < element.childNodes.length; i++) {
+              walkNodes(element.childNodes[i], tagName);
+            }
+          } else {
+            // For other elements (UL, OL, SPAN, STRONG, etc.), just process children
+            for (let i = 0; i < element.childNodes.length; i++) {
+              walkNodes(element.childNodes[i], tagName);
+            }
+          }
+        } else {
+          // Walk through child nodes for other node types
+          for (let i = 0; i < node.childNodes.length; i++) {
+            walkNodes(node.childNodes[i], parentTag);
+          }
+        }
+      };
+      
+      walkNodes(clone);
+      return text;
+    };
+    
+    // Create a range from start of content to start of selection
     const beforeRange = document.createRange();
     beforeRange.selectNodeContents(contentElement);
     beforeRange.setEnd(range.startContainer, range.startOffset);
-    const textBefore = beforeRange.toString();
+    const textBefore = extractTextFromRange(beforeRange);
     
-    // Find the position in the original content string
-    // Use the text before selection to find exact position
-    let position = -1;
+    // Create a range from end of selection to end of content
+    const afterRange = document.createRange();
+    afterRange.selectNodeContents(contentElement);
+    afterRange.setStart(range.endContainer, range.endOffset);
+    const textAfter = extractTextFromRange(afterRange);
     
-    // Try to find position by matching text before selection
-    // Match last portion of text before to avoid duplicates
-    const beforeText = textBefore.trim();
-    if (beforeText.length > 0) {
-      // Find the last occurrence of the last part of beforeText in content
-      const searchText = beforeText.slice(-Math.min(100, beforeText.length));
-      const lastIndex = content.lastIndexOf(searchText);
-      if (lastIndex !== -1) {
-        position = lastIndex + searchText.length;
-      }
-    }
+    // Combine: text before + replacement (with newline and bullet) + text after
+    // replacementText already contains "\n• " prefix
+    const newContent = textBefore + replacementText + textAfter;
     
-    // Fallback: find by selected text if position not found
-    if (position === -1) {
-      position = content.indexOf(selectedText);
-    }
-    
-    let newContent = content;
-    
-    if (position !== -1) {
-      // Replace selected text with bullet items
-      newContent = 
-        content.substring(0, position) + 
-        bulletItems + 
-        content.substring(position + selectedText.length);
-    } else {
-      // If we can't find exact position, try simple replace (first occurrence)
-      newContent = content.replace(selectedText, bulletItems);
-    }
-    
-    // Update content
+    // Update content - only plain text with bullet, no HTML
     onContentChange(newContent);
     
     // Clear selection
@@ -674,7 +681,9 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                     {...(paragraphHasHTML ? { dangerouslySetInnerHTML: { __html: trimmed } } : { children: trimmed })}
                     onBlur={(e) => {
                       if (editable && onContentChange) {
-                        onContentChange(e.currentTarget.innerHTML || '');
+                        // Extract plain text content, preserving line breaks and bullets
+                        const textContent = e.currentTarget.textContent || e.currentTarget.innerText || '';
+                        onContentChange(textContent);
                       }
                     }}
                   />
@@ -719,7 +728,10 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           {...(containsHTML ? { dangerouslySetInnerHTML: { __html: displayContent } } : { children: displayContent })}
           onBlur={(e) => {
             if (editable && onContentChange) {
-              onContentChange(e.currentTarget.innerHTML || '');
+              // Extract plain text content, preserving line breaks and bullets
+              // This ensures JSON only contains plain text with bullets, not HTML
+              const textContent = e.currentTarget.textContent || e.currentTarget.innerText || '';
+              onContentChange(textContent);
             }
           }}
           onClick={(e) => {
