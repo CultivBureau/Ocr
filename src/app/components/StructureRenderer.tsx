@@ -7,6 +7,7 @@ import DynamicTableTemplate from "../Templates/dynamicTableTemplate";
 import BaseTemplate from "../Templates/baseTemplate";
 import AirplaneSection from "../Templates/airplaneSection";
 import HotelsSection from "../Templates/HotelsSection";
+import TransportSection from "../Templates/TransportSection";
 import { sortSectionsByOrder, getSectionHierarchy } from "../utils/formatSections";
 import { sortTablesByOrder, groupTablesBySection } from "../utils/formatTables";
 import { isSeparatedStructure, isLegacyStructure, migrateToSeparatedStructure } from "../utils/structureMigration";
@@ -195,6 +196,16 @@ export default function StructureRenderer({
         } else if (userElement.type === 'hotel') {
           return (
             <HotelsSection
+              key={userElement.id}
+              id={userElement.id}
+              {...userElement.data}
+              editable={editable}
+              onEditSection={handleEdit}
+            />
+          );
+        } else if (userElement.type === 'transport') {
+          return (
+            <TransportSection
               key={userElement.id}
               id={userElement.id}
               {...userElement.data}

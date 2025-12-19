@@ -930,7 +930,7 @@ function CodePageContent() {
       setStructure(prev => {
         const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
         if (userElementIndex === -1) {
-          alert('Transport section not found');
+          console.error('Transport section not found');
           return prev;
         }
         
@@ -1033,15 +1033,12 @@ function CodePageContent() {
         return;
       }
       
-      if (!confirm('Are you sure you want to delete this table?')) {
-        return;
-      }
-      
-      // Remove table from JSON structure
+      // Remove table from JSON structure without confirmation
+      // The modal confirmation is handled by the TransportSection component
       setStructure(prev => {
         const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
         if (userElementIndex === -1) {
-          alert('Transport section not found');
+          console.error('Transport section not found');
           return prev;
         }
         
@@ -1077,28 +1074,9 @@ function CodePageContent() {
       return;
     }
     
-    if (!confirm('Are you sure you want to delete this transport section?')) {
-      return;
-    }
-    
-    try {
-      // Remove from JSON structure (same as handleDeleteSection)
-      setStructure(prev => {
-        const updatedElements = prev.user.elements.filter(el => el.id !== id);
-        const updatedLayout = prev.layout.filter(layoutId => layoutId !== id);
-        
-        return {
-          ...prev,
-          user: {
-            elements: updatedElements
-          },
-          layout: updatedLayout
-        };
-      });
-    } catch (error) {
-      console.error('Error deleting transport section:', error);
-        alert(error instanceof Error ? error.message : 'Failed to delete section');
-    }
+    // Show modal instead of window.confirm
+    setDeletePendingId(id);
+    setShowDeleteModal(true);
   }, []);
 
   // Handler for editing a transport row
@@ -1757,6 +1735,8 @@ function CodePageContent() {
     direction?: "rtl" | "ltr";
     language?: "ar" | "en";
   }) => {
+    console.log('[CodePreview] handleAddTransportSubmit called with data:', data);
+    
     // Generate unique ID for user element
     const elementId = `user_transport_${Date.now()}`;
     
@@ -1773,13 +1753,20 @@ function CodePageContent() {
       }
     };
     
-    setStructure(prev => ({
-      ...prev,
-      user: {
-        elements: [...prev.user.elements, newElement]
-      },
-      layout: [elementId, ...prev.layout]
-    }));
+    console.log('[CodePreview] New transport element:', newElement);
+    
+    setStructure(prev => {
+      console.log('[CodePreview] Previous structure:', prev);
+      const newStructure = {
+        ...prev,
+        user: {
+          elements: [...prev.user.elements, newElement]
+        },
+        layout: [elementId, ...prev.layout]
+      };
+      console.log('[CodePreview] New structure:', newStructure);
+      return newStructure;
+    });
     
     setShowAddTransportModal(false);
     

@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import type { TransportSectionProps, TransportTable, TransportRow } from '../types/TransportTypes';
 
 /**
@@ -35,6 +36,30 @@ const TransportSection: React.FC<TransportSectionProps> = ({
 }) => {
   // Ensure sectionIdValue is always a string
   const sectionIdValue = id ? String(id) : undefined;
+  
+  // State for delete modal
+  const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<{
+    type: 'section' | 'table' | 'row',
+    tableIndex?: number,
+    rowIndex?: number
+  } | null>(null);
+  
+  // Handle delete confirmation
+  const handleDeleteConfirm = () => {
+    if (!deleteTarget) return;
+    
+    if (deleteTarget.type === 'section' && onDeleteSection) {
+      onDeleteSection();
+    } else if (deleteTarget.type === 'table' && deleteTarget.tableIndex !== undefined && onDeleteTable) {
+      onDeleteTable(deleteTarget.tableIndex);
+    } else if (deleteTarget.type === 'row' && deleteTarget.tableIndex !== undefined && deleteTarget.rowIndex !== undefined && onRemoveRow) {
+      onRemoveRow(deleteTarget.tableIndex, deleteTarget.rowIndex);
+    }
+    
+    setDeleteTarget(null);
+    setShowDeleteModal(false);
+  };
   
   // Set default values based on language
   const defaultTitle = title || (language === 'ar' ? 'المواصلات' : 'Transportation');
@@ -129,9 +154,8 @@ const TransportSection: React.FC<TransportSectionProps> = ({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (onDeleteSection) {
-                  onDeleteSection();
-                }
+                setDeleteTarget({type: 'section'});
+                setShowDeleteModal(true);
               }}
               data-action="delete-section"
               data-transport-section-id={sectionIdValue}
@@ -203,9 +227,8 @@ const TransportSection: React.FC<TransportSectionProps> = ({
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            if (onDeleteTable) {
-                              onDeleteTable(tableIndex);
-                            }
+                            setDeleteTarget({type: 'table', tableIndex});
+                            setShowDeleteModal(true);
                           }}
                           data-action="delete-table"
                           data-transport-section-id={sectionIdValue}
@@ -283,9 +306,8 @@ const TransportSection: React.FC<TransportSectionProps> = ({
                                     onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      if (onRemoveRow) {
-                                        onRemoveRow(tableIndex, rowIndex);
-                                      }
+                                      setDeleteTarget({type: 'row', tableIndex, rowIndex});
+                                      setShowDeleteModal(true);
                                     }}
                                     data-action="remove-row"
                                     data-transport-section-id={sectionIdValue}
@@ -371,6 +393,30 @@ const TransportSection: React.FC<TransportSectionProps> = ({
           );
         })}
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title={
+          deleteTarget?.type === 'section' 
+            ? (language === 'ar' ? 'حذف القسم' : 'Delete Section')
+            : deleteTarget?.type === 'table'
+            ? (language === 'ar' ? 'حذف الجدول' : 'Delete Table')
+            : (language === 'ar' ? 'حذف الصف' : 'Delete Row')
+        }
+        message={
+          deleteTarget?.type === 'section'
+            ? (language === 'ar' ? 'هل أنت متأكد من حذف هذا القسم؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to delete this section? This action cannot be undone.')
+            : deleteTarget?.type === 'table'
+            ? (language === 'ar' ? 'هل أنت متأكد من حذف هذا الجدول؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to delete this table? This action cannot be undone.')
+            : (language === 'ar' ? 'هل أنت متأكد من حذف هذا الصف؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to delete this row? This action cannot be undone.')
+        }
+      />
     </div>
   );
 };

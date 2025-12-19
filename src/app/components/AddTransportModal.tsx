@@ -108,29 +108,37 @@ export default function AddTransportModal({
   const validate = (): boolean => {
     const newErrors: { [key: string]: string } = {};
 
+    console.log('[AddTransportModal] Validating...');
+    console.log('[AddTransportModal] Tables length:', tables.length);
+
     if (tables.length === 0) {
       newErrors.tables = "At least one table is required";
     }
 
     tables.forEach((table, tableIndex) => {
-      if (!table.title.trim()) {
-        newErrors[`table_${tableIndex}_title`] = "Table title is required";
-      }
+      console.log(`[AddTransportModal] Validating table ${tableIndex}:`, table);
+      
+      // Table title is optional - remove validation
       if (table.rows.length === 0) {
         newErrors[`table_${tableIndex}_rows`] = "At least one row is required";
       }
       table.rows.forEach((row, rowIndex) => {
+        console.log(`[AddTransportModal] Validating row ${rowIndex}:`, row);
+        
         table.columns.forEach((column) => {
           if (column.key === 'day' && !row.day?.trim()) {
+            console.log(`[AddTransportModal] Day is missing in table ${tableIndex}, row ${rowIndex}`);
             newErrors[`table_${tableIndex}_row_${rowIndex}_day`] = "Day is required";
           }
           if (column.key === 'date' && !row.date) {
+            console.log(`[AddTransportModal] Date is missing in table ${tableIndex}, row ${rowIndex}`);
             newErrors[`table_${tableIndex}_row_${rowIndex}_date`] = "Date is required";
           }
         });
       });
     });
 
+    console.log('[AddTransportModal] Validation errors:', newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -138,10 +146,16 @@ export default function AddTransportModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('[AddTransportModal] handleSubmit called');
+    console.log('[AddTransportModal] Tables:', tables);
+    console.log('[AddTransportModal] Title:', title);
+    
     if (!validate()) {
+      console.log('[AddTransportModal] Validation failed, errors:', errors);
       return;
     }
 
+    console.log('[AddTransportModal] Validation passed, calling onSubmit');
     onSubmit({
       title: title.trim() || undefined,
       showTitle,
@@ -420,20 +434,15 @@ export default function AddTransportModal({
                   {/* Table Title */}
                   <div className="mb-4">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Table Title *
+                      Table Title (Optional)
                     </label>
                     <input
                       type="text"
                       value={table.title}
                       onChange={(e) => updateTable(tableIndex, 'title', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent text-sm ${
-                        errors[`table_${tableIndex}_title`] ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent text-sm"
                       placeholder={language === 'ar' ? 'عنوان الجدول' : 'Table Title'}
                     />
-                    {errors[`table_${tableIndex}_title`] && (
-                      <p className="text-red-500 text-xs mt-1">{errors[`table_${tableIndex}_title`]}</p>
-                    )}
                   </div>
 
                   {/* Background Color */}
