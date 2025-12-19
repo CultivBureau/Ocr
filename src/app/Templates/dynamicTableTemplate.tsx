@@ -158,18 +158,43 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
     return null;
   }
 
-  // Normalize rows to match headers length
+  // Normalize rows to match headers length - handle both array and object formats
   const normalizedRows = rows?.map((row) => {
-    const normalizedRow = Array.isArray(row) ? [...row] : [];
-    // Pad or truncate to match headers length
-    while (normalizedRow.length < tableHeaders.length) {
-      normalizedRow.push("");
+    // If row is already an array, use it
+    if (Array.isArray(row)) {
+      const normalizedRow = [...row];
+      // Pad or truncate to match headers length
+      while (normalizedRow.length < tableHeaders.length) {
+        normalizedRow.push("");
+      }
+      return normalizedRow.slice(0, tableHeaders.length);
+    } 
+    // If row is an object, convert it to array based on column keys
+    else if (row && typeof row === 'object') {
+      return tableHeaders.map((header: any) => {
+        const key = typeof header === 'string' ? header : (header?.key || header?.label);
+        return row[key] !== undefined ? row[key] : '';
+      });
     }
-    return normalizedRow.slice(0, tableHeaders.length);
+    // Fallback to empty array
+    return Array(tableHeaders.length).fill("");
   }) || [];
 
-  // Clean empty headers
-  const cleanHeaders = tableHeaders.filter(h => h && String(h).trim());
+  // Convert headers to strings (handle both string and object formats)
+  const getHeaderString = (header: any): string => {
+    if (typeof header === 'string') {
+      return header;
+    } else if (header && typeof header === 'object') {
+      // Handle {key, label} format
+      return header.label || header.key || String(header);
+    }
+    return String(header || '');
+  };
+
+  // Clean empty headers and convert objects to strings
+  const cleanHeaders = tableHeaders
+    .map(h => getHeaderString(h))
+    .filter(h => h && h.trim());
   
   if (cleanHeaders.length === 0) return null;
 
