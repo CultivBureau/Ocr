@@ -22,6 +22,7 @@ import AddTransportModal from "../../components/AddTransportModal";
 import EditTransportRowModal from "../../components/EditTransportRowModal";
 import EditTransportTableModal from "../../components/EditTransportTableModal";
 import EditTransportSectionModal from "../../components/EditTransportSectionModal";
+import DeleteConfirmationModal from "../../components/DeleteConfirmationModal";
 import { Hotel } from "../../Templates/HotelsSection";
 import { isAuthenticated } from "../../services/AuthApi";
 import { saveDocument, updateDocument, getDocument } from "../../services/HistoryApi";
@@ -75,6 +76,8 @@ function CodePageContent() {
   const [showEditTransportRowModal, setShowEditTransportRowModal] = useState(false);
   const [showEditTransportTableModal, setShowEditTransportTableModal] = useState(false);
   const [showEditTransportSectionModal, setShowEditTransportSectionModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   
   // Event delegation for airplane section actions
@@ -481,18 +484,23 @@ function CodePageContent() {
       return;
     }
     
-    if (!confirm('Are you sure you want to delete this section?')) {
-      return;
-    }
+    // Show modal instead of window.confirm
+    setDeletePendingId(id);
+    setShowDeleteModal(true);
+  }, []);
+  
+  // Confirm deletion after modal confirmation
+  const confirmDeleteSection = useCallback(() => {
+    if (!deletePendingId) return;
     
     try {
       // Remove from JSON structure
       setStructure(prev => {
         // Remove from user.elements
-        const updatedElements = prev.user.elements.filter(el => el.id !== id);
+        const updatedElements = prev.user.elements.filter(el => el.id !== deletePendingId);
         
         // Remove from layout
-        const updatedLayout = prev.layout.filter(layoutId => layoutId !== id);
+        const updatedLayout = prev.layout.filter(layoutId => layoutId !== deletePendingId);
         
         return {
           ...prev,
@@ -502,11 +510,15 @@ function CodePageContent() {
           layout: updatedLayout
         };
       });
+      
+      // Clear pending state
+      setDeletePendingId(null);
+      setShowDeleteModal(false);
     } catch (error) {
       console.error('Error deleting section:', error);
-        alert(error instanceof Error ? error.message : 'Failed to delete section');
+      alert(error instanceof Error ? error.message : 'Failed to delete section');
     }
-  }, []);
+  }, [deletePendingId]);
   
   // Handler for editing a flight
   const handleEditFlightSubmit = useCallback((updatedFlight: FlightData) => {
@@ -2377,6 +2389,18 @@ function CodePageContent() {
           }
         }}
         initialData={getInitialTransportSectionData()}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeletePendingId(null);
+        }}
+        onConfirm={confirmDeleteSection}
+        title="Delete Section"
+        message="Are you sure you want to delete this section? This action cannot be undone."
       />
 
       <style jsx>{`

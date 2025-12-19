@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 
 /**
  * Airplane Section Template Component
@@ -102,6 +103,24 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
   style
 }) => {
   const sectionIdValue = id || sectionId;
+  
+  // State for delete modal
+  const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<{type: 'section' | 'flight', flightIndex?: number} | null>(null);
+  
+  // Handle delete confirmation
+  const handleDeleteConfirm = () => {
+    if (!deleteTarget) return;
+    
+    if (deleteTarget.type === 'section' && onDeleteSection) {
+      onDeleteSection();
+    } else if (deleteTarget.type === 'flight' && deleteTarget.flightIndex !== undefined && onRemoveFlight) {
+      onRemoveFlight(deleteTarget.flightIndex);
+    }
+    
+    setDeleteTarget(null);
+    setShowDeleteModal(false);
+  };
   
   // Set default values based on language
   const defaultTitle = title || (language === 'ar' ? 'حجز الطيران' : 'Flight Booking');
@@ -212,12 +231,9 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
               </button>
               <button
                 onClick={(e) => {
-                  // Support prop handler if provided (for backward compatibility)
-                  // Event delegation will handle this when rendered in preview
-                  if (onDeleteSection) {
-                    e.stopPropagation();
-                    onDeleteSection();
-                  }
+                  e.stopPropagation();
+                  setDeleteTarget({type: 'section'});
+                  setShowDeleteModal(true);
                 }}
                 data-action="delete-section"
                 data-airplane-section-id={sectionIdValue}
@@ -297,12 +313,9 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                       {flights.length > 1 && (
                         <button
                           onClick={(e) => {
-                            // Support prop handler if provided (for backward compatibility)
-                            // Event delegation will handle this when rendered in preview
-                            if (onRemoveFlight) {
-                              e.stopPropagation();
-                              onRemoveFlight(index);
-                            }
+                            e.stopPropagation();
+                            setDeleteTarget({type: 'flight', flightIndex: index});
+                            setShowDeleteModal(true);
                           }}
                           data-action="remove-flight"
                           data-airplane-section-id={sectionIdValue}
@@ -416,6 +429,24 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
           </div>
         </div>
       )}
+      
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title={deleteTarget?.type === 'section' 
+          ? (language === 'ar' ? 'حذف القسم' : 'Delete Section')
+          : (language === 'ar' ? 'حذف الرحلة' : 'Delete Flight')
+        }
+        message={deleteTarget?.type === 'section'
+          ? (language === 'ar' ? 'هل أنت متأكد من حذف هذا القسم؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to delete this section? This action cannot be undone.')
+          : (language === 'ar' ? 'هل أنت متأكد من حذف هذه الرحلة؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to delete this flight? This action cannot be undone.')
+        }
+      />
     </div>
   );
 };
