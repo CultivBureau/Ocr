@@ -950,7 +950,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
             e.stopPropagation();
             onAddAfter();
           }}
-          className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 z-[100] w-6 h-6 rounded-full bg-white border-2 border-[#A4C639] flex items-center justify-center transition-all duration-200 hover:bg-[#A4C639] hover:scale-110 group no-pdf-export shadow-md"
+          className="absolute -bottom-3 left-1/2 transform -translate-x-1/2  w-6 h-6 rounded-full bg-white border-2 border-[#A4C639] flex items-center justify-center transition-all duration-200 hover:bg-[#A4C639] hover:scale-110 group no-pdf-export shadow-md"
           title="Add section below"
           aria-label="Add new section after this one"
         >
