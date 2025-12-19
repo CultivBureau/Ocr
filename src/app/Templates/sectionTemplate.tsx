@@ -384,119 +384,29 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       return;
     }
     
-    // Wrap selected text in strong tag with font-weight 900
-    const boldText = `<strong style="font-weight: 900">${trimmedText}</strong>`;
+    // Check if text is already bold (wrapped in **)
+    const isBold = trimmedText.startsWith('**') && trimmedText.endsWith('**');
     
-    // If onContentChange is not provided, try fallback DOM update
-    if (!onContentChange) {
-      // Try to update content directly if editable is true
-      if (editable) {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          try {
-            // Create a strong element with bold text
-            const strongElement = document.createElement('strong');
-            strongElement.style.fontWeight = '900';
-            strongElement.textContent = trimmedText;
-            range.deleteContents();
-            range.insertNode(strongElement);
-            // Clear selection
-            window.getSelection()?.removeAllRanges();
-            setShowSplitButton(false);
-            setSelectedText("");
-            setSelectionRange(null);
-            return;
-          } catch (err) {
-            console.error('Error updating DOM directly:', err);
-          }
-        }
-      }
-      setShowSplitButton(false);
-      return;
-    }
+    let replacementText: string;
+    let searchText: string;
     
-    // Get the current selection
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-    
-    const range = selection.getRangeAt(0);
-    
-    // Get text content from the container
-    const contentElement = contentContainerRef.current;
-    if (!contentElement) return;
-    
-    // Try to use the actual DOM range for more accurate HTML handling
-    // This works better when content already contains HTML
-    try {
-      // Create strong element and insert it directly in the DOM
-      const strongElement = document.createElement('strong');
-      strongElement.style.fontWeight = '900';
-      strongElement.textContent = trimmedText;
-      
-      // Delete the selected content and insert the bold element
-      range.deleteContents();
-      range.insertNode(strongElement);
-      
-      // Get the updated HTML from the content element
-      const updatedHTML = contentElement.innerHTML;
-      
-      // Update content via callback
-      onContentChange(updatedHTML);
-      
-      // Clear selection
-      window.getSelection()?.removeAllRanges();
-      setShowSplitButton(false);
-      setSelectedText("");
-      setSelectionRange(null);
-      return;
-    } catch (err) {
-      console.error('Error with direct DOM manipulation, falling back to string replacement:', err);
-    }
-    
-    // Fallback to string-based replacement
-    // Create a range that covers all content before selection
-    const beforeRange = document.createRange();
-    beforeRange.selectNodeContents(contentElement);
-    beforeRange.setEnd(range.startContainer, range.startOffset);
-    const textBefore = beforeRange.toString();
-    
-    // Find the position in the original content string
-    // Use the text before selection to find exact position
-    let position = -1;
-    
-    // Try to find position by matching text before selection
-    // Match last portion of text before to avoid duplicates
-    const beforeText = textBefore.trim();
-    if (beforeText.length > 0) {
-      // Find the last occurrence of the last part of beforeText in content
-      const searchText = beforeText.slice(-Math.min(100, beforeText.length));
-      const lastIndex = content.lastIndexOf(searchText);
-      if (lastIndex !== -1) {
-        position = lastIndex + searchText.length;
-      }
-    }
-    
-    // Fallback: find by selected text if position not found
-    if (position === -1) {
-      position = content.indexOf(selectedText);
-    }
-    
-    let newContent = content;
-    
-    if (position !== -1) {
-      // Replace selected text with bold-wrapped version
-      newContent = 
-        content.substring(0, position) + 
-        boldText + 
-        content.substring(position + selectedText.length);
+    if (isBold) {
+      // Remove bold markers
+      replacementText = trimmedText.slice(2, -2);
+      searchText = trimmedText;
     } else {
-      // If we can't find exact position, try simple replace (first occurrence)
-      newContent = content.replace(selectedText, boldText);
+      // Add bold markers using markdown-style ** **
+      replacementText = `**${trimmedText}**`;
+      searchText = trimmedText;
     }
+    
+    // Simple string replacement in the content
+    const newContent = content.replace(searchText, replacementText);
     
     // Update content
-    onContentChange(newContent);
+    if (onContentChange) {
+      onContentChange(newContent);
+    }
     
     // Clear selection
     window.getSelection()?.removeAllRanges();
@@ -527,6 +437,17 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
     return tempDiv.textContent || tempDiv.innerText || '';
+  };
+  
+  // Helper function to convert markdown-style bold (**text**) to HTML
+  const convertBoldMarkersToHTML = (text: string): string => {
+    // Replace **text** with <strong> tags
+    return text.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 900">$1</strong>');
+  };
+  
+  // Helper function to check if text contains bold markers
+  const hasBoldMarkers = (text: string): boolean => {
+    return /\*\*.*?\*\*/.test(text);
   };
 
   // Format content with bullet points and line breaks - Enhanced for our JSON structure
@@ -609,7 +530,13 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                   
                   if (!cleanItem) return null;
                   
+                  // Check for bold markers or HTML
+                  const itemHasBoldMarkers = hasBoldMarkers(cleanItem);
                   const itemHasHTML = hasHTML(cleanItem);
+                  
+                  // Convert bold markers to HTML if present
+                  const displayItem = itemHasBoldMarkers ? convertBoldMarkersToHTML(cleanItem) : cleanItem;
+                  const shouldUseHTML = itemHasHTML || itemHasBoldMarkers;
                   
                   return (
                     <li 
@@ -618,7 +545,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                       style={{ fontSize: '11px', lineHeight: '1.4' }}
                       contentEditable={editable}
                       suppressContentEditableWarning={true}
-                      {...(itemHasHTML ? { dangerouslySetInnerHTML: { __html: cleanItem } } : { children: cleanItem })}
+                      {...(shouldUseHTML ? { dangerouslySetInnerHTML: { __html: displayItem } } : { children: cleanItem })}
                       onBlur={(e) => {
                         if (editable && onContentChange) {
                           // Get all list items and reconstruct content
@@ -656,7 +583,11 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                     <div key={pIndex} className="mb-2 last:mb-0">
                       {trimmed.split(/\n/).filter(p => p.trim()).map((p, idx) => {
                         const pText = p.trim();
+                        const pHasBoldMarkers = hasBoldMarkers(pText);
                         const pHasHTML = hasHTML(pText);
+                        const displayPText = pHasBoldMarkers ? convertBoldMarkersToHTML(pText) : pText;
+                        const shouldUsePHTML = pHasHTML || pHasBoldMarkers;
+                        
                         return (
                           <p 
                             key={idx} 
@@ -664,7 +595,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                             style={{ fontSize: '11px', lineHeight: '1.4' }}
                             contentEditable={editable}
                             suppressContentEditableWarning={true}
-                            {...(pHasHTML ? { dangerouslySetInnerHTML: { __html: pText } } : { children: pText })}
+                            {...(shouldUsePHTML ? { dangerouslySetInnerHTML: { __html: displayPText } } : { children: pText })}
                             onBlur={(e) => {
                               if (editable && onContentChange) {
                                 onContentChange(e.currentTarget.innerHTML || '');
@@ -678,7 +609,11 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                 }
                 
                 // Regular paragraph
+                const paragraphHasBoldMarkers = hasBoldMarkers(trimmed);
                 const paragraphHasHTML = hasHTML(trimmed);
+                const displayParagraph = paragraphHasBoldMarkers ? convertBoldMarkersToHTML(trimmed) : trimmed;
+                const shouldUseParagraphHTML = paragraphHasHTML || paragraphHasBoldMarkers;
+                
                 return (
                   <p
                     key={pIndex}
@@ -686,7 +621,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                     style={{ fontSize: '11px', lineHeight: '1.4' }}
                     contentEditable={editable}
                     suppressContentEditableWarning={true}
-                    {...(paragraphHasHTML ? { dangerouslySetInnerHTML: { __html: trimmed } } : { children: trimmed })}
+                    {...(shouldUseParagraphHTML ? { dangerouslySetInnerHTML: { __html: displayParagraph } } : { children: trimmed })}
                     onBlur={(e) => {
                       if (editable && onContentChange) {
                         // Extract plain text content, preserving line breaks and bullets
@@ -727,13 +662,18 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
         displayContent = formatted.join('\n');
       }
       
+      // Convert bold markers to HTML for display
+      const contentHasBoldMarkers = hasBoldMarkers(displayContent);
+      const finalDisplayContent = contentHasBoldMarkers ? convertBoldMarkersToHTML(displayContent) : displayContent;
+      const shouldUseHTML = containsHTML || contentHasBoldMarkers;
+      
       return (
         <div 
           className={`${preserveWhitespace ? "whitespace-pre-wrap leading-snug" : ""} ${editable ? 'cursor-text hover:bg-gray-50 rounded px-1 py-0.5 transition-colors min-h-[1.5em]' : ''}`}
           style={{ fontSize: '11px', lineHeight: '1.4' }}
           contentEditable={editable}
           suppressContentEditableWarning={true}
-          {...(containsHTML ? { dangerouslySetInnerHTML: { __html: displayContent } } : { children: displayContent })}
+          {...(shouldUseHTML ? { dangerouslySetInnerHTML: { __html: finalDisplayContent } } : { children: displayContent })}
           onBlur={(e) => {
             if (editable && onContentChange) {
               // Extract plain text content, preserving line breaks and bullets
