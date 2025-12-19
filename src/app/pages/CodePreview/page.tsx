@@ -709,7 +709,7 @@ function CodePageContent() {
       setStructure(prev => {
         const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'hotel');
         if (userElementIndex === -1) {
-        alert('Hotel section not found');
+          console.error('Hotel section not found');
           return prev;
         }
         
@@ -735,7 +735,7 @@ function CodePageContent() {
       });
     } catch (error) {
       console.error('Error removing hotel:', error);
-        alert(error instanceof Error ? error.message : 'Failed to remove hotel');
+      alert(error instanceof Error ? error.message : 'Failed to remove hotel');
     }
   }, []);
   
@@ -805,28 +805,9 @@ function CodePageContent() {
       return;
     }
     
-    if (!confirm('Are you sure you want to delete this hotel section?')) {
-      return;
-    }
-    
-    try {
-      // Remove from JSON structure (same as handleDeleteSection, but keeping separate for clarity)
-      setStructure(prev => {
-        const updatedElements = prev.user.elements.filter(el => el.id !== id);
-        const updatedLayout = prev.layout.filter(layoutId => layoutId !== id);
-        
-        return {
-          ...prev,
-          user: {
-            elements: updatedElements
-          },
-          layout: updatedLayout
-        };
-      });
-    } catch (error) {
-      console.error('Error deleting hotel section:', error);
-        alert(error instanceof Error ? error.message : 'Failed to delete section');
-    }
+    // Show modal instead of window.confirm
+    setDeletePendingId(id);
+    setShowDeleteModal(true);
   }, []);
   
   // Handler for editing a hotel

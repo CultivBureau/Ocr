@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 
 /**
  * Hotels Section Template Component
@@ -147,6 +148,24 @@ const HotelsSection: React.FC<HotelsSectionProps> = ({
 }) => {
   const sectionIdValue = id || sectionId;
   
+  // State for delete modal
+  const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<{type: 'section' | 'hotel', hotelIndex?: number} | null>(null);
+  
+  // Handle delete confirmation
+  const handleDeleteConfirm = () => {
+    if (!deleteTarget) return;
+    
+    if (deleteTarget.type === 'section' && onDeleteSection) {
+      onDeleteSection();
+    } else if (deleteTarget.type === 'hotel' && deleteTarget.hotelIndex !== undefined && onRemoveHotel) {
+      onRemoveHotel(deleteTarget.hotelIndex);
+    }
+    
+    setDeleteTarget(null);
+    setShowDeleteModal(false);
+  };
+  
   // Set default values based on language
   const defaultTitle = title || (language === 'ar' ? 'حجز الفنادق' : 'Hotel Booking');
   const defaultLabels = labels || (language === 'ar' ? {
@@ -214,13 +233,10 @@ const HotelsSection: React.FC<HotelsSectionProps> = ({
             </button>
             <button
               onClick={(e) => {
-                // Support prop handler if provided (for backward compatibility)
-                // Event delegation will handle this when rendered in preview
                 e.preventDefault();
                 e.stopPropagation();
-                if (onDeleteSection) {
-                  onDeleteSection();
-                }
+                setDeleteTarget({type: 'section'});
+                setShowDeleteModal(true);
               }}
               data-action="delete-section"
               data-hotels-section-id={sectionIdValue}
@@ -289,13 +305,10 @@ const HotelsSection: React.FC<HotelsSectionProps> = ({
                 {hotels.length > 1 && (
                   <button
                     onClick={(e) => {
-                      // Support prop handler if provided (for backward compatibility)
-                      // Event delegation will handle this when rendered in preview
                       e.preventDefault();
                       e.stopPropagation();
-                      if (onRemoveHotel) {
-                        onRemoveHotel(index);
-                      }
+                      setDeleteTarget({type: 'hotel', hotelIndex: index});
+                      setShowDeleteModal(true);
                     }}
                     data-action="remove-hotel"
                     data-hotels-section-id={sectionIdValue}
@@ -454,6 +467,24 @@ const HotelsSection: React.FC<HotelsSectionProps> = ({
           </div>
         )}
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title={deleteTarget?.type === 'section' 
+          ? (language === 'ar' ? 'حذف القسم' : 'Delete Section')
+          : (language === 'ar' ? 'حذف الفندق' : 'Delete Hotel')
+        }
+        message={deleteTarget?.type === 'section'
+          ? (language === 'ar' ? 'هل أنت متأكد من حذف هذا القسم؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to delete this section? This action cannot be undone.')
+          : (language === 'ar' ? 'هل أنت متأكد من حذف هذا الفندق؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to delete this hotel? This action cannot be undone.')
+        }
+      />
     </div>
   );
 };
