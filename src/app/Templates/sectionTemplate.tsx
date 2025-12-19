@@ -519,13 +519,38 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     if (typeof content === "string") {
       const containsHTML = hasHTML(content);
       
+      // Pre-process content: if it contains "•" but not on separate lines, split them
+      let processedContent = content;
+      // Check if bullets are already on separate lines (bullet follows newline)
+      const bulletsOnNewLines = /\n\s*•/.test(content);
+      if (content.includes('•') && !bulletsOnNewLines) {
+        // Split by bullet point and put each on a new line
+        const parts = content.split('•');
+        const formatted: string[] = [];
+        
+        // Handle first part (might not have a bullet if content doesn't start with •)
+        if (parts[0] && parts[0].trim()) {
+          formatted.push(parts[0].trim());
+        }
+        
+        // Add remaining parts with bullet prefix
+        for (let i = 1; i < parts.length; i++) {
+          const trimmed = parts[i].trim();
+          if (trimmed) {
+            formatted.push(`• ${trimmed}`);
+          }
+        }
+        
+        processedContent = formatted.join('\n');
+      }
+      
       if (parseParagraphs) {
         // First, check if content has bullet points (•, -, *, or numbered lists)
-        const hasBullets = content.includes('•') || /^[\s]*[\-\*]|^\d+\./m.test(content);
+        const hasBullets = processedContent.includes('•') || /^[\s]*[\-\*]|^\d+\./m.test(processedContent);
         
         if (hasBullets) {
           // For bullet content, split by single newlines to get individual items
-          const lines = content.split(/\n/).filter(line => line.trim());
+          const lines = processedContent.split(/\n/).filter(line => line.trim());
           
           if (lines.length === 0) return null;
           
@@ -600,7 +625,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           );
         } else {
           // For non-bullet content, split by double newlines for paragraphs
-          const paragraphs = content.split(/\n\n+/).filter(p => p.trim());
+          const paragraphs = processedContent.split(/\n\n+/).filter(p => p.trim());
           
           if (paragraphs.length === 0) return null;
           
@@ -660,13 +685,38 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
         }
       }
       // If parseParagraphs is false, preserve whitespace
+      // Pre-process content for bullet points if needed
+      let displayContent = content;
+      // Check if bullets are already on separate lines (bullet follows newline)
+      const bulletsOnNewLinesForDisplay = /\n\s*•/.test(content);
+      if (typeof content === "string" && content.includes('•') && !bulletsOnNewLinesForDisplay) {
+        // Split by bullet point and put each on a new line
+        const parts = content.split('•');
+        const formatted: string[] = [];
+        
+        // Handle first part (might not have a bullet if content doesn't start with •)
+        if (parts[0] && parts[0].trim()) {
+          formatted.push(parts[0].trim());
+        }
+        
+        // Add remaining parts with bullet prefix
+        for (let i = 1; i < parts.length; i++) {
+          const trimmed = parts[i].trim();
+          if (trimmed) {
+            formatted.push(`• ${trimmed}`);
+          }
+        }
+        
+        displayContent = formatted.join('\n');
+      }
+      
       return (
         <div 
           className={preserveWhitespace ? "whitespace-pre-wrap leading-snug" : ""} 
           style={{ fontSize: '11px', lineHeight: '1.4' }}
           contentEditable={editable}
           suppressContentEditableWarning={true}
-          {...(containsHTML ? { dangerouslySetInnerHTML: { __html: content } } : { children: content })}
+          {...(containsHTML ? { dangerouslySetInnerHTML: { __html: displayContent } } : { children: displayContent })}
           onBlur={(e) => {
             if (editable && onContentChange) {
               onContentChange(e.currentTarget.innerHTML || '');

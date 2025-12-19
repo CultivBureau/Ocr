@@ -8,6 +8,35 @@
 import type { ExtractResponse, Section, Table } from '../types/ExtractTypes';
 
 /**
+ * Format content with bullet points on new lines
+ * If content contains "•", split by "•" and put each bullet on a new line
+ */
+function formatBulletPoints(content: string): string {
+  // Check if content contains bullet points
+  if (content.includes('•')) {
+    // Split by bullet point
+    const parts = content.split('•');
+    const formatted: string[] = [];
+    
+    // Handle first part (might not have a bullet if content doesn't start with •)
+    if (parts[0] && parts[0].trim()) {
+      formatted.push(parts[0].trim());
+    }
+    
+    // Add remaining parts with bullet prefix
+    for (let i = 1; i < parts.length; i++) {
+      const trimmed = parts[i].trim();
+      if (trimmed) {
+        formatted.push(`• ${trimmed}`);
+      }
+    }
+    
+    return formatted.join('\n');
+  }
+  return content;
+}
+
+/**
  * Generate JSX string for a section component
  */
 function generateSectionJSX(section: Section | { title?: string; content: string; type?: string }): string {
@@ -20,7 +49,11 @@ function generateSectionJSX(section: Section | { title?: string; content: string
   }
   
   // Use template literal for JSX content attribute - escape backticks and ${} to prevent issues
-  const content = section.content.replace(/`/g, '\\`').replace(/\${/g, '\\${');
+  // Format bullet points to be on new lines
+  let content = section.content.replace(/`/g, '\\`').replace(/\${/g, '\\${');
+  content = formatBulletPoints(content);
+  // Escape newlines for template literal
+  content = content.replace(/\n/g, '\\n');
   props.push(`content={\`${content}\`}`);
   
   if (section.type && section.type !== 'section') {
