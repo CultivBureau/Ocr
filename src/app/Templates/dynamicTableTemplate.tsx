@@ -287,7 +287,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
     <div className={`${wrapperClasses} relative`} style={style}>
       {/* Action Buttons - Top Right */}
       {editable && (
-        <div className="absolute top-0 right-2 flex gap-2  no-pdf-export">
+        <div className="absolute -top-1 right-2 flex gap-2 no-pdf-export">
           {/* Edit Button (Color Picker) */}
           <div className="relative">
             <button
@@ -296,7 +296,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                 e.stopPropagation();
                 setShowColorPicker(!showColorPicker);
               }}
-              className="p-1.5 rounded-lg transition-all duration-200 hover:bg-blue-50 group bg-white shadow-md border border-gray-200"
+              className="p-2 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg group bg-gradient-to-br from-blue-50 to-blue-100 shadow-md border border-blue-200 hover:border-blue-300"
               title="Edit table settings"
               aria-label="Edit table settings"
             >
@@ -317,15 +317,15 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
             
             {/* Edit Settings Dropdown */}
             {showColorPicker && (
-              <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 min-w-[220px]">
+              <div className="absolute top-full right-0 mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 min-w-[240px] backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="mb-4">
-                  <p className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                  <p className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                     <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                     </svg>
                     Table Color
                   </p>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2.5">
                     {[
                       { value: 'green', label: 'Green', bg: 'bg-[#A4C639]' },
                       { value: 'dark-blue', label: 'Dark Blue', bg: 'bg-[#1E3A8A]' },
@@ -340,12 +340,12 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                             onBackgroundColorChange(color.value as any);
                           }
                         }}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-gray-50 ${
-                          selectedColor === color.value ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02] ${
+                          selectedColor === color.value ? 'ring-2 ring-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-md' : 'hover:bg-gray-50 hover:shadow-sm'
                         }`}
                       >
-                        <div className={`w-7 h-7 rounded ${color.bg} border-2 border-gray-300 shadow-sm`}></div>
-                        <span className="text-sm font-medium text-gray-700">{color.label}</span>
+                        <div className={`w-8 h-8 rounded-lg ${color.bg} border-2 border-white shadow-lg`}></div>
+                        <span className="text-sm font-semibold text-gray-800">{color.label}</span>
                       </button>
                     ))}
                   </div>
@@ -362,7 +362,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                 e.stopPropagation();
                 setShowDeleteModal(true);
               }}
-              className="p-1.5 rounded-lg transition-all duration-200 hover:bg-red-50 group bg-white shadow-md border border-gray-200"
+              className="p-2 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg group bg-gradient-to-br from-red-50 to-red-100 shadow-md border border-red-200 hover:border-red-300"
               title="Delete table"
               aria-label="Delete this table"
             >
@@ -396,9 +396,9 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
       
       {/* Table Title - Compact */}
       {showTitle && title && (
-        <div className="mb-3">
+        <div className="mb-4">
           <h3 
-            className={`text-base font-bold text-gray-900 ${editable ? 'cursor-text hover:bg-gray-50 rounded px-1 py-0.5 transition-colors inline-block' : ''}`}
+            className={`text-base font-bold text-gray-900 ${editable ? 'cursor-text hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 rounded-lg px-2 py-1 transition-all duration-200 inline-block' : ''}`}
             contentEditable={editable}
             suppressContentEditableWarning={true}
             onBlur={(e) => {
@@ -418,7 +418,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
       )}
 
       {/* Table Container - NO overflow, perfect compression */}
-      <div className={`w-full rounded-lg border-2 ${colorClasses.border} overflow-hidden`}>
+      <div className={`w-full rounded-2xl border-2 ${colorClasses.border} overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300`}>
         <table className="dynamic-table w-full border-collapse" style={{ tableLayout: 'fixed' }}>
           {/* Table Header */}
           <thead>
@@ -435,7 +435,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                   }}
                 >
                   <div 
-                    className={`wrap-break-word hyphens-auto ${editable ? 'cursor-text hover:bg-green-100/50 rounded px-1 py-0.5 transition-colors' : ''}`}
+                    className={`wrap-break-word hyphens-auto ${editable ? 'cursor-text hover:bg-white/20 rounded-md px-1.5 py-1 transition-all duration-200' : ''}`}
                     style={{ wordBreak: 'break-word' }}
                     contentEditable={editable}
                     suppressContentEditableWarning={true}
@@ -463,7 +463,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
               normalizedRows.map((row, rowIndex) => (
                 <tr 
                   key={rowIndex} 
-                  className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-green-50/50 transition-colors`}
+                  className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/80'} hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-blue-100/50 transition-all duration-200`}
                 >
                   {cleanHeaders.map((_, cellIndex) => {
                     const cell = row[cellIndex];
@@ -481,7 +481,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                         }}
                       >
                         <div 
-                          className={`wrap-break-word font-medium ${editable ? 'cursor-text hover:bg-green-50 rounded px-1 py-0.5 transition-colors min-h-[1.2em]' : ''}`}
+                          className={`wrap-break-word font-medium ${editable ? 'cursor-text hover:bg-blue-50 rounded-md px-1.5 py-1 transition-all duration-200 min-h-[1.2em]' : ''}`}
                           style={{ wordBreak: 'break-word' }}
                           contentEditable={editable}
                           suppressContentEditableWarning={true}
