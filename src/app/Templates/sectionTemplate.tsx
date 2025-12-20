@@ -415,6 +415,54 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     setSelectionRange(null);
   };
 
+  // Handle underline text formatting
+  const handleUnderlineText = () => {
+    if (!selectedText) {
+      return;
+    }
+    
+    if (typeof content !== 'string') {
+      return;
+    }
+    
+    const trimmedText = selectedText.trim();
+    
+    if (trimmedText.length === 0) {
+      setShowSplitButton(false);
+      return;
+    }
+    
+    // Check if text is already underlined (wrapped in __)
+    const isUnderlined = trimmedText.startsWith('__') && trimmedText.endsWith('__');
+    
+    let replacementText: string;
+    let searchText: string;
+    
+    if (isUnderlined) {
+      // Remove underline markers
+      replacementText = trimmedText.slice(2, -2);
+      searchText = trimmedText;
+    } else {
+      // Add underline markers using __ __
+      replacementText = `__${trimmedText}__`;
+      searchText = trimmedText;
+    }
+    
+    // Simple string replacement in the content
+    const newContent = content.replace(searchText, replacementText);
+    
+    // Update content
+    if (onContentChange) {
+      onContentChange(newContent);
+    }
+    
+    // Clear selection
+    window.getSelection()?.removeAllRanges();
+    setShowSplitButton(false);
+    setSelectedText("");
+    setSelectionRange(null);
+  };
+
   // Build underline classes
   const underlineClasses = [
     "h-1",
@@ -439,15 +487,17 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     return tempDiv.textContent || tempDiv.innerText || '';
   };
   
-  // Helper function to convert markdown-style bold (**text**) to HTML
+  // Helper function to convert markdown-style bold (**text**) and underline (__text__) to HTML
   const convertBoldMarkersToHTML = (text: string): string => {
-    // Replace **text** with <strong> tags
-    return text.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 900">$1</strong>');
+    // Replace **text** with <strong> tags and __text__ with <u> tags
+    let result = text.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 900">$1</strong>');
+    result = result.replace(/__(.*?)__/g, '<u style="text-decoration: underline">$1</u>');
+    return result;
   };
   
-  // Helper function to check if text contains bold markers
+  // Helper function to check if text contains bold or underline markers
   const hasBoldMarkers = (text: string): boolean => {
-    return /\*\*.*?\*\*/.test(text);
+    return /\*\*.*?\*\*/.test(text) || /__.*?__/.test(text);
   };
 
   // Format content with bullet points and line breaks - Enhanced for our JSON structure
@@ -852,7 +902,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
               onMouseDown={(e) => e.preventDefault()} // Prevent losing selection
               className="p-2 rounded-lg shadow-lg active:scale-95 transition-all duration-200 flex items-center gap-1.5 text-xs font-medium cursor-pointer"
               style={{
-                backgroundColor: '#A4C639', // Use inline style instead of Tailwind class to avoid lab() colors
+                backgroundColor: '#A4C639',
                 color: '#ffffff',
               }}
               onMouseEnter={(e) => {
@@ -872,6 +922,38 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                 <path d="M15.6 10.79c.97-.67 1.65-1.77 1.65-2.79 0-2.26-1.75-4-4-4H7v14h7.04c2.09 0 3.71-1.7 3.71-3.79 0-1.52-.86-2.82-2.15-3.42zM10 6.5h3c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-3v-3zm3.5 9H10v-3h3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5z"/>
               </svg>
               <span>Bold</span>
+            </button>
+            
+            {/* Underline Button */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleUnderlineText();
+              }}
+              onMouseDown={(e) => e.preventDefault()} // Prevent losing selection
+              className="p-2 rounded-lg shadow-lg active:scale-95 transition-all duration-200 flex items-center gap-1.5 text-xs font-medium cursor-pointer"
+              style={{
+                backgroundColor: '#A4C639',
+                color: '#ffffff',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#8FB02E';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#A4C639';
+              }}
+              title="Underline text"
+              aria-label="Underline selected text"
+            >
+              <svg 
+                className="w-4 h-4" 
+                fill="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 17c3.31 0 6-2.69 6-6V3h-2.5v8c0 1.93-1.57 3.5-3.5 3.5S8.5 12.93 8.5 11V3H6v8c0 3.31 2.69 6 6 6zm-7 2v2h14v-2H5z"/>
+              </svg>
+              <span>Underline</span>
             </button>
           </div>
         )}
