@@ -25,6 +25,8 @@ export interface DynamicTableTemplateProps {
   onHeaderChange?: (headerIndex: number, newValue: string) => void;
   onTitleChange?: (newTitle: string) => void;
   onDelete?: () => void;
+  onBackgroundColorChange?: (color: 'dark-blue' | 'dark-red' | 'pink' | 'green') => void;
+  tableBackgroundColor?: 'dark-blue' | 'dark-red' | 'pink' | 'green'; // Initial color from JSON
   
   // Table Title
   title?: string;
@@ -96,6 +98,8 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
   onHeaderChange,
   onTitleChange,
   onDelete,
+  onBackgroundColorChange,
+  tableBackgroundColor = 'green', // Default to green if not specified
   // Title
   title,
   titleClassName = "",
@@ -149,6 +153,25 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
 }) => {
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<'dark-blue' | 'dark-red' | 'pink' | 'green'>(tableBackgroundColor);
+  
+  // Get background color classes
+  const getBackgroundColorClass = (color: 'dark-blue' | 'dark-red' | 'pink' | 'green') => {
+    switch (color) {
+      case 'dark-blue':
+        return { bg: 'bg-[#1E3A8A]', border: 'border-[#1E3A8A]', from: '#1E3A8A', to: '#1E40AF' };
+      case 'dark-red':
+        return { bg: 'bg-[#991B1B]', border: 'border-[#991B1B]', from: '#991B1B', to: '#B91C1C' };
+      case 'pink':
+        return { bg: 'bg-[#EC4899]', border: 'border-[#EC4899]', from: '#EC4899', to: '#F472B6' };
+      case 'green':
+      default:
+        return { bg: 'bg-[#A4C639]', border: 'border-[#A4C639]', from: '#A4C639', to: '#8FB02E' };
+    }
+  };
+  
+  const colorClasses = getBackgroundColorClass(selectedColor);
   
   // Use 'columns' from JSON or fallback to 'headers'
   const tableHeaders = columns || headers || [];
@@ -203,11 +226,8 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
     if (headerBackgroundColor) {
       return `bg-[${headerBackgroundColor}]`;
     }
-    if (headerGradient) {
-      return `bg-gradient-to-r from-[${headerGradient.from}] to-[${headerGradient.to}]`;
-    }
-    // Default gradient
-    return `bg-gradient-to-r from-[#A4C639] to-[#8FB02E]`;
+    // Use selected color gradient
+    return `bg-gradient-to-r from-[${colorClasses.from}] to-[${colorClasses.to}]`;
   };
 
   // Build header classes - Ultra compact for NO scrolling
@@ -265,42 +285,113 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
 
   return (
     <div className={`${wrapperClasses} relative`} style={style}>
-      {/* Delete Button - Top Right */}
-      {editable && onDelete && (
-        <>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setShowDeleteModal(true);
-            }}
-            className="absolute top-2 right-2  p-1.5 rounded-lg transition-all duration-200 hover:bg-red-50 group no-pdf-export"
-            title="Delete table"
-            aria-label="Delete this table"
-          >
-            <svg
-              className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+      {/* Action Buttons - Top Right */}
+      {editable && (
+        <div className="absolute top-0 right-2 flex gap-2  no-pdf-export">
+          {/* Edit Button (Color Picker) */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowColorPicker(!showColorPicker);
+              }}
+              className="p-1.5 rounded-lg transition-all duration-200 hover:bg-blue-50 group bg-white shadow-md border border-gray-200"
+              title="Edit table settings"
+              aria-label="Edit table settings"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </button>
+              <svg
+                className="w-4 h-4 text-gray-600 group-hover:text-blue-500 transition-colors"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+            </button>
+            
+            {/* Edit Settings Dropdown */}
+            {showColorPicker && (
+              <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 min-w-[220px]">
+                <div className="mb-4">
+                  <p className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                    Table Color
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { value: 'green', label: 'Green', bg: 'bg-[#A4C639]' },
+                      { value: 'dark-blue', label: 'Dark Blue', bg: 'bg-[#1E3A8A]' },
+                      { value: 'dark-red', label: 'Dark Red', bg: 'bg-[#991B1B]' },
+                      { value: 'pink', label: 'Pink', bg: 'bg-[#EC4899]' }
+                    ].map((color) => (
+                      <button
+                        key={color.value}
+                        onClick={() => {
+                          setSelectedColor(color.value as any);
+                          if (onBackgroundColorChange) {
+                            onBackgroundColorChange(color.value as any);
+                          }
+                        }}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-gray-50 ${
+                          selectedColor === color.value ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                        }`}
+                      >
+                        <div className={`w-7 h-7 rounded ${color.bg} border-2 border-gray-300 shadow-sm`}></div>
+                        <span className="text-sm font-medium text-gray-700">{color.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           
-          <DeleteConfirmationModal
-            isOpen={showDeleteModal}
-            onClose={() => setShowDeleteModal(false)}
-            onConfirm={onDelete}
-            title="Delete Table"
-            message="Are you sure you want to delete this table? This action cannot be undone."
-          />
-        </>
+          {/* Delete Button */}
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowDeleteModal(true);
+              }}
+              className="p-1.5 rounded-lg transition-all duration-200 hover:bg-red-50 group bg-white shadow-md border border-gray-200"
+              title="Delete table"
+              aria-label="Delete this table"
+            >
+              <svg
+                className="w-4 h-4 text-gray-600 group-hover:text-red-500 transition-colors"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
+      
+      {onDelete && (
+        <DeleteConfirmationModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={onDelete}
+          title="Delete Table"
+          message="Are you sure you want to delete this table? This action cannot be undone."
+        />
       )}
       
       {/* Table Title - Compact */}
@@ -327,15 +418,15 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
       )}
 
       {/* Table Container - NO overflow, perfect compression */}
-      <div className="w-full rounded-lg border-2 border-[#A4C639] overflow-hidden">
+      <div className={`w-full rounded-lg border-2 ${colorClasses.border} overflow-hidden`}>
         <table className="dynamic-table w-full border-collapse" style={{ tableLayout: 'fixed' }}>
           {/* Table Header */}
           <thead>
-            <tr className="bg-linear-to-r from-[#A4C639] to-[#8FB02E]">
+            <tr style={{ background: `linear-gradient(to right, ${colorClasses.from}, ${colorClasses.to})` }}>
               {cleanHeaders.map((header, index) => (
                   <th
                     key={index}
-                  className={headerClasses}
+                  className="text-white font-bold text-center border-r border-white/30 tracking-tight last:border-r-0"
                   style={{ 
                     fontSize: '9px',
                     lineHeight: '1.2',

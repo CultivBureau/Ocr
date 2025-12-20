@@ -131,6 +131,10 @@ export default function StructureRenderer({
             columns={table.columns}
             rows={table.rows}
             editable={editable}
+            tableBackgroundColor={table.backgroundColor as any}
+            onBackgroundColorChange={onTableEdit ? (color: 'dark-blue' | 'dark-red' | 'pink' | 'green') => {
+              onTableEdit({ ...table, backgroundColor: color });
+            } : undefined}
             onTitleChange={onTableEdit ? (newTitle: string) => {
               onTableEdit({ ...table, title: newTitle });
             } : undefined}
