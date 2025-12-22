@@ -86,17 +86,32 @@ function HomeContent() {
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-10">
                     {canManageCompanies && (
-                      <Link
-                        href="/pages/Companies"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        <span className="flex items-center gap-2">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                          Companies
-                        </span>
-                      </Link>
+                      <>
+                        <Link
+                          href="/pages/Companies"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <span className="flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            Companies
+                          </span>
+                        </Link>
+                        {isSuperAdmin && (
+                          <Link
+                            href="/pages/CompanyDetails"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <span className="flex items-center gap-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              Company Details
+                            </span>
+                          </Link>
+                        )}
+                      </>
                     )}
                     {canManagePlans && (
                       <Link
@@ -292,39 +307,76 @@ function HomeContent() {
             )}
 
             {canManageCompanies && (
-              <Link
-                href="/pages/Companies"
-                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-purple-400 hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-400/50 relative overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
-                <div className="flex flex-col h-full">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-4 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
-                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              <>
+                <Link
+                  href="/pages/Companies"
+                  className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-purple-400 hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-400/50 relative overflow-hidden"
+                >
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
+                  <div className="flex flex-col h-full">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-4 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-900">Companies</h2>
+                    </div>
+                    <div className="mb-4">
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full mb-3 shadow-md">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        Super Admin Only
+                      </span>
+                      <p className="text-gray-600 grow leading-relaxed">
+                        Manage all companies, assign plans, and control access across your platform.
+                      </p>
+                    </div>
+                    <div className="flex items-center text-purple-600 font-bold group-hover:gap-3 transition-all">
+                      <span>Manage Companies</span>
+                      <svg className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                       </svg>
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900">Companies</h2>
                   </div>
-                  <div className="mb-4">
-                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full mb-3 shadow-md">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
-                      Super Admin Only
-                    </span>
-                    <p className="text-gray-600 grow leading-relaxed">
-                      Manage all companies, assign plans, and control access across your platform.
-                    </p>
-                  </div>
-                  <div className="flex items-center text-purple-600 font-bold group-hover:gap-3 transition-all">
-                    <span>Manage Companies</span>
-                    <svg className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </div>
-                </div>
-              </Link>
+                </Link>
+                {isSuperAdmin && (
+                  <Link
+                    href="/pages/CompanyDetails"
+                    className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-indigo-400 hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400/50 relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-500"></div>
+                    <div className="flex flex-col h-full">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-4 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-2xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900">Company Details</h2>
+                      </div>
+                      <div className="mb-4">
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-blue-500 text-white text-xs font-bold rounded-full mb-3 shadow-md">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          </svg>
+                          Super Admin Only
+                        </span>
+                        <p className="text-gray-600 grow leading-relaxed">
+                          View detailed information for any company including usage, users, and plan details.
+                        </p>
+                      </div>
+                      <div className="flex items-center text-indigo-600 font-bold group-hover:gap-3 transition-all">
+                        <span>View Details</span>
+                        <svg className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                      </div>
+                    </div>
+                  </Link>
+                )}
+              </>
             )}
 
             {canManagePlans && (
@@ -391,7 +443,7 @@ function HomeContent() {
               </Link>
             )}
 
-            {canManageCompanySettings && (
+            {canManageCompanySettings && !isSuperAdmin && (
               <Link
                 href="/pages/CompanySettings"
                 className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-blue-400 hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-400/50 relative overflow-hidden"

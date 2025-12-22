@@ -259,3 +259,97 @@ export async function deleteCompanyFooterImage(companyId: string): Promise<Compa
   });
 }
 
+// Company Details types (for Super Admin)
+export interface CompanyUsageSummary {
+  total_uploads: number;
+  total_ocr_pages: number;
+  total_pdf_exports: number;
+  total_cost: number;
+  period_start: string;
+  period_end: string;
+}
+
+export interface CompanyPlanDetails {
+  plan: {
+    id: string;
+    name: string;
+    price_monthly: number;
+    is_trial: boolean;
+    duration_days: number | null;
+    is_active: boolean;
+    limits: {
+      uploads_per_month: number;
+      users_limit: number;
+      pages_per_month: number;
+      pdf_exports: number;
+    };
+  } | null;
+  plan_started_at: string | null;
+  plan_expires_at: string | null;
+  message?: string;
+}
+
+export interface CompanyUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  company_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompanyUsersResponse {
+  users: CompanyUser[];
+  total: number;
+  message?: string;
+}
+
+/**
+ * Get company usage statistics (Super Admin only)
+ */
+export async function getCompanyUsage(
+  companyId: string,
+  month?: number,
+  year?: number
+): Promise<CompanyUsageSummary> {
+  const params = new URLSearchParams();
+  if (month !== undefined) {
+    params.append("month", month.toString());
+  }
+  if (year !== undefined) {
+    params.append("year", year.toString());
+  }
+
+  return authRequest(`/companies/${companyId}/usage?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Get company users (Super Admin only)
+ */
+export async function getCompanyUsers(
+  companyId: string,
+  skip: number = 0,
+  limit: number = 100
+): Promise<CompanyUsersResponse> {
+  const params = new URLSearchParams();
+  params.append("skip", skip.toString());
+  params.append("limit", limit.toString());
+
+  return authRequest(`/companies/${companyId}/users?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Get company plan details (Super Admin only)
+ */
+export async function getCompanyPlanDetails(companyId: string): Promise<CompanyPlanDetails> {
+  return authRequest(`/companies/${companyId}/plan`, {
+    method: "GET",
+  });
+}
+
