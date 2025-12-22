@@ -649,7 +649,7 @@ function CompanySettingsContent() {
               </div>
 
               {usage && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                     <p className="text-sm text-gray-600 mb-1">Total Uploads</p>
                     <p className="text-2xl font-bold text-blue-600">{usage.total_uploads}</p>
@@ -661,10 +661,6 @@ function CompanySettingsContent() {
                   <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
                     <p className="text-sm text-gray-600 mb-1">PDF Exports</p>
                     <p className="text-2xl font-bold text-purple-600">{usage.total_pdf_exports}</p>
-                  </div>
-                  <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
-                    <p className="text-sm text-gray-600 mb-1">Total Cost</p>
-                    <p className="text-2xl font-bold text-orange-600">${usage.total_cost.toFixed(2)}</p>
                   </div>
                 </div>
               )}

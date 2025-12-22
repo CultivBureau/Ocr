@@ -427,7 +427,7 @@ function CompanyDetailsContent() {
 
               {usage ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="bg-blue-50 rounded-lg p-4">
                       <p className="text-sm text-gray-600 mb-1">Total Uploads</p>
                       <p className="text-2xl font-bold text-blue-600">{usage.total_uploads}</p>
@@ -439,10 +439,6 @@ function CompanyDetailsContent() {
                     <div className="bg-purple-50 rounded-lg p-4">
                       <p className="text-sm text-gray-600 mb-1">PDF Exports</p>
                       <p className="text-2xl font-bold text-purple-600">{usage.total_pdf_exports}</p>
-                    </div>
-                    <div className="bg-orange-50 rounded-lg p-4">
-                      <p className="text-sm text-gray-600 mb-1">Total Cost</p>
-                      <p className="text-2xl font-bold text-orange-600">${usage.total_cost.toFixed(2)}</p>
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 mt-2">
