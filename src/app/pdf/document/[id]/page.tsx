@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import StructureRenderer from "@/app/components/StructureRenderer";
+import BaseTemplate from "@/app/Templates/baseTemplate";
 import type { SeparatedStructure } from "@/app/types/ExtractTypes";
-import { getDocumentServer } from "@/app/services/HistoryApiServer";
+import { getDocumentServer, getCompanyBrandingServer } from "@/app/services/HistoryApiServer";
 import "./print.css";
 import "./fonts.css";
 
@@ -134,16 +135,56 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
   // Detect document direction
   const direction = detectDocumentDirection(structure);
 
+  // Fetch company branding if document has company_id
+  let headerImage: string | undefined = undefined;
+  let footerImage: string | undefined = undefined;
+  
+  if (document.company_id) {
+    try {
+      const branding = await getCompanyBrandingServer(document.company_id, token || undefined);
+      // Only set images if they exist (don't use defaults)
+      // Ensure URLs are absolute for Playwright PDF generation
+      if (branding.header_image) {
+        headerImage = branding.header_image;
+        // If it's a relative URL, make it absolute using backend URL
+        if (headerImage && !headerImage.startsWith("http")) {
+          const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000";
+          headerImage = `${API_BASE_URL}${headerImage.startsWith("/") ? "" : "/"}${headerImage}`;
+        }
+      }
+      if (branding.footer_image) {
+        footerImage = branding.footer_image;
+        // If it's a relative URL, make it absolute using backend URL
+        if (footerImage && !footerImage.startsWith("http")) {
+          const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000";
+          footerImage = `${API_BASE_URL}${footerImage.startsWith("/") ? "" : "/"}${footerImage}`;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch company branding:", error);
+      // Don't set images if branding fetch fails - will show no header/footer
+    }
+  }
+
   return (
-    <div className="pdf-document-body" dir={direction}>
-      <div className="pdf-container">
-        <StructureRenderer
-          structure={structure}
-          editable={false}
-          className="pdf-structure-renderer"
-        />
+    <BaseTemplate
+      headerImage={headerImage}
+      footerImage={footerImage}
+      showHeader={!!headerImage} // Only show header if image exists
+      showFooter={!!footerImage} // Only show footer if image exists
+      pageSize="A4"
+    >
+      <div className="pdf-document-body" dir={direction}>
+        <div className="pdf-container">
+          <StructureRenderer
+            structure={structure}
+            editable={false}
+            className="pdf-structure-renderer"
+            skipBaseTemplate={true} // Skip BaseTemplate since we're already wrapped in one
+          />
+        </div>
       </div>
-    </div>
+    </BaseTemplate>
   );
 }
 

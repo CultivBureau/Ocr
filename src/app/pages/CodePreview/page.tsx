@@ -27,9 +27,14 @@ import { Hotel } from "../../Templates/HotelsSection";
 import { isAuthenticated } from "../../services/AuthApi";
 import { saveDocument, updateDocument, getDocument } from "../../services/HistoryApi";
 import { generatePDFWithPlaywright, downloadPDFBlob } from "../../services/PdfApi";
+import { getCompany } from "../../services/CompanyApi";
 import ProtectedRoute from "../../components/ProtectedRoute";
 import VersionHistoryModal from "../../components/VersionHistoryModal";
 import type { SeparatedStructure, UserElement } from "../../types/ExtractTypes";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
 
 // Default empty structure
 const defaultStructure: SeparatedStructure = {
@@ -81,6 +86,10 @@ function CodePageContent() {
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
   const [isExportingPlaywright, setIsExportingPlaywright] = useState(false);
   const previewContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Company branding state
+  const [headerImage, setHeaderImage] = useState<string | undefined>(undefined);
+  const [footerImage, setFooterImage] = useState<string | undefined>(undefined);
   
   // Event delegation for airplane section actions
   useEffect(() => {
@@ -1445,6 +1454,8 @@ function CodePageContent() {
     if (storedDocId) {
       setDocumentId(storedDocId);
       sessionStorage.removeItem("codePreview.documentId");
+      // Load document to get company_id and fetch branding
+      loadDocument(storedDocId);
     }
 
     const storedMetadata = sessionStorage.getItem("codePreview.metadata");
@@ -1542,6 +1553,40 @@ function CodePageContent() {
           filename: doc.metadata.filename || doc.original_filename,
           uploadedAt: doc.created_at,
         });
+      }
+      
+      // Fetch company branding if document has company_id
+      if (doc.company_id) {
+        try {
+          const company = await getCompany(doc.company_id);
+          // Construct full URLs for images
+          if (company.header_image) {
+            const headerUrl = company.header_image.startsWith("http")
+              ? company.header_image
+              : `${API_BASE_URL}${company.header_image}`;
+            setHeaderImage(headerUrl);
+          } else {
+            setHeaderImage(undefined);
+          }
+          
+          if (company.footer_image) {
+            const footerUrl = company.footer_image.startsWith("http")
+              ? company.footer_image
+              : `${API_BASE_URL}${company.footer_image}`;
+            setFooterImage(footerUrl);
+          } else {
+            setFooterImage(undefined);
+          }
+        } catch (err) {
+          console.error("Failed to fetch company branding:", err);
+          // Don't set images if fetch fails
+          setHeaderImage(undefined);
+          setFooterImage(undefined);
+        }
+      } else {
+        // No company_id, clear branding
+        setHeaderImage(undefined);
+        setFooterImage(undefined);
       }
     } catch (err) {
       console.error("Failed to load document:", err);
@@ -2234,6 +2279,8 @@ function CodePageContent() {
               structure={structure}
                   showStats={false}
               editable={true}
+              headerImage={headerImage}
+              footerImage={footerImage}
               onMoveUp={handleMoveUp}
               onMoveDown={handleMoveDown}
               onSectionEdit={(section) => {

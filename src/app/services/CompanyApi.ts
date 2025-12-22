@@ -159,3 +159,103 @@ export async function activateCompany(companyId: string): Promise<Company> {
   });
 }
 
+/**
+ * Upload header image for a company (Super Admin only)
+ */
+export async function uploadCompanyHeaderImage(
+  companyId: string,
+  file: File
+): Promise<Company> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/companies/${companyId}/branding/header`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType && contentType.includes("application/json");
+  const payload = isJson ? await response.json() : await response.text();
+
+  if (!response.ok) {
+    const errorMessage =
+      isJson && payload?.message
+        ? payload.message
+        : isJson && payload?.detail
+        ? typeof payload.detail === "string"
+          ? payload.detail
+          : JSON.stringify(payload.detail)
+        : payload || response.statusText;
+    throw new Error(errorMessage || "Request failed");
+  }
+
+  return payload;
+}
+
+/**
+ * Upload footer image for a company (Super Admin only)
+ */
+export async function uploadCompanyFooterImage(
+  companyId: string,
+  file: File
+): Promise<Company> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/companies/${companyId}/branding/footer`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType && contentType.includes("application/json");
+  const payload = isJson ? await response.json() : await response.text();
+
+  if (!response.ok) {
+    const errorMessage =
+      isJson && payload?.message
+        ? payload.message
+        : isJson && payload?.detail
+        ? typeof payload.detail === "string"
+          ? payload.detail
+          : JSON.stringify(payload.detail)
+        : payload || response.statusText;
+    throw new Error(errorMessage || "Request failed");
+  }
+
+  return payload;
+}
+
+/**
+ * Delete header image for a company (Super Admin only)
+ */
+export async function deleteCompanyHeaderImage(companyId: string): Promise<Company> {
+  return authRequest(`/companies/${companyId}/branding/header`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Delete footer image for a company (Super Admin only)
+ */
+export async function deleteCompanyFooterImage(companyId: string): Promise<Company> {
+  return authRequest(`/companies/${companyId}/branding/footer`, {
+    method: "DELETE",
+  });
+}
+

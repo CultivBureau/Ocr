@@ -27,6 +27,11 @@ interface StructureRendererProps {
   onMoveUp?: (id: string) => void;
   onMoveDown?: (id: string) => void;
   className?: string;
+  // Branding props - if provided, will use company branding instead of defaults
+  headerImage?: string;
+  footerImage?: string;
+  // If true, won't render BaseTemplate wrapper (useful when already wrapped)
+  skipBaseTemplate?: boolean;
 }
 
 /**
@@ -50,6 +55,9 @@ export default function StructureRenderer({
   onMoveUp,
   onMoveDown,
   className = "",
+  headerImage,
+  footerImage,
+  skipBaseTemplate = false,
 }: StructureRendererProps) {
   // Normalize structure to SeparatedStructure format
   let separatedStructure: SeparatedStructure;
@@ -412,14 +420,8 @@ export default function StructureRenderer({
     }
   };
 
-  return (
-    <BaseTemplate
-      headerImage="/happylifeHeader.jpeg"
-      footerImage="/happylifeFooter.jpg"
-      showHeader={true}
-      showFooter={true}
-      className={className}
-    >
+  const content = (
+    <>
       {separatedStructure.layout.length === 0 && 
        separatedStructure.generated.sections.length === 0 && 
        separatedStructure.generated.tables.length === 0 &&
@@ -459,6 +461,24 @@ export default function StructureRenderer({
           </div>
         </div>
       )}
+    </>
+  );
+
+  // If skipBaseTemplate is true, return content without BaseTemplate wrapper
+  if (skipBaseTemplate) {
+    return <div className={className}>{content}</div>;
+  }
+
+  // Otherwise, wrap in BaseTemplate with dynamic or default branding
+  return (
+    <BaseTemplate
+      headerImage={headerImage}
+      footerImage={footerImage}
+      showHeader={!!headerImage} // Only show if image provided
+      showFooter={!!footerImage} // Only show if image provided
+      className={className}
+    >
+      {content}
     </BaseTemplate>
   );
 }

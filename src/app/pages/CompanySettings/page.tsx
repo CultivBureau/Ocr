@@ -11,11 +11,19 @@ import {
   getCompanyUsage,
   getCompanyUsers,
   getCompanyPlan,
+  uploadCompanyHeaderImage,
+  uploadCompanyFooterImage,
+  deleteCompanyHeaderImage,
+  deleteCompanyFooterImage,
   type CompanySettings,
   type UsageSummary,
   type CompanyPlan,
 } from "@/app/services/CompanySettingsApi";
 import { format } from "date-fns";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
 
 export default function CompanySettingsPage() {
   return (
@@ -40,6 +48,11 @@ function CompanySettingsContent() {
   const [editingName, setEditingName] = useState(false);
   const [formName, setFormName] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Image upload state
+  const [headerImageFile, setHeaderImageFile] = useState<File | null>(null);
+  const [footerImageFile, setFooterImageFile] = useState<File | null>(null);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   // Usage filter
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -64,6 +77,8 @@ function CompanySettingsContent() {
       setPlan(planData);
       setCompanyUsers(usersData.users || []);
       setFormName(settingsData.name);
+      setHeaderImageFile(null);
+      setFooterImageFile(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch data";
       setError(message);
@@ -100,6 +115,120 @@ function CompanySettingsContent() {
   ];
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+
+  const handleHeaderImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+      if (!validTypes.includes(file.type)) {
+        setError("Invalid file type. Please upload JPG, PNG, GIF, or WEBP image.");
+        return;
+      }
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("File size too large. Maximum size is 5MB.");
+        return;
+      }
+      setHeaderImageFile(file);
+    }
+  };
+
+  const handleFooterImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+      if (!validTypes.includes(file.type)) {
+        setError("Invalid file type. Please upload JPG, PNG, GIF, or WEBP image.");
+        return;
+      }
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("File size too large. Maximum size is 5MB.");
+        return;
+      }
+      setFooterImageFile(file);
+    }
+  };
+
+  const handleUploadHeaderImage = async () => {
+    if (!headerImageFile) return;
+    
+    setIsUploadingImages(true);
+    setError("");
+    try {
+      const updated = await uploadCompanyHeaderImage(headerImageFile);
+      setSettings(updated);
+      setSuccess("Header image uploaded successfully");
+      setHeaderImageFile(null);
+      fetchData();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload header image";
+      setError(message);
+    } finally {
+      setIsUploadingImages(false);
+    }
+  };
+
+  const handleUploadFooterImage = async () => {
+    if (!footerImageFile) return;
+    
+    setIsUploadingImages(true);
+    setError("");
+    try {
+      const updated = await uploadCompanyFooterImage(footerImageFile);
+      setSettings(updated);
+      setSuccess("Footer image uploaded successfully");
+      setFooterImageFile(null);
+      fetchData();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload footer image";
+      setError(message);
+    } finally {
+      setIsUploadingImages(false);
+    }
+  };
+
+  const handleDeleteHeaderImage = async () => {
+    if (!confirm("Are you sure you want to delete the header image?")) return;
+    
+    setIsUploadingImages(true);
+    setError("");
+    try {
+      const updated = await deleteCompanyHeaderImage();
+      setSettings(updated);
+      setSuccess("Header image deleted successfully");
+      fetchData();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete header image";
+      setError(message);
+    } finally {
+      setIsUploadingImages(false);
+    }
+  };
+
+  const handleDeleteFooterImage = async () => {
+    if (!confirm("Are you sure you want to delete the footer image?")) return;
+    
+    setIsUploadingImages(true);
+    setError("");
+    try {
+      const updated = await deleteCompanyFooterImage();
+      setSettings(updated);
+      setSuccess("Footer image deleted successfully");
+      fetchData();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete footer image";
+      setError(message);
+    } finally {
+      setIsUploadingImages(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50">
@@ -250,6 +379,160 @@ function CompanySettingsContent() {
                       {settings?.is_active ? "Active" : "Inactive"}
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* Branding Images Section */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Branding Images</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Upload header and footer images that will appear on all PDF documents generated for your company.
+                </p>
+
+                {/* Header Image */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Header Image
+                  </label>
+                  <div className="mb-2 p-1.5 bg-blue-50 border border-blue-200 rounded text-xs max-h-16 overflow-y-auto">
+                    <p className="text-blue-900 font-semibold text-xs leading-tight mb-0.5">📏 Recommended Size:</p>
+                    <p className="text-blue-700 text-xs leading-tight">1200×200px or similar wide format (16:3 ratio) for best results</p>
+                  </div>
+                  {settings?.header_image ? (
+                    <div className="space-y-2">
+                      <img
+                        src={settings.header_image.startsWith("http") ? settings.header_image : `${API_BASE_URL}${settings.header_image}`}
+                        alt="Header"
+                        className="w-full h-32 object-cover rounded-xl border-2 border-gray-200"
+                        onError={(e) => {
+                          // Fallback if image fails to load
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                      <div className="flex gap-2">
+                        <label className="flex-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium text-center cursor-pointer">
+                          Change
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                            onChange={handleHeaderImageChange}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          onClick={handleDeleteHeaderImage}
+                          disabled={isUploadingImages}
+                          className="px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                      {headerImageFile && (
+                        <button
+                          onClick={handleUploadHeaderImage}
+                          disabled={isUploadingImages}
+                          className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                        >
+                          {isUploadingImages ? "Uploading..." : "Upload New Header Image"}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="block w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 transition-colors text-center">
+                        <span className="text-sm text-gray-600">Click to upload header image</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                          onChange={handleHeaderImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                      {headerImageFile && (
+                        <button
+                          onClick={handleUploadHeaderImage}
+                          disabled={isUploadingImages}
+                          className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                        >
+                          {isUploadingImages ? "Uploading..." : "Upload Header Image"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF, or WEBP (Max 5MB)</p>
+                </div>
+
+                {/* Footer Image */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Footer Image
+                  </label>
+                  <div className="mb-2 p-1.5 bg-blue-50 border border-blue-200 rounded text-xs max-h-16 overflow-y-auto">
+                    <p className="text-blue-900 font-semibold text-xs leading-tight mb-0.5">📏 Recommended Size:</p>
+                    <p className="text-blue-700 text-xs leading-tight">1200×100px or similar wide format (12:1 ratio) for best results</p>
+                  </div>
+                  {settings?.footer_image ? (
+                    <div className="space-y-2">
+                      <img
+                        src={settings.footer_image.startsWith("http") ? settings.footer_image : `${API_BASE_URL}${settings.footer_image}`}
+                        alt="Footer"
+                        className="w-full h-24 object-cover rounded-xl border-2 border-gray-200"
+                        onError={(e) => {
+                          // Fallback if image fails to load
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                      <div className="flex gap-2">
+                        <label className="flex-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium text-center cursor-pointer">
+                          Change
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                            onChange={handleFooterImageChange}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          onClick={handleDeleteFooterImage}
+                          disabled={isUploadingImages}
+                          className="px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                      {footerImageFile && (
+                        <button
+                          onClick={handleUploadFooterImage}
+                          disabled={isUploadingImages}
+                          className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                        >
+                          {isUploadingImages ? "Uploading..." : "Upload New Footer Image"}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="block w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 transition-colors text-center">
+                        <span className="text-sm text-gray-600">Click to upload footer image</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                          onChange={handleFooterImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                      {footerImageFile && (
+                        <button
+                          onClick={handleUploadFooterImage}
+                          disabled={isUploadingImages}
+                          className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                        >
+                          {isUploadingImages ? "Uploading..." : "Upload Footer Image"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF, or WEBP (Max 5MB)</p>
                 </div>
               </div>
             </div>

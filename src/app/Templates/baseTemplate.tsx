@@ -66,12 +66,12 @@ export interface BaseTemplateProps {
 const BaseTemplate: React.FC<BaseTemplateProps> = ({
   children,
   // Header
-  headerImage = "/happylifeHeader.jpeg",
+  headerImage,
   headerImageAlt = "Header",
   showHeader = true,
   headerClassName = "",
   // Footer
-  footerImage = "/happylifeFooter.jpg",
+  footerImage,
   footerImageAlt = "Footer",
   showFooter = true,
   footerClassName = "",
@@ -191,7 +191,7 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
               src={headerImage}
               alt={headerImageAlt}
               className="w-full h-auto object-cover block"
-              style={{ display: "block", width: "100%", height: "auto", maxHeight: "520px" }}
+              style={{ display: "block", width: "100%", height: "auto",  }}
             />
           </div>
         )}
@@ -208,7 +208,7 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
               src={footerImage}
               alt={footerImageAlt}
               className="w-full h-auto object-cover block"
-              style={{ display: "block", width: "100%", height: "auto", maxHeight: "100px" }}
+              style={{ display: "block", width: "100%", height: "auto", }}
             />
           </div>
         )}

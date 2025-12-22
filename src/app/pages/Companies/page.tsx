@@ -12,10 +12,18 @@ import {
   deleteCompany,
   assignPlan,
   activateCompany,
+  uploadCompanyHeaderImage,
+  uploadCompanyFooterImage,
+  deleteCompanyHeaderImage,
+  deleteCompanyFooterImage,
   type Company,
 } from "@/app/services/CompanyApi";
 import { getAllPlans, type Plan } from "@/app/services/PlanApi";
 import { format } from "date-fns";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
 
 export default function CompaniesPage() {
   return (
@@ -41,6 +49,13 @@ function CompaniesContent() {
   const [formPlanId, setFormPlanId] = useState<string | null>(null);
   const [formIsActive, setFormIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Image upload state
+  const [headerImageFile, setHeaderImageFile] = useState<File | null>(null);
+  const [footerImageFile, setFooterImageFile] = useState<File | null>(null);
+  const [headerImagePreview, setHeaderImagePreview] = useState<string | null>(null);
+  const [footerImagePreview, setFooterImagePreview] = useState<string | null>(null);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -73,11 +88,31 @@ function CompaniesContent() {
     setIsSubmitting(true);
     setError("");
     try {
-      await createCompany({
+      // Create company first
+      const newCompany = await createCompany({
         name: formName.trim(),
         plan_id: formPlanId || null,
         is_active: formIsActive,
       });
+      
+      // Upload images if provided
+      if (headerImageFile || footerImageFile) {
+        setIsUploadingImages(true);
+        try {
+          if (headerImageFile) {
+            await uploadCompanyHeaderImage(newCompany.id, headerImageFile);
+          }
+          if (footerImageFile) {
+            await uploadCompanyFooterImage(newCompany.id, footerImageFile);
+          }
+        } catch (imgErr) {
+          console.error("Error uploading images:", imgErr);
+          setError("Company created but failed to upload images. You can upload them later.");
+        } finally {
+          setIsUploadingImages(false);
+        }
+      }
+      
       setSuccess("Company created successfully");
       setShowCreateModal(false);
       resetForm();
@@ -100,11 +135,31 @@ function CompaniesContent() {
     setIsSubmitting(true);
     setError("");
     try {
+      // Update company basic info
       await updateCompany(editingCompany.id, {
         name: formName.trim(),
         plan_id: formPlanId || null,
         is_active: formIsActive,
       });
+      
+      // Upload images if new files are selected
+      if (headerImageFile || footerImageFile) {
+        setIsUploadingImages(true);
+        try {
+          if (headerImageFile) {
+            await uploadCompanyHeaderImage(editingCompany.id, headerImageFile);
+          }
+          if (footerImageFile) {
+            await uploadCompanyFooterImage(editingCompany.id, footerImageFile);
+          }
+        } catch (imgErr) {
+          console.error("Error uploading images:", imgErr);
+          setError("Company updated but failed to upload images. You can upload them later.");
+        } finally {
+          setIsUploadingImages(false);
+        }
+      }
+      
       setSuccess("Company updated successfully");
       setEditingCompany(null);
       resetForm();
@@ -160,6 +215,10 @@ function CompaniesContent() {
     setFormName("");
     setFormPlanId(null);
     setFormIsActive(true);
+    setHeaderImageFile(null);
+    setFooterImageFile(null);
+    setHeaderImagePreview(null);
+    setFooterImagePreview(null);
   };
 
   const openEditModal = (company: Company) => {
@@ -167,6 +226,143 @@ function CompaniesContent() {
     setFormName(company.name);
     setFormPlanId(company.plan_id || null);
     setFormIsActive(company.is_active);
+    // Construct full URL for images if they exist
+    const headerUrl = company.header_image
+      ? company.header_image.startsWith("http")
+        ? company.header_image
+        : `${API_BASE_URL}${company.header_image}`
+      : null;
+    const footerUrl = company.footer_image
+      ? company.footer_image.startsWith("http")
+        ? company.footer_image
+        : `${API_BASE_URL}${company.footer_image}`
+      : null;
+    setHeaderImagePreview(headerUrl);
+    setFooterImagePreview(footerUrl);
+    setHeaderImageFile(null);
+    setFooterImageFile(null);
+  };
+
+  const handleHeaderImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+      if (!validTypes.includes(file.type)) {
+        setError("Invalid file type. Please upload JPG, PNG, GIF, or WEBP image.");
+        return;
+      }
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("File size too large. Maximum size is 5MB.");
+        return;
+      }
+      setHeaderImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setHeaderImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleFooterImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+      if (!validTypes.includes(file.type)) {
+        setError("Invalid file type. Please upload JPG, PNG, GIF, or WEBP image.");
+        return;
+      }
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("File size too large. Maximum size is 5MB.");
+        return;
+      }
+      setFooterImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFooterImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadHeaderImage = async (companyId: string) => {
+    if (!headerImageFile) return;
+    
+    setIsUploadingImages(true);
+    setError("");
+    try {
+      await uploadCompanyHeaderImage(companyId, headerImageFile);
+      setSuccess("Header image uploaded successfully");
+      setHeaderImageFile(null);
+      fetchData();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload header image";
+      setError(message);
+    } finally {
+      setIsUploadingImages(false);
+    }
+  };
+
+  const handleUploadFooterImage = async (companyId: string) => {
+    if (!footerImageFile) return;
+    
+    setIsUploadingImages(true);
+    setError("");
+    try {
+      await uploadCompanyFooterImage(companyId, footerImageFile);
+      setSuccess("Footer image uploaded successfully");
+      setFooterImageFile(null);
+      fetchData();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload footer image";
+      setError(message);
+    } finally {
+      setIsUploadingImages(false);
+    }
+  };
+
+  const handleDeleteHeaderImage = async (companyId: string) => {
+    if (!confirm("Are you sure you want to delete the header image?")) return;
+    
+    setIsUploadingImages(true);
+    setError("");
+    try {
+      await deleteCompanyHeaderImage(companyId);
+      setSuccess("Header image deleted successfully");
+      setHeaderImagePreview(null);
+      fetchData();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete header image";
+      setError(message);
+    } finally {
+      setIsUploadingImages(false);
+    }
+  };
+
+  const handleDeleteFooterImage = async (companyId: string) => {
+    if (!confirm("Are you sure you want to delete the footer image?")) return;
+    
+    setIsUploadingImages(true);
+    setError("");
+    try {
+      await deleteCompanyFooterImage(companyId);
+      setSuccess("Footer image deleted successfully");
+      setFooterImagePreview(null);
+      fetchData();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete footer image";
+      setError(message);
+    } finally {
+      setIsUploadingImages(false);
+    }
   };
 
   const closeModal = () => {
@@ -415,6 +611,140 @@ function CompaniesContent() {
                 </label>
               </div>
 
+              {/* Header Image Upload */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Header Image (Optional)
+                </label>
+                <div className="mb-2 p-1.5 bg-blue-50 border border-blue-200 rounded text-xs max-h-16 overflow-y-auto">
+                  <p className="text-blue-900 font-semibold text-xs leading-tight mb-0.5">📏 Recommended Size:</p>
+                  <p className="text-blue-700 text-xs leading-tight">1200×200px or similar wide format (16:3 ratio) for best results</p>
+                </div>
+                {headerImagePreview ? (
+                  <div className="space-y-2">
+                    <img
+                      src={headerImagePreview}
+                      alt="Header preview"
+                      className="w-full h-32 object-cover rounded-xl border-2 border-gray-200"
+                      onError={(e) => {
+                        // Hide image if it fails to load
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <label className="flex-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium text-center cursor-pointer">
+                        Change
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                          onChange={handleHeaderImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                      {editingCompany && (
+                        <button
+                          onClick={() => handleDeleteHeaderImage(editingCompany.id)}
+                          disabled={isUploadingImages}
+                          className="px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <label className="block w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-purple-500 transition-colors text-center">
+                    <span className="text-sm text-gray-600">Click to upload header image</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={handleHeaderImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+                <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF, or WEBP (Max 5MB)</p>
+              </div>
+
+              {/* Footer Image Upload */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Footer Image (Optional)
+                </label>
+                <div className="mb-2 p-1.5 bg-blue-50 border border-blue-200 rounded text-xs max-h-16 overflow-y-auto">
+                  <p className="text-blue-900 font-semibold text-xs leading-tight mb-0.5">📏 Recommended Size:</p>
+                  <p className="text-blue-700 text-xs leading-tight">1200×100px or similar wide format (12:1 ratio) for best results</p>
+                </div>
+                {footerImagePreview ? (
+                  <div className="space-y-2">
+                    <img
+                      src={footerImagePreview}
+                      alt="Footer preview"
+                      className="w-full h-24 object-cover rounded-xl border-2 border-gray-200"
+                      onError={(e) => {
+                        // Hide image if it fails to load
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <label className="flex-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium text-center cursor-pointer">
+                        Change
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                          onChange={handleFooterImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                      {editingCompany && (
+                        <button
+                          onClick={() => handleDeleteFooterImage(editingCompany.id)}
+                          disabled={isUploadingImages}
+                          className="px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <label className="block w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-purple-500 transition-colors text-center">
+                    <span className="text-sm text-gray-600">Click to upload footer image</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={handleFooterImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+                <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF, or WEBP (Max 5MB)</p>
+              </div>
+
+              {/* Upload buttons for editing mode */}
+              {editingCompany && (headerImageFile || footerImageFile) && (
+                <div className="flex gap-2">
+                  {headerImageFile && (
+                    <button
+                      onClick={() => handleUploadHeaderImage(editingCompany.id)}
+                      disabled={isUploadingImages}
+                      className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                    >
+                      {isUploadingImages ? "Uploading..." : "Upload Header"}
+                    </button>
+                  )}
+                  {footerImageFile && (
+                    <button
+                      onClick={() => handleUploadFooterImage(editingCompany.id)}
+                      disabled={isUploadingImages}
+                      className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                    >
+                      {isUploadingImages ? "Uploading..." : "Upload Footer"}
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={closeModal}
@@ -424,10 +754,10 @@ function CompaniesContent() {
                 </button>
                 <button
                   onClick={editingCompany ? handleUpdate : handleCreate}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isUploadingImages}
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50"
                 >
-                  {isSubmitting ? "Saving..." : editingCompany ? "Update" : "Create"}
+                  {isSubmitting || isUploadingImages ? "Saving..." : editingCompany ? "Update" : "Create"}
                 </button>
               </div>
             </div>
