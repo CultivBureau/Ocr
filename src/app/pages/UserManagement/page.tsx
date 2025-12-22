@@ -374,13 +374,12 @@ function UserManagementContent() {
                   <option value="user">👤 User - Regular access</option>
                   {isSuperAdmin && <option value="superadmin">👑 Super Admin - Full system access</option>}
                   <option value="company_admin">⭐ Company Admin - Company management</option>
-                  <option value="admin">🔧 Admin - Legacy admin role</option>
                 </select>
                 <p className="mt-1.5 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
                   {role === "superadmin" 
                     ? "✓ Super Admin has full system access"
-                    : role === "company_admin" || role === "admin"
-                    ? "✓ Admin users can manage users in their company"
+                    : role === "company_admin"
+                    ? "✓ Company Admin can manage users in their company"
                     : "✓ Regular users have standard access"}
                 </p>
               </div>
