@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,14 +11,33 @@ import {
 import type { SeparatedStructure } from "../../types/ExtractTypes";
 import { isAuthenticated } from "../../services/AuthApi";
 import { saveDocument } from "../../services/HistoryApi";
+import { useAuth } from "../../contexts/AuthContext";
+import { getCompany } from "../../services/CompanyApi";
 import ProtectedRoute from "../../components/ProtectedRoute";
 
 const PdfConverterContent: React.FC = () => {
   const router = useRouter();
+  const { user, isSuperAdmin } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+
+  // Load company name if user has a company
+  useEffect(() => {
+    if (user?.company_id) {
+      const loadCompany = async () => {
+        try {
+          const company = await getCompany(user.company_id!);
+          setCompanyName(company.name);
+        } catch (err) {
+          console.error("Failed to load company:", err);
+        }
+      };
+      loadCompany();
+    }
+  }, [user?.company_id]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedFile(event.target.files?.[0] || null);
@@ -265,6 +284,33 @@ const PdfConverterContent: React.FC = () => {
               )}
             </button>
           </div>
+
+          {/* Company Info (if user has company) */}
+          {user && (user.company_id || isSuperAdmin) && (
+            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-gray-700">
+                    {isSuperAdmin 
+                      ? "Super Admin: Uploads can be assigned to any company or no company"
+                      : companyName 
+                      ? `Company: ${companyName}`
+                      : "Company: Loading..."}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {isSuperAdmin 
+                      ? "You have full system access"
+                      : "This document will be assigned to your company"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Info Section */}
           <div className="mt-8 pt-6 border-t border-gray-200">

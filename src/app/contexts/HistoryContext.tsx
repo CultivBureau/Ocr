@@ -21,6 +21,8 @@ interface HistoryContextType {
   // Filters
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  companyFilter: string | null; // Company ID filter (Super Admin only)
+  setCompanyFilter: (companyId: string | null) => void;
   filterType: "all" | "recent" | "favorites" | "shared";
   setFilterType: (type: "all" | "recent" | "favorites" | "shared") => void;
   
@@ -39,7 +41,7 @@ interface HistoryContextType {
 const HistoryContext = createContext<HistoryContextType | undefined>(undefined);
 
 export function HistoryProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isSuperAdmin } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [recentDocuments, setRecentDocuments] = useState<Document[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -52,6 +54,7 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
   
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<"all" | "recent" | "favorites" | "shared">("all");
   
   // Sorting
@@ -112,7 +115,9 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     
     try {
-      const response: DocumentListResponse = await getHistory(1, 100, searchQuery || undefined);
+      // Only include company_id filter if user is Super Admin
+      const companyId = isSuperAdmin && companyFilter ? companyFilter : undefined;
+      const response: DocumentListResponse = await getHistory(1, 100, searchQuery || undefined, companyId);
       setDocuments(response.documents);
       setTotal(response.total);
       
@@ -128,7 +133,7 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, searchQuery]);
+  }, [isAuthenticated, searchQuery, companyFilter, isSuperAdmin]);
   
   // Initial load and refresh on auth change
   useEffect(() => {
@@ -221,6 +226,8 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
     setSidebarOpen,
     searchQuery,
     setSearchQuery,
+    companyFilter,
+    setCompanyFilter,
     filterType,
     setFilterType,
     sortBy,

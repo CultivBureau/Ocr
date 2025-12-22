@@ -18,12 +18,6 @@ if (process.env.NODE_ENV !== "production" && !process.env.NEXT_PUBLIC_API_BASE_U
   );
 }
 
-// Get auth token
-function getAuthToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("auth_token");
-}
-
 async function handleResponse(response: Response) {
   const contentType = response.headers.get("content-type");
   const isJson = contentType && contentType.includes("application/json");
@@ -46,22 +40,40 @@ async function request(path: string, init: RequestInit = {}) {
   try {
     const url = `${API_BASE_URL}${path}`;
     
-    const token = getAuthToken();
+    // Use getToken from AuthApi which reads from cookies
+    const token = getToken();
     
-    let headers: HeadersInit = init.headers || {};
-    
-    if (token) {
-      headers = { ...headers, "Authorization": `Bearer ${token}` };
+    if (!token) {
+      throw new Error("Not authenticated. Please login again.");
     }
     
+    let headers: HeadersInit = {};
+    
+    // Always add Authorization header if token exists
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    
+    // Merge with any existing headers from init
+    if (init.headers) {
+      headers = { ...headers, ...init.headers };
+    }
+    
+    // Don't set Content-Type for FormData - browser will set it with boundary automatically
     if (!(init.body instanceof FormData)) {
-      headers = { ...headers, "Content-Type": "application/json" };
+      if (!headers["Content-Type"]) {
+        headers["Content-Type"] = "application/json";
+      }
+    } else {
+      // For FormData, explicitly remove Content-Type to let browser set it with boundary
+      delete headers["Content-Type"];
     }
     
     const response = await fetch(url, {
       ...init,
       mode: init.mode ?? "cors",
       headers,
+      credentials: "include", // Include cookies in the request
     });
     return await handleResponse(response);
   } catch (error) {
@@ -78,9 +90,16 @@ export async function uploadFile(file: File): Promise<{
   filename: string;
   original_filename: string;
   message: string;
+  company_id?: string | null;
 }> {
   const formData = new FormData();
   formData.append("file", file);
+
+  // Verify token exists before making request
+  const token = getToken();
+  if (!token) {
+    throw new Error("Not authenticated. Please login again.");
+  }
 
   return request("/upload/", {
     method: "POST",
@@ -91,6 +110,7 @@ export async function uploadFile(file: File): Promise<{
     filename: string;
     original_filename: string;
     message: string;
+    company_id?: string | null;
   }>;
 }
 

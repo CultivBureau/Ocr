@@ -12,6 +12,7 @@ import {
   shareDocument,
   type Document,
 } from "@/app/services/HistoryApi";
+import { getAllCompanies, type Company } from "@/app/services/CompanyApi";
 import DocumentCard from "@/app/components/DocumentCard";
 import RenameModal from "@/app/components/RenameModal";
 import ShareModal from "@/app/components/ShareModal";
@@ -24,16 +25,21 @@ import { getDocument } from "@/app/services/HistoryApi";
 
 function HistoryPageContent() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const {
     documents,
     isLoading,
     error,
     searchQuery,
     setSearchQuery,
+    companyFilter,
+    setCompanyFilter,
     getFilteredDocuments,
     refreshDocuments,
   } = useHistory();
+  
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
   
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [localSearch, setLocalSearch] = useState("");
@@ -66,6 +72,24 @@ function HistoryPageContent() {
     return () => clearTimeout(timer);
   }, [localSearch, setSearchQuery]);
   
+  // Load companies for Super Admin filter
+  useEffect(() => {
+    if (isSuperAdmin) {
+      const loadCompanies = async () => {
+        try {
+          setLoadingCompanies(true);
+          const companiesList = await getAllCompanies(0, 1000);
+          setCompanies(companiesList);
+        } catch (err) {
+          console.error("Failed to load companies:", err);
+        } finally {
+          setLoadingCompanies(false);
+        }
+      };
+      loadCompanies();
+    }
+  }, [isSuperAdmin]);
+
   // Refresh documents when needed
   useEffect(() => {
     refreshDocuments();
@@ -239,6 +263,43 @@ function HistoryPageContent() {
               </div>
             </div>
           </div>
+
+          {/* Company Filter (Super Admin Only) */}
+          {isSuperAdmin && (
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl blur-xl"></div>
+              <div className="relative">
+                <select
+                  value={companyFilter || ""}
+                  onChange={(e) => setCompanyFilter(e.target.value || null)}
+                  className="w-full pl-14 pr-6 py-4 bg-white/90 backdrop-blur-sm border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 text-slate-700 font-medium shadow-lg hover:shadow-xl appearance-none cursor-pointer"
+                >
+                  <option value="">All Companies</option>
+                  {loadingCompanies ? (
+                    <option disabled>Loading companies...</option>
+                  ) : (
+                    companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name} {!company.is_active && "(Inactive)"}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <div className="absolute left-5 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="absolute right-5 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* View Mode & Filter Toggle */}
           <div className="flex gap-3">

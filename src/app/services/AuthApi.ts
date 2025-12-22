@@ -68,11 +68,14 @@ async function authRequest(path: string, init: RequestInit = {}) {
 }
 
 // User types
+export type UserRole = "superadmin" | "company_admin" | "user" | "admin";
+
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: "user" | "admin";
+  role: UserRole;
+  company_id: string | null;
   created_at: string;
   updated_at: string;
   is_active: boolean;
@@ -82,7 +85,8 @@ export interface RegisterRequest {
   email: string;
   name: string;
   password: string;
-  role?: "user" | "admin";
+  role?: UserRole;
+  company_id?: string | null; // Optional, for Super Admin to assign users to companies
 }
 
 export interface LoginRequest {

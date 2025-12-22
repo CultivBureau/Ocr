@@ -58,6 +58,7 @@ async function historyRequest(path: string, init: RequestInit = {}) {
 export interface Document {
   id: string;
   user_id: string;
+  company_id: string | null;
   title: string;
   original_filename: string;
   file_path: string;
@@ -183,15 +184,23 @@ export interface RestoreVersionRequest {
 
 /**
  * Get user's document history
+ * @param page - Page number (1-indexed)
+ * @param pageSize - Number of items per page
+ * @param search - Optional search query
+ * @param companyId - Optional company ID filter (Super Admin only)
  */
 export async function getHistory(
   page: number = 1,
   pageSize: number = 20,
-  search?: string
+  search?: string,
+  companyId?: string
 ): Promise<DocumentListResponse> {
   let url = `/history/?page=${page}&page_size=${pageSize}`;
   if (search) {
     url += `&search=${encodeURIComponent(search)}`;
+  }
+  if (companyId) {
+    url += `&company_id=${encodeURIComponent(companyId)}`;
   }
 
   return historyRequest(url, { method: "GET" });

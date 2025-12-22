@@ -5,7 +5,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/app/contexts/AuthContext";
 import AdminRoute from "@/app/components/AdminRoute";
-import { register, getAllUsers, deleteUser, type User } from "@/app/services/AuthApi";
+import { register, getAllUsers, deleteUser, type User, type UserRole } from "@/app/services/AuthApi";
+import { getAllCompanies, type Company } from "@/app/services/CompanyApi";
+import { getRoleDisplayName, getRoleBadgeColor } from "@/app/utils/rbac";
 import { format } from "date-fns";
 
 export default function UserManagementPage() {
@@ -17,7 +19,7 @@ export default function UserManagementPage() {
 }
 
 function UserManagementContent() {
-  const { user: currentUser, logout } = useAuth();
+  const { user: currentUser, isSuperAdmin, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   // Form state
@@ -25,7 +27,8 @@ function UserManagementContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<"user" | "admin">("user");
+  const [role, setRole] = useState<UserRole>("user");
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -36,18 +39,50 @@ function UserManagementContent() {
   const [usersError, setUsersError] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  
+  // Companies list (for Super Admin)
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
 
-  // Fetch users on mount
+  // Fetch companies for Super Admin
+  useEffect(() => {
+    if (isSuperAdmin) {
+      const loadCompanies = async () => {
+        try {
+          setLoadingCompanies(true);
+          const companiesList = await getAllCompanies(0, 1000);
+          setCompanies(companiesList);
+        } catch (err) {
+          console.error("Failed to load companies:", err);
+        } finally {
+          setLoadingCompanies(false);
+        }
+      };
+      loadCompanies();
+    }
+  }, [isSuperAdmin]);
+
+  // Fetch users on mount and when company filter changes
   useEffect(() => {
     fetchUsers();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyFilter]);
 
   const fetchUsers = async () => {
     try {
       setIsLoadingUsers(true);
       setUsersError("");
       const response = await getAllUsers();
-      setUsers(response.users);
+      // Filter users by company if filter is set (Super Admin only)
+      let filteredUsers = response.users;
+      if (isSuperAdmin && companyFilter) {
+        filteredUsers = response.users.filter((u) => u.company_id === companyFilter);
+      } else if (!isSuperAdmin) {
+        // Company Admin only sees users in their company
+        filteredUsers = response.users.filter((u) => u.company_id === currentUser?.company_id);
+      }
+      setUsers(filteredUsers);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch users";
       setUsersError(message);
@@ -75,7 +110,15 @@ function UserManagementContent() {
     setIsCreating(true);
 
     try {
-      const response = await register({ name, email, password, role });
+      // Super Admin can assign company_id, Company Admin uses their own company
+      const userCompanyId = isSuperAdmin ? companyId : currentUser?.company_id || null;
+      const response = await register({ 
+        name, 
+        email, 
+        password, 
+        role,
+        company_id: userCompanyId 
+      });
       setFormSuccess(`User ${response.user.email} created successfully!`);
       
       // Clear form
@@ -84,6 +127,7 @@ function UserManagementContent() {
       setPassword("");
       setConfirmPassword("");
       setRole("user");
+      setCompanyId(null);
       
       // Refresh users list
       fetchUsers();
@@ -150,7 +194,11 @@ function UserManagementContent() {
                   </div>
                   <div className="flex flex-col items-start">
                     <span className="text-sm font-medium text-gray-700">{currentUser.name}</span>
-                    <span className="text-xs text-[#A4C639] font-semibold">Admin</span>
+                    {currentUser && (
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${getRoleBadgeColor(currentUser.role)}`}>
+                        {getRoleDisplayName(currentUser.role)}
+                      </span>
+                    )}
                   </div>
                   <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -320,18 +368,53 @@ function UserManagementContent() {
                 <select
                   id="role"
                   value={role}
-                  onChange={(e) => setRole(e.target.value as "user" | "admin")}
+                  onChange={(e) => setRole(e.target.value as UserRole)}
                   className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#A4C639]/20 focus:border-[#A4C639] focus:bg-white transition-all duration-200 text-gray-900 font-medium cursor-pointer"
                 >
                   <option value="user">👤 User - Regular access</option>
-                  <option value="admin">⭐ Admin - Full access</option>
+                  {isSuperAdmin && <option value="superadmin">👑 Super Admin - Full system access</option>}
+                  <option value="company_admin">⭐ Company Admin - Company management</option>
+                  <option value="admin">🔧 Admin - Legacy admin role</option>
                 </select>
                 <p className="mt-1.5 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
-                  {role === "admin" 
-                    ? "✓ Admin users can manage other users" 
+                  {role === "superadmin" 
+                    ? "✓ Super Admin has full system access"
+                    : role === "company_admin" || role === "admin"
+                    ? "✓ Admin users can manage users in their company"
                     : "✓ Regular users have standard access"}
                 </p>
               </div>
+
+              {/* Company Selection (Super Admin only) */}
+              {isSuperAdmin && (
+                <div>
+                  <label htmlFor="company" className="block text-sm font-bold text-gray-800 mb-2">
+                    Company (Optional)
+                  </label>
+                  <select
+                    id="company"
+                    value={companyId || ""}
+                    onChange={(e) => setCompanyId(e.target.value || null)}
+                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#A4C639]/20 focus:border-[#A4C639] focus:bg-white transition-all duration-200 text-gray-900 font-medium cursor-pointer"
+                  >
+                    <option value="">No Company (Super Admin)</option>
+                    {loadingCompanies ? (
+                      <option disabled>Loading companies...</option>
+                    ) : (
+                      companies.map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.name} {!company.is_active && "(Inactive)"}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <p className="mt-1.5 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
+                    {role === "superadmin" 
+                      ? "✓ Leave empty for Super Admin (no company)"
+                      : "✓ Select a company to assign the user to"}
+                  </p>
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -363,15 +446,38 @@ function UserManagementContent() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
-                <span>All Users <span className="text-[#A4C639]">({users.length})</span></span>
+                <span>
+                  {isSuperAdmin ? "All Users" : "Company Users"} 
+                  <span className="text-[#A4C639]"> ({users.length})</span>
+                </span>
               </h2>
-              <button
-                onClick={fetchUsers}
-                disabled={isLoadingUsers}
-                className="px-4 py-2 text-sm bg-gradient-to-r from-[#A4C639] to-emerald-500 text-white font-bold rounded-xl hover:shadow-lg disabled:opacity-50 transition-all duration-200 transform hover:scale-105 active:scale-95"
-              >
-                🔄 Refresh
-              </button>
+              <div className="flex items-center gap-3">
+                {/* Company Filter (Super Admin only) */}
+                {isSuperAdmin && (
+                  <select
+                    value={companyFilter || ""}
+                    onChange={(e) => {
+                      setCompanyFilter(e.target.value || null);
+                      fetchUsers();
+                    }}
+                    className="px-4 py-2 text-sm bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-200 text-gray-900 font-medium cursor-pointer"
+                  >
+                    <option value="">All Companies</option>
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  onClick={fetchUsers}
+                  disabled={isLoadingUsers}
+                  className="px-4 py-2 text-sm bg-gradient-to-r from-[#A4C639] to-emerald-500 text-white font-bold rounded-xl hover:shadow-lg disabled:opacity-50 transition-all duration-200 transform hover:scale-105 active:scale-95"
+                >
+                  🔄 Refresh
+                </button>
+              </div>
             </div>
 
             {isLoadingUsers ? (
@@ -425,17 +531,21 @@ function UserManagementContent() {
                                 You
                               </span>
                             )}
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                user.role === "admin"
-                                  ? "bg-purple-100 text-purple-700"
-                                  : "bg-blue-100 text-blue-700"
-                              }`}
-                            >
-                              {user.role === "admin" ? "Admin" : "User"}
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${getRoleBadgeColor(user.role)}`}>
+                              {getRoleDisplayName(user.role)}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600">{user.email}</p>
+                          {user.company_id && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Company: {companies.find(c => c.id === user.company_id)?.name || user.company_id}
+                            </p>
+                          )}
+                          {!user.company_id && user.role === "superadmin" && (
+                            <p className="text-xs text-purple-600 mt-1 font-medium">
+                              Super Admin (No Company)
+                            </p>
+                          )}
                           <p className="text-xs text-gray-500 mt-1">
                             Created: {format(new Date(user.created_at), "MMM d, yyyy")}
                           </p>

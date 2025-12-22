@@ -11,11 +11,29 @@ import {
   type User,
   type LoginRequest,
 } from "../services/AuthApi";
+import {
+  isSuperAdmin,
+  isCompanyAdmin,
+  isRegularUser,
+  canManageCompanies,
+  canManagePlans,
+  canManageUsers,
+  canViewAllDocuments,
+  canManageCompanySettings,
+} from "../utils/rbac";
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  isAdmin: boolean;
+  isAdmin: boolean; // Backward compatibility: true for superadmin or company_admin
+  isSuperAdmin: boolean;
+  isCompanyAdmin: boolean;
+  isRegularUser: boolean;
+  canManageCompanies: boolean;
+  canManagePlans: boolean;
+  canManageUsers: boolean;
+  canViewAllDocuments: boolean;
+  canManageCompanySettings: boolean;
   loading: boolean;
   error: string | null;
   login: (credentials: LoginRequest) => Promise<void>;
@@ -33,7 +51,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const isAuthenticated = user !== null;
-  const isAdmin = user?.role === "admin";
+  // Backward compatibility: isAdmin is true for superadmin or company_admin
+  const isAdmin = isSuperAdmin(user) || isCompanyAdmin(user);
+  
+  // Role-based properties using RBAC utilities
+  const isSuperAdminValue = isSuperAdmin(user);
+  const isCompanyAdminValue = isCompanyAdmin(user);
+  const isRegularUserValue = isRegularUser(user);
+  const canManageCompaniesValue = canManageCompanies(user);
+  const canManagePlansValue = canManagePlans(user);
+  const canManageUsersValue = canManageUsers(user);
+  const canViewAllDocumentsValue = canViewAllDocuments(user);
+  const canManageCompanySettingsValue = canManageCompanySettings(user);
 
   // Fetch current user if token exists
   const refreshUser = useCallback(async () => {
@@ -104,6 +133,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     isAuthenticated,
     isAdmin,
+    isSuperAdmin: isSuperAdminValue,
+    isCompanyAdmin: isCompanyAdminValue,
+    isRegularUser: isRegularUserValue,
+    canManageCompanies: canManageCompaniesValue,
+    canManagePlans: canManagePlansValue,
+    canManageUsers: canManageUsersValue,
+    canViewAllDocuments: canViewAllDocumentsValue,
+    canManageCompanySettings: canManageCompanySettingsValue,
     loading,
     error,
     login,

@@ -1,0 +1,161 @@
+// Company API client
+import { getToken } from "./AuthApi";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+// Make authenticated request
+async function authRequest(path: string, init: RequestInit = {}) {
+  const token = getToken();
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(init.headers || {}),
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  try {
+    const url = `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
+      ...init,
+      mode: init.mode ?? "cors",
+      headers,
+    });
+
+    const contentType = response.headers.get("content-type");
+    const isJson = contentType && contentType.includes("application/json");
+    const payload = isJson ? await response.json() : await response.text();
+
+    if (!response.ok) {
+      const errorMessage =
+        isJson && payload?.message
+          ? payload.message
+          : isJson && payload?.detail
+          ? typeof payload.detail === "string"
+            ? payload.detail
+            : JSON.stringify(payload.detail)
+          : payload || response.statusText;
+      throw new Error(errorMessage || "Request failed");
+    }
+
+    return payload;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`[CompanyApi] Network request failed for ${path}: ${message}`);
+  }
+}
+
+// Company types
+export interface Company {
+  id: string;
+  name: string;
+  plan_id: string | null;
+  header_image: string | null;
+  footer_image: string | null;
+  is_active: boolean;
+  created_at: string;
+  plan_started_at: string | null;
+  plan_expires_at: string | null;
+}
+
+export interface CompanyCreate {
+  name: string;
+  is_active?: boolean;
+  plan_id?: string | null;
+  header_image?: string | null;
+  footer_image?: string | null;
+}
+
+export interface CompanyUpdate {
+  name?: string;
+  plan_id?: string | null;
+  header_image?: string | null;
+  footer_image?: string | null;
+  is_active?: boolean;
+}
+
+/**
+ * Get all companies (Super Admin only)
+ */
+export async function getAllCompanies(
+  skip: number = 0,
+  limit: number = 100,
+  is_active?: boolean
+): Promise<Company[]> {
+  const params = new URLSearchParams();
+  params.append("skip", skip.toString());
+  params.append("limit", limit.toString());
+  if (is_active !== undefined) {
+    params.append("is_active", is_active.toString());
+  }
+
+  return authRequest(`/companies?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Get company by ID
+ */
+export async function getCompany(companyId: string): Promise<Company> {
+  return authRequest(`/companies/${companyId}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Create a new company (Super Admin only)
+ */
+export async function createCompany(data: CompanyCreate): Promise<Company> {
+  return authRequest("/companies", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Update a company (Super Admin only)
+ */
+export async function updateCompany(
+  companyId: string,
+  data: CompanyUpdate
+): Promise<Company> {
+  return authRequest(`/companies/${companyId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Deactivate a company (Super Admin only)
+ */
+export async function deleteCompany(companyId: string): Promise<void> {
+  return authRequest(`/companies/${companyId}`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Assign plan to company (Super Admin only)
+ */
+export async function assignPlan(
+  companyId: string,
+  planId: string
+): Promise<Company> {
+  return authRequest(`/companies/${companyId}/plan?plan_id=${planId}`, {
+    method: "PUT",
+  });
+}
+
+/**
+ * Activate a company (Super Admin only)
+ */
+export async function activateCompany(companyId: string): Promise<Company> {
+  return authRequest(`/companies/${companyId}/activate`, {
+    method: "POST",
+  });
+}
+

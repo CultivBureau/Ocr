@@ -1,0 +1,160 @@
+// Company Settings API client
+import { getToken } from "./AuthApi";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+// Make authenticated request
+async function authRequest(path: string, init: RequestInit = {}) {
+  const token = getToken();
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(init.headers || {}),
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  try {
+    const url = `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
+      ...init,
+      mode: init.mode ?? "cors",
+      headers,
+    });
+
+    const contentType = response.headers.get("content-type");
+    const isJson = contentType && contentType.includes("application/json");
+    const payload = isJson ? await response.json() : await response.text();
+
+    if (!response.ok) {
+      const errorMessage =
+        isJson && payload?.message
+          ? payload.message
+          : isJson && payload?.detail
+          ? typeof payload.detail === "string"
+            ? payload.detail
+            : JSON.stringify(payload.detail)
+          : payload || response.statusText;
+      throw new Error(errorMessage || "Request failed");
+    }
+
+    return payload;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`[CompanySettingsApi] Network request failed for ${path}: ${message}`);
+  }
+}
+
+// Company Settings types
+export interface CompanySettings {
+  company_id: string;
+  name: string;
+  header_image: string | null;
+  footer_image: string | null;
+  plan_id: string | null;
+  is_active: boolean;
+  plan_started_at: string | null;
+  plan_expires_at: string | null;
+}
+
+export interface UsageSummary {
+  total_uploads: number;
+  total_ocr_pages: number;
+  total_pdf_exports: number;
+  total_cost: number;
+  period_start: string;
+  period_end: string;
+}
+
+export interface CompanyPlan {
+  plan: {
+    id: string;
+    name: string;
+    price_monthly: number;
+    is_trial: boolean;
+    duration_days: number | null;
+    is_active: boolean;
+    limits: {
+      uploads_per_month: number;
+      users_limit: number;
+      pages_per_month: number;
+      pdf_exports: number;
+    };
+  } | null;
+  plan_started_at: string | null;
+  plan_expires_at: string | null;
+}
+
+/**
+ * Get company settings (Company Admin only)
+ */
+export async function getCompanySettings(): Promise<CompanySettings> {
+  return authRequest("/company/settings", {
+    method: "GET",
+  });
+}
+
+/**
+ * Update company settings (Company Admin only)
+ */
+export async function updateCompanySettings(
+  name?: string
+): Promise<CompanySettings & { message?: string }> {
+  const params = new URLSearchParams();
+  if (name) {
+    params.append("name", name);
+  }
+
+  return authRequest(`/company/settings?${params.toString()}`, {
+    method: "PUT",
+  });
+}
+
+/**
+ * Get company usage statistics (Company Admin only)
+ */
+export async function getCompanyUsage(
+  month?: number,
+  year?: number
+): Promise<UsageSummary> {
+  const params = new URLSearchParams();
+  if (month !== undefined) {
+    params.append("month", month.toString());
+  }
+  if (year !== undefined) {
+    params.append("year", year.toString());
+  }
+
+  return authRequest(`/company/usage?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Get company users (Company Admin only)
+ */
+export async function getCompanyUsers(
+  skip: number = 0,
+  limit: number = 100
+): Promise<{ users: any[]; total: number; message?: string }> {
+  const params = new URLSearchParams();
+  params.append("skip", skip.toString());
+  params.append("limit", limit.toString());
+
+  return authRequest(`/company/users?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Get company plan (all users in company)
+ */
+export async function getCompanyPlan(): Promise<CompanyPlan> {
+  return authRequest("/company/plan", {
+    method: "GET",
+  });
+}
+
