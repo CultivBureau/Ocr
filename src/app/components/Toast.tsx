@@ -89,7 +89,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
 
 interface ToastContainerProps {
   toasts: Toast[];
-  position: ToastProviderProps["position"];
+  position: NonNullable<ToastProviderProps["position"]>;
   onRemove: (id: string) => void;
 }
 

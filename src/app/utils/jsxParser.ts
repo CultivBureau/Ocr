@@ -40,7 +40,7 @@ export interface ParsedStructure {
  */
 function extractArrayFromProp(propValue: string): string[] {
   // Handle array literals like ["val1", "val2"] or {['val1', 'val2']}
-  const arrayMatch = propValue.match(/\[(.*?)\]/s);
+  const arrayMatch = propValue.match(/\[([\s\S]*?)\]/);
   if (!arrayMatch) return [];
   
   const content = arrayMatch[1];

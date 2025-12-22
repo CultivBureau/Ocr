@@ -30,7 +30,7 @@ import { generatePDFWithPlaywright, downloadPDFBlob } from "../../services/PdfAp
 import { getCompany } from "../../services/CompanyApi";
 import ProtectedRoute from "../../components/ProtectedRoute";
 import VersionHistoryModal from "../../components/VersionHistoryModal";
-import type { SeparatedStructure, UserElement } from "../../types/ExtractTypes";
+import type { SeparatedStructure, UserElement, Table, Section } from "../../types/ExtractTypes";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
@@ -1526,24 +1526,25 @@ function CodePageContent() {
       
       // Load v2 structure from extracted_data
       if (doc.extracted_data) {
+        const extractedData = doc.extracted_data as any;
         // Ensure it's v2 format
-        if (doc.extracted_data.generated && doc.extracted_data.user && doc.extracted_data.layout) {
-          setStructure(doc.extracted_data as SeparatedStructure);
-        } else if (doc.extracted_data.sections || doc.extracted_data.tables) {
+        if (extractedData.generated && extractedData.user && extractedData.layout) {
+          setStructure(extractedData as SeparatedStructure);
+        } else if (extractedData.sections || extractedData.tables) {
           // Legacy format - migrate to v2
           setStructure({
             generated: {
-              sections: doc.extracted_data.sections || [],
-              tables: doc.extracted_data.tables || []
+              sections: extractedData.sections || [],
+              tables: extractedData.tables || []
             },
             user: {
               elements: []
             },
             layout: [
-              ...(doc.extracted_data.sections || []).map((s: any) => s.id),
-              ...(doc.extracted_data.tables || []).map((t: any) => t.id)
+              ...(extractedData.sections || []).map((s: any) => s.id),
+              ...(extractedData.tables || []).map((t: any) => t.id)
             ],
-            meta: doc.extracted_data.meta || {}
+            meta: extractedData.meta || {}
           });
         }
       }
@@ -1605,24 +1606,25 @@ function CodePageContent() {
       
       // Reload structure - handle both v2 and legacy formats
       if (doc.extracted_data) {
-        if (doc.extracted_data.generated && doc.extracted_data.user && doc.extracted_data.layout) {
+        const extractedData = doc.extracted_data as any;
+        if (extractedData.generated && extractedData.user && extractedData.layout) {
           // v2 format
-          setStructure(doc.extracted_data as SeparatedStructure);
-        } else if (doc.extracted_data.sections || doc.extracted_data.tables) {
+          setStructure(extractedData as SeparatedStructure);
+        } else if (extractedData.sections || extractedData.tables) {
           // Legacy format - migrate to v2
           setStructure({
             generated: {
-              sections: doc.extracted_data.sections || [],
-              tables: doc.extracted_data.tables || []
+              sections: extractedData.sections || [],
+              tables: extractedData.tables || []
             },
             user: {
               elements: []
             },
             layout: [
-              ...(doc.extracted_data.sections || []).map((s: any) => s.id),
-              ...(doc.extracted_data.tables || []).map((t: any) => t.id)
+              ...(extractedData.sections || []).map((s: any) => s.id),
+              ...(extractedData.tables || []).map((t: any) => t.id)
             ],
-            meta: doc.extracted_data.meta || {}
+            meta: extractedData.meta || {}
           });
         }
       }
@@ -1648,20 +1650,16 @@ function CodePageContent() {
   }) => {
     // Add new table to JSON structure
     const tableId = `gen_tbl_${Date.now()}`;
-    const newTable = {
+    const newTable: Table = {
+      type: "table",
       id: tableId,
       title: config.title,
-      columns: config.columns.map((col, idx) => ({
-        key: `col_${idx}`,
-        label: col
-      })),
+      columns: config.columns,
       rows: Array(config.rowCount).fill(null).map(() => 
-        config.columns.reduce((acc, _, idx) => {
-          acc[`col_${idx}`] = '';
-          return acc;
-        }, {} as Record<string, string>)
+        config.columns.map(() => '')
       ),
-      order: structure.generated.tables.length
+      order: structure.generated.tables.length,
+      section_id: null
     };
     
     setStructure(prev => ({
@@ -2338,12 +2336,13 @@ function CodePageContent() {
               onSectionAddAfter={(afterId) => {
                 // Add new section after the specified section
                 const newSectionId = `gen_sec_${Date.now()}`;
-                const newSection = {
+                const newSection: Section = {
+                  type: 'section',
                   id: newSectionId,
                   title: 'New Section',
                   content: 'Enter section content here...',
-                  type: 'section' as const,
-                  order: structure.generated.sections.length
+                  order: structure.generated.sections.length,
+                  parent_id: null
                 };
                 
                 setStructure(prev => {

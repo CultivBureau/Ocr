@@ -44,9 +44,9 @@ async function handleResponse(response: Response) {
 // Make authenticated request
 async function authRequest(path: string, init: RequestInit = {}) {
   const token = getToken();
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(init.headers || {}),
+    ...(init.headers as Record<string, string> || {}),
   };
 
   if (token) {

@@ -47,7 +47,7 @@ async function request(path: string, init: RequestInit = {}) {
       throw new Error("Not authenticated. Please login again.");
     }
     
-    let headers: HeadersInit = {};
+    let headers: Record<string, string> = {};
     
     // Always add Authorization header if token exists
     if (token) {
@@ -56,7 +56,7 @@ async function request(path: string, init: RequestInit = {}) {
     
     // Merge with any existing headers from init
     if (init.headers) {
-      headers = { ...headers, ...init.headers };
+      headers = { ...headers, ...(init.headers as Record<string, string>) };
     }
     
     // Don't set Content-Type for FormData - browser will set it with boundary automatically
@@ -205,3 +205,70 @@ export function downloadPDFBlob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
+/**
+ * Validate JSX syntax
+ * 
+ * @param code - JSX code string to validate
+ * @returns Validation result with isValid flag and errors array
+ */
+export function validateJsxSyntax(code: string): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  if (!code || typeof code !== 'string') {
+    return { isValid: false, errors: ['No code provided'] };
+  }
+  
+  try {
+    // Basic syntax checks
+    const trimmedCode = code.trim();
+    
+    // Check for balanced brackets
+    const openBrackets = (trimmedCode.match(/{/g) || []).length;
+    const closeBrackets = (trimmedCode.match(/}/g) || []).length;
+    if (openBrackets !== closeBrackets) {
+      errors.push(`Unbalanced curly brackets: ${openBrackets} open, ${closeBrackets} close`);
+    }
+    
+    // Check for balanced parentheses
+    const openParens = (trimmedCode.match(/\(/g) || []).length;
+    const closeParens = (trimmedCode.match(/\)/g) || []).length;
+    if (openParens !== closeParens) {
+      errors.push(`Unbalanced parentheses: ${openParens} open, ${closeParens} close`);
+    }
+    
+    // Check for balanced angle brackets in JSX tags
+    const openTags = (trimmedCode.match(/<[a-zA-Z]/g) || []).length;
+    const closeTags = (trimmedCode.match(/<\//g) || []).length + (trimmedCode.match(/\/>/g) || []).length;
+    // This is approximate - self-closing tags count as both open and close
+    
+    // Check for unclosed strings
+    const singleQuotes = (trimmedCode.match(/'/g) || []).length;
+    const doubleQuotes = (trimmedCode.match(/"/g) || []).length;
+    const backticks = (trimmedCode.match(/`/g) || []).length;
+    
+    if (singleQuotes % 2 !== 0) {
+      errors.push('Unclosed single quote string');
+    }
+    if (doubleQuotes % 2 !== 0) {
+      errors.push('Unclosed double quote string');
+    }
+    if (backticks % 2 !== 0) {
+      errors.push('Unclosed template literal');
+    }
+    
+    // Check for common JSX issues
+    if (trimmedCode.includes('class=') && !trimmedCode.includes('className=')) {
+      errors.push('Use "className" instead of "class" in JSX');
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  } catch (err) {
+    return {
+      isValid: false,
+      errors: [err instanceof Error ? err.message : 'Unknown validation error']
+    };
+  }
+}

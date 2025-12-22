@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { uploadFile, extractStructured } from "@/app/services/PdfApi";
-import type { UploadResponse, ExtractResponse } from "@/app/types/ExtractTypes";
+import type { UploadResponse, ExtractResponse, SeparatedStructure } from "@/app/types/ExtractTypes";
 
 export interface UseUploadReturn {
   // State
@@ -18,11 +18,11 @@ export interface UseUploadReturn {
   filename: string | null;
   
   // Extract result
-  extractedData: ExtractResponse | null;
+  extractedData: SeparatedStructure | null;
   
   // Actions
   handleUpload: (file: File) => Promise<UploadResponse | null>;
-  handleExtract: (filePath: string) => Promise<ExtractResponse | null>;
+  handleExtract: (filePath: string) => Promise<SeparatedStructure | null>;
   reset: () => void;
 }
 
@@ -42,7 +42,7 @@ export function useUpload(): UseUploadReturn {
   // Extract state
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
-  const [extractedData, setExtractedData] = useState<ExtractResponse | null>(null);
+  const [extractedData, setExtractedData] = useState<SeparatedStructure | null>(null);
   
   // Status message
   const [status, setStatus] = useState("");
@@ -85,7 +85,7 @@ export function useUpload(): UseUploadReturn {
    * @param filePath - File path returned from upload
    * @returns Extract response with sections and tables or null on error
    */
-  const handleExtract = useCallback(async (filePath: string): Promise<ExtractResponse | null> => {
+  const handleExtract = useCallback(async (filePath: string): Promise<SeparatedStructure | null> => {
     setIsExtracting(true);
     setExtractError(null);
     setStatus("جاري استخراج المحتوى...");
@@ -93,7 +93,7 @@ export function useUpload(): UseUploadReturn {
     try {
       const response = await extractStructured(filePath);
       
-      if (!response.sections && !response.tables) {
+      if (!response.generated?.sections && !response.generated?.tables) {
         throw new Error("لم يتم استخراج أي محتوى من الملف.");
       }
 

@@ -264,7 +264,7 @@ export function extractTableById(tableId: string): ExtractedTableData | null {
   const tableEl = document.querySelector(`[data-table-id="${tableId}"] table`);
   if (!tableEl) return null;
   
-  return extractTableFromElement(tableEl as HTMLTableElement);
+  return extractTableFromElement(tableEl as HTMLTableElement, 0);
 }
 
 /**

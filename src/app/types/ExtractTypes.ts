@@ -14,10 +14,12 @@ export interface Section {
 export interface Table {
   type: "table";
   id: string;
+  title?: string;
   columns: string[];
   rows: string[][];
   order: number;
   section_id: string | null;
+  backgroundColor?: 'dark-blue' | 'dark-red' | 'pink' | 'green';
 }
 
 export interface Structure {
@@ -149,10 +151,32 @@ export interface HotelsSectionData {
   [key: string]: any;
 }
 
+export interface TransportSectionData {
+  tables?: Array<{
+    id: string;
+    title: string;
+    backgroundColor: 'dark-blue' | 'dark-red' | 'pink';
+    columns: Array<{ key: string; label: string }>;
+    rows: Array<{
+      day: string;
+      date: string;
+      description: string;
+      carType: string;
+      note?: string;
+      [key: string]: any;
+    }>;
+  }>;
+  title?: string;
+  showTitle?: boolean;
+  direction?: "rtl" | "ltr";
+  language?: "ar" | "en";
+  [key: string]: any;
+}
+
 export interface UserElement {
-  id: string;  // user_airplane_* or user_hotel_*
-  type: "airplane" | "hotel";
-  data: AirplaneSectionData | HotelsSectionData;
+  id: string;  // user_airplane_*, user_hotel_*, or user_transport_*
+  type: "airplane" | "hotel" | "transport";
+  data: AirplaneSectionData | HotelsSectionData | TransportSectionData;
   created_at?: string;
   order?: number;
 }

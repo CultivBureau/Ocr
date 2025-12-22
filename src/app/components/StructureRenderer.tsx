@@ -172,7 +172,7 @@ export default function StructureRenderer({
                     return newRow;
                   } else if (typeof row === 'object') {
                     const col = table.columns[cellIndex];
-                    const key = typeof col === 'string' ? col : (col?.key || col?.label || `col_${cellIndex}`);
+                    const key = col || `col_${cellIndex}`;
                     return { ...row, [key]: newValue };
                   }
                 }
@@ -207,8 +207,8 @@ export default function StructureRenderer({
                 if (Array.isArray(row)) {
                   return row.filter((_: any, idx: number) => idx !== columnIndex);
                 } else if (typeof row === 'object') {
-                  const col = table.columns[columnIndex];
-                  const key = typeof col === 'string' ? col : (col?.key || col?.label || `col_${columnIndex}`);
+                  const col = table.columns[columnIndex] as string | { key?: string; label?: string };
+                  const key = typeof col === 'string' ? col : ((col as { key?: string; label?: string })?.key || (col as { key?: string; label?: string })?.label || `col_${columnIndex}`);
                   const newRow = { ...row };
                   delete newRow[key];
                   return newRow;
@@ -219,11 +219,9 @@ export default function StructureRenderer({
               onTableEdit({ ...table, columns: newColumns, rows: updatedRows });
             } : undefined}
             onAddRow={onTableEdit ? () => {
-              const newRow = Array.isArray(table.columns) 
-                ? Array(table.columns.length).fill('')
-                : {};
+              const newRow = Array(table.columns.length).fill('') as string[];
               
-              const updatedRows = [...table.rows, newRow];
+              const updatedRows = [...table.rows, newRow] as string[][];
               onTableEdit({ ...table, rows: updatedRows });
             } : undefined}
             onRemoveRow={onTableEdit ? (rowIndex: number) => {
@@ -273,6 +271,7 @@ export default function StructureRenderer({
             <TransportSection
               key={userElement.id}
               id={userElement.id}
+              tables={userElement.data.tables || []}
               {...userElement.data}
               editable={editable}
               onEditSection={handleEdit}

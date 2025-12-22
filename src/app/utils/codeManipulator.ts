@@ -291,9 +291,9 @@ export function removeSection(code: string, sectionIndex: number): string {
         title: s.title || '',
         content: s.content || '',
         type: s.type || 'section',
-        id: s.id,
-        order: s.order !== undefined ? s.order : idx,
-        parent_id: s.parent_id,
+        id: (s as any).id,
+        order: (s as any).order !== undefined ? (s as any).order : idx,
+        parent_id: (s as any).parent_id,
       });
       console.log('Generated section object', idx, ':', sectionObj.substring(0, 100));
       return sectionObj;

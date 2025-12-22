@@ -181,7 +181,7 @@ export function extractReducer(state: ExtractState, action: ExtractAction): Extr
           generated: { sections: [], tables: [] },
           user: { elements: [] },
           layout: [],
-          meta: action.payload.meta || {}
+          meta: (action.payload as any).meta || {}
         };
       }
       
