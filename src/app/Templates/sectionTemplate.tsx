@@ -133,6 +133,10 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   
+  // Track if user is typing (to distinguish from programmatic changes)
+  const [userIsTyping, setUserIsTyping] = useState(false);
+  const lastContentRef = useRef<string>("");
+  
   // Determine heading tag
   const HeadingTag = `h${titleLevel}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 
@@ -369,45 +373,113 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     setSelectionRange(null);
   };
 
-  // Handle bold text formatting
+  // Handle bold text formatting - Simple and robust approach
   const handleBoldText = () => {
-    if (!selectedText) {
-      return;
-    }
-    
-    if (typeof content !== 'string') {
+    if (!selectedText || typeof content !== 'string') {
+      setShowSplitButton(false);
       return;
     }
     
     const trimmedText = selectedText.trim();
-    
     if (trimmedText.length === 0) {
       setShowSplitButton(false);
       return;
     }
     
-    // Check if text is already bold (wrapped in **)
-    const isBold = trimmedText.startsWith('**') && trimmedText.endsWith('**');
+    // Simple approach: Find ALL occurrences of the selected text in content
+    // and determine which one to bold based on context
     
-    let replacementText: string;
-    let searchText: string;
-    
-    if (isBold) {
-      // Remove bold markers
-      replacementText = trimmedText.slice(2, -2);
-      searchText = trimmedText;
+    // First, check if text is already bold anywhere (has ** around it)
+    const alreadyBoldPattern = new RegExp(`\\*\\*${escapeRegExp(trimmedText)}\\*\\*`, 'g');
+    if (alreadyBoldPattern.test(content)) {
+      // Remove bold from this text
+      const newContent = content.replace(`**${trimmedText}**`, trimmedText);
+      lastContentRef.current = newContent;
+      if (onContentChange) {
+        onContentChange(newContent);
+      }
     } else {
-      // Add bold markers using markdown-style ** **
-      replacementText = `**${trimmedText}**`;
-      searchText = trimmedText;
-    }
-    
-    // Simple string replacement in the content
-    const newContent = content.replace(searchText, replacementText);
-    
-    // Update content
-    if (onContentChange) {
-      onContentChange(newContent);
+      // Need to find the correct occurrence to bold
+      // Get selection context from DOM to identify which occurrence
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        setShowSplitButton(false);
+        return;
+      }
+      
+      const range = selection.getRangeAt(0);
+      
+      // Find the closest LI or P or DIV parent to get context
+      let contextNode: Node | null = range.startContainer;
+      while (contextNode && contextNode.nodeType !== Node.ELEMENT_NODE) {
+        contextNode = contextNode.parentNode;
+      }
+      
+      // Get the full text of the context element (the bullet item or paragraph)
+      let contextElement = contextNode as HTMLElement;
+      // Walk up to find LI, P, or the content container
+      while (contextElement && 
+             contextElement !== contentContainerRef.current &&
+             !['LI', 'P'].includes(contextElement.tagName)) {
+        contextElement = contextElement.parentElement as HTMLElement;
+      }
+      
+      if (contextElement && contextElement !== contentContainerRef.current) {
+        // We're inside a specific LI or P element
+        const elementText = contextElement.textContent || '';
+        
+        // Find which bullet/paragraph this corresponds to in the original content
+        // Split content by newlines and find matching line
+        const lines = content.split('\n');
+        let targetLineIndex = -1;
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          // Remove bullet markers for comparison
+          const cleanLine = line.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+          // Also remove any existing ** markers for comparison
+          const cleanLineNoBold = cleanLine.replace(/\*\*/g, '');
+          
+          if (cleanLineNoBold === elementText.trim() || cleanLine === elementText.trim()) {
+            targetLineIndex = i;
+            break;
+          }
+        }
+        
+        if (targetLineIndex >= 0) {
+          // Found the line, now bold the selected text within this line only
+          const originalLine = lines[targetLineIndex];
+          
+          // Check if this specific occurrence is already bold
+          if (originalLine.includes(`**${trimmedText}**`)) {
+            // Remove bold
+            lines[targetLineIndex] = originalLine.replace(`**${trimmedText}**`, trimmedText);
+          } else if (originalLine.includes(trimmedText)) {
+            // Add bold - replace only in this line
+            lines[targetLineIndex] = originalLine.replace(trimmedText, `**${trimmedText}**`);
+          }
+          
+          const newContent = lines.join('\n');
+          lastContentRef.current = newContent;
+          if (onContentChange) {
+            onContentChange(newContent);
+          }
+        } else {
+          // Fallback: just replace first occurrence in full content
+          const newContent = content.replace(trimmedText, `**${trimmedText}**`);
+          lastContentRef.current = newContent;
+          if (onContentChange) {
+            onContentChange(newContent);
+          }
+        }
+      } else {
+        // Not in a specific element, use simple replacement
+        const newContent = content.replace(trimmedText, `**${trimmedText}**`);
+        lastContentRef.current = newContent;
+        if (onContentChange) {
+          onContentChange(newContent);
+        }
+      }
     }
     
     // Clear selection
@@ -416,46 +488,112 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     setSelectedText("");
     setSelectionRange(null);
   };
+  
+  // Helper to escape special regex characters
+  const escapeRegExp = (string: string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
 
-  // Handle underline text formatting
+  // Handle underline text formatting - Simple and robust approach
   const handleUnderlineText = () => {
-    if (!selectedText) {
-      return;
-    }
-    
-    if (typeof content !== 'string') {
+    if (!selectedText || typeof content !== 'string') {
+      setShowSplitButton(false);
       return;
     }
     
     const trimmedText = selectedText.trim();
-    
     if (trimmedText.length === 0) {
       setShowSplitButton(false);
       return;
     }
     
-    // Check if text is already underlined (wrapped in __)
-    const isUnderlined = trimmedText.startsWith('__') && trimmedText.endsWith('__');
-    
-    let replacementText: string;
-    let searchText: string;
-    
-    if (isUnderlined) {
-      // Remove underline markers
-      replacementText = trimmedText.slice(2, -2);
-      searchText = trimmedText;
+    // First, check if text is already underlined anywhere (has __ around it)
+    const alreadyUnderlinePattern = new RegExp(`__${escapeRegExp(trimmedText)}__`, 'g');
+    if (alreadyUnderlinePattern.test(content)) {
+      // Remove underline from this text
+      const newContent = content.replace(`__${trimmedText}__`, trimmedText);
+      lastContentRef.current = newContent;
+      if (onContentChange) {
+        onContentChange(newContent);
+      }
     } else {
-      // Add underline markers using __ __
-      replacementText = `__${trimmedText}__`;
-      searchText = trimmedText;
-    }
-    
-    // Simple string replacement in the content
-    const newContent = content.replace(searchText, replacementText);
-    
-    // Update content
-    if (onContentChange) {
-      onContentChange(newContent);
+      // Need to find the correct occurrence to underline
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        setShowSplitButton(false);
+        return;
+      }
+      
+      const range = selection.getRangeAt(0);
+      
+      // Find the closest LI or P parent to get context
+      let contextNode: Node | null = range.startContainer;
+      while (contextNode && contextNode.nodeType !== Node.ELEMENT_NODE) {
+        contextNode = contextNode.parentNode;
+      }
+      
+      let contextElement = contextNode as HTMLElement;
+      while (contextElement && 
+             contextElement !== contentContainerRef.current &&
+             !['LI', 'P'].includes(contextElement.tagName)) {
+        contextElement = contextElement.parentElement as HTMLElement;
+      }
+      
+      if (contextElement && contextElement !== contentContainerRef.current) {
+        // We're inside a specific LI or P element
+        const elementText = contextElement.textContent || '';
+        
+        // Find which bullet/paragraph this corresponds to in the original content
+        const lines = content.split('\n');
+        let targetLineIndex = -1;
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          // Remove bullet markers for comparison
+          const cleanLine = line.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+          // Also remove any existing ** or __ markers for comparison
+          const cleanLineNoFormatting = cleanLine.replace(/\*\*/g, '').replace(/__/g, '');
+          
+          if (cleanLineNoFormatting === elementText.trim() || cleanLine === elementText.trim()) {
+            targetLineIndex = i;
+            break;
+          }
+        }
+        
+        if (targetLineIndex >= 0) {
+          // Found the line, now underline the selected text within this line only
+          const originalLine = lines[targetLineIndex];
+          
+          // Check if this specific occurrence is already underlined
+          if (originalLine.includes(`__${trimmedText}__`)) {
+            // Remove underline
+            lines[targetLineIndex] = originalLine.replace(`__${trimmedText}__`, trimmedText);
+          } else if (originalLine.includes(trimmedText)) {
+            // Add underline - replace only in this line
+            lines[targetLineIndex] = originalLine.replace(trimmedText, `__${trimmedText}__`);
+          }
+          
+          const newContent = lines.join('\n');
+          lastContentRef.current = newContent;
+          if (onContentChange) {
+            onContentChange(newContent);
+          }
+        } else {
+          // Fallback: just replace first occurrence in full content
+          const newContent = content.replace(trimmedText, `__${trimmedText}__`);
+          lastContentRef.current = newContent;
+          if (onContentChange) {
+            onContentChange(newContent);
+          }
+        }
+      } else {
+        // Not in a specific element, use simple replacement
+        const newContent = content.replace(trimmedText, `__${trimmedText}__`);
+        lastContentRef.current = newContent;
+        if (onContentChange) {
+          onContentChange(newContent);
+        }
+      }
     }
     
     // Clear selection
@@ -500,6 +638,40 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   // Helper function to check if text contains bold or underline markers
   const hasBoldMarkers = (text: string): boolean => {
     return /\*\*.*?\*\*/.test(text) || /__.*?__/.test(text);
+  };
+  
+  // Helper function to find and preserve formatting markers when rebuilding content from DOM
+  // This maps displayed text back to original formatted text
+  const preserveFormattingMarkers = (displayedText: string, originalContent: string): string => {
+    if (!hasBoldMarkers(originalContent)) {
+      return displayedText;
+    }
+    
+    // Build a map of plain text positions to formatted text
+    // This helps us preserve ** and __ markers
+    let result = displayedText;
+    
+    // Find all bold sections in original
+    const boldRegex = /\*\*([^*]+)\*\*/g;
+    let match;
+    while ((match = boldRegex.exec(originalContent)) !== null) {
+      const boldText = match[1];
+      // If this bold text exists in the displayed text, wrap it with markers
+      if (result.includes(boldText) && !result.includes(`**${boldText}**`)) {
+        result = result.replace(boldText, `**${boldText}**`);
+      }
+    }
+    
+    // Find all underline sections in original
+    const underlineRegex = /__([^_]+)__/g;
+    while ((match = underlineRegex.exec(originalContent)) !== null) {
+      const underlineText = match[1];
+      if (result.includes(underlineText) && !result.includes(`__${underlineText}__`)) {
+        result = result.replace(underlineText, `__${underlineText}__`);
+      }
+    }
+    
+    return result;
   };
 
   // Helper function to check if cursor is at the start of an element
@@ -652,18 +824,23 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                         }
                       }}
                       onBlur={(e) => {
-                        if (editable && onContentChange) {
-                          // Get all list items and reconstruct content
+                        if (editable && onContentChange && userIsTyping) {
+                          // Get all list items and reconstruct content with preserved formatting
                           const ul = e.currentTarget.parentElement;
                           if (ul) {
-                            const items = Array.from(ul.children).map((li) => {
+                            const newItems = Array.from(ul.children).map((li, idx) => {
                               const text = (li as HTMLElement).textContent || (li as HTMLElement).innerText || '';
-                              return `• ${text}`;
+                              // Try to preserve formatting from original item
+                              const originalItem = items[idx] || '';
+                              const preservedText = preserveFormattingMarkers(text, originalItem);
+                              return `• ${preservedText}`;
                             }).join('\n');
-                            onContentChange(items);
+                            onContentChange(newItems);
                           }
+                          setUserIsTyping(false);
                         }
                       }}
+                      onInput={() => setUserIsTyping(true)}
                     />
                   );
                 })}
@@ -709,16 +886,20 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                                 handleKeyDownForMerge(e, idx, allLines, false);
                               }
                             }}
+                            onInput={() => setUserIsTyping(true)}
                             onBlur={(e) => {
-                              if (editable && onContentChange) {
-                                // Reconstruct all paragraphs from the parent container
+                              if (editable && onContentChange && userIsTyping) {
+                                // Reconstruct all paragraphs from the parent container with preserved formatting
                                 const container = e.currentTarget.parentElement;
                                 if (container) {
-                                  const paragraphs = Array.from(container.children).map((p) => {
-                                    return (p as HTMLElement).textContent || (p as HTMLElement).innerText || '';
+                                  const newParagraphs = Array.from(container.children).map((p, idx) => {
+                                    const text = (p as HTMLElement).textContent || (p as HTMLElement).innerText || '';
+                                    const originalLine = allLines[idx] || '';
+                                    return preserveFormattingMarkers(text, originalLine);
                                   }).join('\n');
-                                  onContentChange(paragraphs);
+                                  onContentChange(newParagraphs);
                                 }
+                                setUserIsTyping(false);
                               }
                             }}
                           />
@@ -747,16 +928,20 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                         handleKeyDownForMerge(e, pIndex, paragraphs, false);
                       }
                     }}
+                    onInput={() => setUserIsTyping(true)}
                     onBlur={(e) => {
-                      if (editable && onContentChange) {
-                        // Reconstruct all paragraphs from the parent container
+                      if (editable && onContentChange && userIsTyping) {
+                        // Reconstruct all paragraphs with preserved formatting
                         const container = e.currentTarget.parentElement;
                         if (container) {
-                          const allParagraphs = Array.from(container.children).map((p) => {
-                            return (p as HTMLElement).textContent || (p as HTMLElement).innerText || '';
+                          const allParagraphs = Array.from(container.children).map((p, idx) => {
+                            const text = (p as HTMLElement).textContent || (p as HTMLElement).innerText || '';
+                            const originalParagraph = paragraphs[idx] || '';
+                            return preserveFormattingMarkers(text, originalParagraph);
                           }).join('\n\n');
                           onContentChange(allParagraphs);
                         }
+                        setUserIsTyping(false);
                       }
                     }}
                   />
@@ -804,12 +989,31 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           contentEditable={editable}
           suppressContentEditableWarning={true}
           {...(shouldUseHTML ? { dangerouslySetInnerHTML: { __html: finalDisplayContent } } : { children: displayContent })}
+          onInput={() => {
+            // Mark that user is typing
+            setUserIsTyping(true);
+          }}
           onBlur={(e) => {
             if (editable && onContentChange) {
-              // Extract plain text content, preserving line breaks and bullets
-              // This ensures JSON only contains plain text with bullets, not HTML
-              const textContent = e.currentTarget.textContent || e.currentTarget.innerText || '';
-              onContentChange(textContent);
+              // Only update if user was actually typing, not if bold/underline was applied
+              if (userIsTyping) {
+                // Extract text content, but preserve any existing formatting markers from the original
+                const newText = e.currentTarget.textContent || e.currentTarget.innerText || '';
+                
+                // If the original content had bold markers, we need to be smart about preserving them
+                // For now, only update if the text actually changed from user input
+                if (typeof content === 'string') {
+                  // Strip markers from original to compare
+                  const originalWithoutMarkers = content.replace(/\*\*/g, '').replace(/__/g, '');
+                  if (newText !== originalWithoutMarkers) {
+                    // User made actual changes, update with new text
+                    onContentChange(newText);
+                  }
+                  // If same, don't update - preserves the formatting markers
+                }
+                setUserIsTyping(false);
+              }
+              // If not typing (e.g., just clicked bold then blurred), don't overwrite
             }
           }}
           onClick={(e) => {
