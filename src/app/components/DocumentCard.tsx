@@ -68,13 +68,74 @@ export default function DocumentCard({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  // Fallback method for clipboard copying (mobile-friendly)
+  // This method uses document.execCommand which works better with user gestures on mobile
+  const copyToClipboardFallback = (text: string): boolean => {
+    try {
+      // Create a temporary textarea element
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      // Style it to be hidden but still selectable
+      textarea.style.position = "fixed";
+      textarea.style.left = "-999999px";
+      textarea.style.top = "-999999px";
+      textarea.style.opacity = "0";
+      textarea.style.pointerEvents = "none";
+      textarea.setAttribute("readonly", "");
+      textarea.setAttribute("contenteditable", "true");
+      document.body.appendChild(textarea);
+      
+      // For mobile, we need to focus and select properly
+      if (navigator.userAgent.match(/ipad|iphone/i)) {
+        // iOS requires contentEditable element
+        const range = document.createRange();
+        range.selectNodeContents(textarea);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        textarea.setSelectionRange(0, text.length);
+      } else {
+        // For Android and other mobile devices
+        textarea.select();
+        textarea.setSelectionRange(0, text.length);
+      }
+      
+      // Focus the textarea (important for mobile)
+      textarea.focus();
+      
+      try {
+        // Try execCommand (works on mobile with user gesture)
+        const successful = document.execCommand("copy");
+        // Clean up
+        document.body.removeChild(textarea);
+        // Clear selection
+        if (window.getSelection) {
+          window.getSelection()?.removeAllRanges();
+        }
+        return successful;
+      } catch (err) {
+        // Clean up on error
+        document.body.removeChild(textarea);
+        if (window.getSelection) {
+          window.getSelection()?.removeAllRanges();
+        }
+        console.error("execCommand('copy') failed:", err);
+        return false;
+      }
+    } catch (err) {
+      console.error("Fallback copy failed:", err);
+      return false;
+    }
+  };
+
   const handleCopyLink = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     setIsCopyingLink(true);
     setLinkCopied(false);
     
     try {
-      // Generate or get public link
+      // Generate or get public link first
       let publicLink: string | null = null;
       
       // First, try to generate a new link (this will create or regenerate)
@@ -93,11 +154,49 @@ export default function DocumentCard({
         }
       }
       
-      // Copy to clipboard
+      // Copy to clipboard (for mobile, we must use fallback method in user gesture context)
       if (publicLink) {
-        await navigator.clipboard.writeText(publicLink);
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 2000);
+        let copied = false;
+        
+        // Detect mobile devices
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        // On mobile, always use fallback method as it works better with user gesture
+        // On desktop, try modern Clipboard API first
+        if (isMobile) {
+          // Use fallback method for mobile (works with user gesture even after async)
+          copied = copyToClipboardFallback(publicLink);
+        } else if (navigator.clipboard?.writeText) {
+          // Try modern Clipboard API for desktop (works on HTTPS)
+          try {
+            await navigator.clipboard.writeText(publicLink);
+            copied = true;
+          } catch (clipboardErr: any) {
+            console.warn("Clipboard API failed, trying fallback:", clipboardErr);
+            // If clipboard API fails, use fallback
+            copied = copyToClipboardFallback(publicLink);
+          }
+        } else {
+          // No clipboard API available, use fallback
+          copied = copyToClipboardFallback(publicLink);
+        }
+        
+        if (copied) {
+          setLinkCopied(true);
+          setTimeout(() => setLinkCopied(false), 2000);
+        } else {
+          // If copy failed, show link in a way user can copy manually
+          // Use prompt which allows user to select and copy on mobile
+          const userConfirmed = window.prompt(
+            "Unable to copy automatically. Please copy this link:",
+            publicLink
+          );
+          // If user interacted with prompt, consider it a success
+          if (userConfirmed !== null) {
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+          }
+        }
       } else {
         throw new Error("No public link available");
       }
