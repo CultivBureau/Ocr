@@ -734,3 +734,81 @@ div[class*="section"] {
     padding: 0.4rem 0.5rem !important;
   }
 }
+
+/* ============================================
+   RESPONSIVE STYLES FOR TRANSPORT SECTION
+   ============================================ */
+
+@media screen and (max-width: 768px) {
+  /* Transport Section - Mobile Optimization */
+  [data-transport-section-id] {
+    padding: 0 !important;
+  }
+  
+  /* Header */
+  [data-transport-section-id] h2 {
+    font-size: 1rem !important;
+    padding: 0.5rem 1.5rem !important;
+  }
+  
+  /* Table container - enable horizontal scroll */
+  [data-transport-section-id] .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Table cells */
+  [data-transport-section-id] table th,
+  [data-transport-section-id] table td {
+    padding: 0.5rem 0.35rem !important;
+    font-size: 0.7rem !important;
+  }
+  
+  /* From/To badges */
+  [data-transport-section-id] .bg-green-100,
+  [data-transport-section-id] .bg-blue-100 {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.65rem !important;
+  }
+  
+  [data-transport-section-id] .bg-green-100 svg,
+  [data-transport-section-id] .bg-blue-100 svg {
+    width: 0.85rem !important;
+    height: 0.85rem !important;
+  }
+  
+  /* Form inputs */
+  [data-transport-section-id] input {
+    font-size: 0.75rem !important;
+    padding: 0.4rem 0.6rem !important;
+  }
+  
+  [data-transport-section-id] label {
+    font-size: 0.65rem !important;
+  }
+  
+  /* Action buttons in table */
+  [data-transport-section-id] button[data-action="edit-row"],
+  [data-transport-section-id] button[data-action="remove-row"] {
+    padding: 0.4rem !important;
+  }
+  
+  [data-transport-section-id] button[data-action="edit-row"] svg,
+  [data-transport-section-id] button[data-action="remove-row"] svg {
+    width: 0.85rem !important;
+    height: 0.85rem !important;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  /* Extra small screens */
+  [data-transport-section-id] table th,
+  [data-transport-section-id] table td {
+    padding: 0.4rem 0.3rem !important;
+    font-size: 0.65rem !important;
+  }
+  
+  [data-transport-section-id] .bg-green-100,
+  [data-transport-section-id] .bg-blue-100 {
+    font-size: 0.6rem !important;
+  }
+}

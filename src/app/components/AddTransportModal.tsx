@@ -32,15 +32,21 @@ export default function AddTransportModal({
       columns: [
         { key: 'day', label: language === 'ar' ? 'يوم' : 'Day' },
         { key: 'date', label: language === 'ar' ? 'التاريخ' : 'Date' },
-        { key: 'description', label: language === 'ar' ? 'الوصف' : 'Description' },
+        { key: 'from', label: language === 'ar' ? 'من' : 'From' },
+        { key: 'to', label: language === 'ar' ? 'إلى' : 'To' },
         { key: 'carType', label: language === 'ar' ? 'نوع السياره' : 'Car Type' },
+        { key: 'description', label: language === 'ar' ? 'الوصف' : 'Description' },
       ],
       rows: [
         {
           day: "",
           date: new Date().toISOString().split('T')[0],
-          description: "",
+          from: "",
+          to: "",
+          fromLink: "",
+          toLink: "",
           carType: "",
+          description: "",
         }
       ]
     }
@@ -62,15 +68,21 @@ export default function AddTransportModal({
           columns: [
             { key: 'day', label: 'يوم' },
             { key: 'date', label: 'التاريخ' },
-            { key: 'description', label: 'الوصف' },
+            { key: 'from', label: 'من' },
+            { key: 'to', label: 'إلى' },
             { key: 'carType', label: 'نوع السياره' },
+            { key: 'description', label: 'الوصف' },
           ],
           rows: [
             {
               day: "",
               date: new Date().toISOString().split('T')[0],
-              description: "",
+              from: "",
+              to: "",
+              fromLink: "",
+              toLink: "",
               carType: "",
+              description: "",
             }
           ]
         }
@@ -84,13 +96,17 @@ export default function AddTransportModal({
     const defaultLabels = language === 'ar' ? {
       day: 'يوم',
       date: 'التاريخ',
-      description: 'الوصف',
-      carType: 'نوع السياره'
+      from: 'من',
+      to: 'إلى',
+      carType: 'نوع السياره',
+      description: 'الوصف'
     } : {
       day: 'Day',
       date: 'Date',
-      description: 'Description',
-      carType: 'Car Type'
+      from: 'From',
+      to: 'To',
+      carType: 'Car Type',
+      description: 'Description'
     };
 
     setTables(prevTables => prevTables.map(table => ({
@@ -177,15 +193,21 @@ export default function AddTransportModal({
         columns: [
           { key: 'day', label: language === 'ar' ? 'يوم' : 'Day' },
           { key: 'date', label: language === 'ar' ? 'التاريخ' : 'Date' },
-          { key: 'description', label: language === 'ar' ? 'الوصف' : 'Description' },
+          { key: 'from', label: language === 'ar' ? 'من' : 'From' },
+          { key: 'to', label: language === 'ar' ? 'إلى' : 'To' },
           { key: 'carType', label: language === 'ar' ? 'نوع السياره' : 'Car Type' },
+          { key: 'description', label: language === 'ar' ? 'الوصف' : 'Description' },
         ],
         rows: [
           {
             day: "",
             date: new Date().toISOString().split('T')[0],
-            description: "",
+            from: "",
+            to: "",
+            fromLink: "",
+            toLink: "",
             carType: "",
+            description: "",
           }
         ]
       }
@@ -225,8 +247,12 @@ export default function AddTransportModal({
     const newRow: TransportRow = {
       day: "",
       date: new Date().toISOString().split('T')[0],
-      description: "",
+      from: "",
+      to: "",
+      fromLink: "",
+      toLink: "",
       carType: "",
+      description: "",
     };
     // Initialize all column values
     table.columns.forEach(col => {
@@ -272,10 +298,7 @@ export default function AddTransportModal({
   const removeColumn = (tableIndex: number, columnIndex: number) => {
     const newTables = [...tables];
     const column = newTables[tableIndex].columns[columnIndex];
-    // Don't allow removing default columns
-    if (['day', 'date', 'description', 'carType'].includes(column.key)) {
-      return;
-    }
+    // Allow deletion of any column
     newTables[tableIndex].columns = newTables[tableIndex].columns.filter((_, i) => i !== columnIndex);
     // Remove column data from all rows
     newTables[tableIndex].rows.forEach(row => {
@@ -287,10 +310,7 @@ export default function AddTransportModal({
   const updateColumn = (tableIndex: number, columnIndex: number, field: 'key' | 'label', value: string) => {
     const newTables = [...tables];
     const column = newTables[tableIndex].columns[columnIndex];
-    // Don't allow changing key of default columns
-    if (field === 'key' && ['day', 'date', 'description', 'carType'].includes(column.key)) {
-      return;
-    }
+    // Allow changing any column
     newTables[tableIndex].columns[columnIndex] = {
       ...column,
       [field]: value
@@ -482,8 +502,7 @@ export default function AddTransportModal({
                             type="text"
                             value={column.key}
                             onChange={(e) => updateColumn(tableIndex, colIndex, 'key', e.target.value)}
-                            disabled={['day', 'date', 'description', 'carType'].includes(column.key)}
-                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
                             placeholder="Column Key"
                           />
                           <input
@@ -493,15 +512,13 @@ export default function AddTransportModal({
                             className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
                             placeholder="Column Label"
                           />
-                          {!['day', 'date', 'description', 'carType'].includes(column.key) && (
-                            <button
-                              type="button"
-                              onClick={() => removeColumn(tableIndex, colIndex)}
-                              className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600"
-                            >
-                              Remove
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeColumn(tableIndex, colIndex)}
+                            className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600"
+                          >
+                            Remove
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -567,6 +584,34 @@ export default function AddTransportModal({
                                 )}
                               </div>
                             ))}
+                            {/* From Link field */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                From Link (Optional) 🔗
+                              </label>
+                              <input
+                                type="url"
+                                value={row.fromLink || ''}
+                                onChange={(e) => updateRow(tableIndex, rowIndex, 'fromLink', e.target.value)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                placeholder="Location link"
+                              />
+                            </div>
+                            
+                            {/* To Link field */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                To Link (Optional) 🔗
+                              </label>
+                              <input
+                                type="url"
+                                value={row.toLink || ''}
+                                onChange={(e) => updateRow(tableIndex, rowIndex, 'toLink', e.target.value)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                placeholder="Location link"
+                              />
+                            </div>
+                            
                             {/* Note field */}
                             <div>
                               <label className="block text-xs font-medium text-gray-600 mb-1">

@@ -162,6 +162,10 @@ export interface TransportSectionData {
     rows: Array<{
       day: string;
       date: string;
+      from: string;
+      to: string;
+      fromLink?: string;
+      toLink?: string;
       description: string;
       carType: string;
       note?: string;

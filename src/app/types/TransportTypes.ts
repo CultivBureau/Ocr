@@ -5,7 +5,11 @@
 export interface TransportRow {
   day: string;
   date: string;
-  description: string;
+  from: string; // Starting location
+  to: string; // Destination location
+  fromLink?: string; // Optional link for from location
+  toLink?: string; // Optional link for to location
+  description?: string; // Optional description
   carType: string;
   note?: string; // Optional note with red car icon
   [key: string]: any; // Support for additional dynamic columns

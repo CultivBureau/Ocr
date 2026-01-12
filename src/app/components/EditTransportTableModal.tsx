@@ -88,13 +88,10 @@ export default function EditTransportTableModal({
   };
 
   const removeColumn = (index: number) => {
-    // Don't allow removing default columns
-    const column = columns[index];
-    if (['day', 'date', 'description', 'carType'].includes(column.key)) {
-      if (columns.length <= 4) {
-        alert(language === 'ar' ? 'لا يمكن حذف جميع الأعمدة الافتراضية' : 'Cannot remove all default columns');
-        return;
-      }
+    // Allow deletion of any column
+    if (columns.length <= 1) {
+      alert(language === 'ar' ? 'يجب أن يحتوي الجدول على عمود واحد على الأقل' : 'Table must have at least one column');
+      return;
     }
     setColumns(columns.filter((_, i) => i !== index));
   };
@@ -103,11 +100,7 @@ export default function EditTransportTableModal({
     const newColumns = [...columns];
     const column = newColumns[index];
     
-    // Don't allow changing key of default columns
-    if (field === 'key' && ['day', 'date', 'description', 'carType'].includes(column.key)) {
-      return;
-    }
-    
+    // Allow changing any column
     newColumns[index] = {
       ...column,
       [field]: value
@@ -214,15 +207,13 @@ export default function EditTransportTableModal({
                     <span className="text-xs font-medium text-gray-600">
                       {language === 'ar' ? 'عمود' : 'Column'} {index + 1}
                     </span>
-                    {!['day', 'date', 'description', 'carType'].includes(column.key) && (
-                      <button
-                        type="button"
-                        onClick={() => removeColumn(index)}
-                        className="text-red-600 hover:text-red-700 text-xs"
-                      >
-                        {language === 'ar' ? 'حذف' : 'Remove'}
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeColumn(index)}
+                      className="text-red-600 hover:text-red-700 text-xs"
+                    >
+                      {language === 'ar' ? 'حذف' : 'Remove'}
+                    </button>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -233,10 +224,9 @@ export default function EditTransportTableModal({
                         type="text"
                         value={column.key}
                         onChange={(e) => updateColumn(index, 'key', e.target.value)}
-                        disabled={['day', 'date', 'description', 'carType'].includes(column.key)}
                         className={`w-full px-3 py-2 border rounded-lg text-sm ${
                           errors[`column_${index}_key`] ? "border-red-500" : "border-gray-300"
-                        } disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                        }`}
                         placeholder="column_key"
                       />
                       {errors[`column_${index}_key`] && (
