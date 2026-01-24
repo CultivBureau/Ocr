@@ -162,20 +162,32 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [selectedColor, setSelectedColor] = useState<'dark-blue' | 'dark-red' | 'pink' | 'green'>(tableBackgroundColor);
+  const [selectedColor, setSelectedColor] = useState<'dark-blue' | 'dark-red' | 'pink' | 'green' | 'black' | 'purple' | 'teal' | 'orange' | 'indigo' | 'emerald'>(tableBackgroundColor);
   
-  // Get background color classes
-  const getBackgroundColorClass = (color: 'dark-blue' | 'dark-red' | 'pink' | 'green') => {
+  // Get background color classes - Enhanced with more professional options
+  const getBackgroundColorClass = (color: 'dark-blue' | 'dark-red' | 'pink' | 'green' | 'black' | 'purple' | 'teal' | 'orange' | 'indigo' | 'emerald') => {
     switch (color) {
       case 'dark-blue':
-        return { bg: 'bg-[#1E3A8A]', border: 'border-[#1E3A8A]', from: '#1E3A8A', to: '#1E40AF' };
+        return { bg: 'bg-[#1E3A8A]', border: 'border-[#1E3A8A]', from: '#1E3A8A', to: '#1E40AF', accent: '#3B82F6' };
       case 'dark-red':
-        return { bg: 'bg-[#991B1B]', border: 'border-[#991B1B]', from: '#991B1B', to: '#B91C1C' };
+        return { bg: 'bg-[#991B1B]', border: 'border-[#991B1B]', from: '#991B1B', to: '#B91C1C', accent: '#EF4444' };
+      case 'black':
+        return { bg: 'bg-[#1F2937]', border: 'border-[#1F2937]', from: '#1F2937', to: '#374151', accent: '#6B7280' };
+      case 'purple':
+        return { bg: 'bg-[#7C3AED]', border: 'border-[#7C3AED]', from: '#7C3AED', to: '#8B5CF6', accent: '#A78BFA' };
+      case 'teal':
+        return { bg: 'bg-[#0D9488]', border: 'border-[#0D9488]', from: '#0D9488', to: '#14B8A6', accent: '#2DD4BF' };
+      case 'orange':
+        return { bg: 'bg-[#EA580C]', border: 'border-[#EA580C]', from: '#EA580C', to: '#F97316', accent: '#FB923C' };
+      case 'indigo':
+        return { bg: 'bg-[#4338CA]', border: 'border-[#4338CA]', from: '#4338CA', to: '#5B21B6', accent: '#8B5CF6' };
+      case 'emerald':
+        return { bg: 'bg-[#059669]', border: 'border-[#059669]', from: '#059669', to: '#10B981', accent: '#34D399' };
       case 'pink':
-        return { bg: 'bg-[#EC4899]', border: 'border-[#EC4899]', from: '#EC4899', to: '#F472B6' };
+        return { bg: 'bg-[#EC4899]', border: 'border-[#EC4899]', from: '#EC4899', to: '#F472B6', accent: '#F9A8D4' };
       case 'green':
       default:
-        return { bg: 'bg-[#A4C639]', border: 'border-[#A4C639]', from: '#A4C639', to: '#8FB02E' };
+        return { bg: 'bg-[#A4C639]', border: 'border-[#A4C639]', from: '#A4C639', to: '#8FB02E', accent: '#BEF264' };
     }
   };
   
@@ -323,22 +335,61 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
               </svg>
             </button>
             
-            {/* Edit Settings Dropdown */}
+            {/* Edit Settings Modal - Fixed Center Popup */}
             {showColorPicker && (
-              <div className="absolute top-full right-0 z-100 mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 min-w-[240px] backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="mb-4">
-                  <p className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <>
+                {/* Backdrop Overlay */}
+                <div 
+                  className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
+                  onClick={() => setShowColorPicker(false)}
+                ></div>
+                
+                {/* Modal Content */}
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div 
+                    className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 w-full max-w-md max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-300"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Close Button */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                          </svg>
+                        </div>
+                        Table Settings
+                      </div>
+                      <button
+                        onClick={() => setShowColorPicker(false)}
+                        className="p-2 hover:bg-gray-100 rounded-xl transition-colors duration-200"
+                        aria-label="Close modal"
+                      >
+                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                <div className="mb-6">
+                  <div className="text-sm font-bold text-gray-900 mb-5 flex items-center gap-2">
                     <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                     </svg>
-                    Table Color
-                  </p>
-                  <div className="flex flex-col gap-2.5">
+                    Professional Table Colors
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     {[
-                      { value: 'green', label: 'Green', bg: 'bg-[#A4C639]' },
-                      { value: 'dark-blue', label: 'Dark Blue', bg: 'bg-[#1E3A8A]' },
-                      { value: 'dark-red', label: 'Dark Red', bg: 'bg-[#991B1B]' },
-                      { value: 'pink', label: 'Pink', bg: 'bg-[#EC4899]' }
+                      { value: 'green', label: 'Nature Green', bg: 'bg-[#A4C639]', accent: '#BEF264' },
+                      { value: 'dark-blue', label: 'Ocean Blue', bg: 'bg-[#1E3A8A]', accent: '#3B82F6' },
+                      { value: 'dark-red', label: 'Ruby Red', bg: 'bg-[#991B1B]', accent: '#EF4444' },
+                      { value: 'black', label: 'Carbon Black', bg: 'bg-[#1F2937]', accent: '#6B7280' },
+                      { value: 'purple', label: 'Royal Purple', bg: 'bg-[#7C3AED]', accent: '#A78BFA' },
+                      { value: 'teal', label: 'Emerald Teal', bg: 'bg-[#0D9488]', accent: '#2DD4BF' },
+                      { value: 'orange', label: 'Sunset Orange', bg: 'bg-[#EA580C]', accent: '#FB923C' },
+                      { value: 'indigo', label: 'Midnight Indigo', bg: 'bg-[#4338CA]', accent: '#8B5CF6' },
+                      { value: 'emerald', label: 'Forest Emerald', bg: 'bg-[#059669]', accent: '#34D399' },
+                      { value: 'pink', label: 'Blossom Pink', bg: 'bg-[#EC4899]', accent: '#F9A8D4' }
                     ].map((color) => (
                       <button
                         key={color.value}
@@ -348,12 +399,35 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                             onBackgroundColorChange(color.value as any);
                           }
                         }}
-                        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02] ${
-                          selectedColor === color.value ? 'ring-2 ring-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-md' : 'hover:bg-gray-50 hover:shadow-sm'
+                        className={`group relative flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-300 hover:scale-105 transform ${
+                          selectedColor === color.value 
+                            ? 'ring-3 ring-blue-500 bg-gradient-to-br from-blue-50 via-white to-purple-50 shadow-xl scale-105' 
+                            : 'hover:bg-gradient-to-br hover:from-gray-50 hover:to-blue-50 hover:shadow-lg'
                         }`}
+                        style={{
+                          boxShadow: selectedColor === color.value 
+                            ? '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 3px rgb(59 130 246 / 0.5)'
+                            : ''
+                        }}
                       >
-                        <div className={`w-8 h-8 rounded-lg ${color.bg} border-2 border-white shadow-lg`}></div>
-                        <span className="text-sm font-semibold text-gray-800">{color.label}</span>
+                        <div className="relative">
+                          <div 
+                            className={`w-12 h-8 rounded-xl ${color.bg} border-3 border-white shadow-lg relative overflow-hidden`}
+                            style={{
+                              background: `linear-gradient(135deg, ${color.bg.replace('bg-[', '').replace(']', '')}, ${color.accent})`
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                          </div>
+                          {selectedColor === color.value && (
+                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs font-semibold text-gray-700 text-center leading-tight">{color.label}</span>
                       </button>
                     ))}
                   </div>
@@ -364,12 +438,12 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                 
                 {/* Add/Remove Columns */}
                 <div className="mb-4">
-                  <p className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <div className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
                     <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
                     </svg>
                     Columns
-                  </p>
+                  </div>
                   <div className="flex gap-2">
                     {onAddColumn && (
                       <button
@@ -390,12 +464,12 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                 
                 {/* Add/Remove Rows */}
                 <div>
-                  <p className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <div className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
                     <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                     Rows
-                  </p>
+                  </div>
                   <div className="flex gap-2">
                     {onAddRow && (
                       <button
@@ -413,7 +487,9 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                     )}
                   </div>
                 </div>
-              </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
           
@@ -480,24 +556,41 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
         </div>
       )}
 
-      {/* Responsive Table Container - Enables horizontal scroll on mobile */}
-      <div className="responsive-table-container">
-        <div className={`w-full rounded-2xl border-2 ${colorClasses.border} shadow-lg hover:shadow-xl transition-shadow duration-300`}>
-          <table className="dynamic-table w-full border-collapse rounded-2xl" style={{ tableLayout: 'fixed' }}>
-          {/* Table Header */}
+      {/* Responsive Table Container - Enhanced Professional Styling */}
+      <div className="responsive-table-container relative">
+        <div className={`w-full rounded-2xl border-2 ${colorClasses.border} shadow-2xl hover:shadow-3xl transition-all duration-500 relative overflow-hidden`}
+             style={{
+               background: `linear-gradient(145deg, ${colorClasses.accent}08, ${colorClasses.from}05)`,
+               backdropFilter: 'blur(10px)'
+             }}>
+          {/* Subtle background pattern */}
+          <div className="absolute inset-0 opacity-[0.03]" 
+               style={{
+                 backgroundImage: `radial-gradient(circle at 1px 1px, ${colorClasses.from} 1px, transparent 0)`,
+                 backgroundSize: '20px 20px'
+               }}></div>
+          
+          <table className="dynamic-table w-full border-collapse rounded-2xl relative z-10" style={{ tableLayout: 'fixed' }}>
+          {/* Table Header - Enhanced Professional Design */}
           <thead>
-            <tr style={{ background: `linear-gradient(to right, ${colorClasses.from}, ${colorClasses.to})` }}>
+            <tr style={{ 
+                background: `linear-gradient(135deg, ${colorClasses.from} 0%, ${colorClasses.to} 50%, ${colorClasses.accent} 100%)`,
+                boxShadow: `0 4px 6px -1px ${colorClasses.from}40`
+              }}>
               {cleanHeaders.map((header, index) => (
                   <th
                     key={index}
-                  className="text-white font-bold text-center border-r border-white/30 tracking-tight last:border-r-0 relative group"
+                  className="text-white font-bold text-center border-r border-white/30 tracking-tight last:border-r-0 relative group backdrop-blur-sm"
                   style={{ 
                     fontSize: '9px',
                     lineHeight: '1.2',
                     padding: '6px 4px',
-                    verticalAlign: 'middle'
+                    verticalAlign: 'middle',
+                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
                   }}
                 >
+                  {/* Subtle header accent */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   {/* Delete Column Button */}
                   {editable && onRemoveColumn && cleanHeaders.length > 1 && (
                     <button
@@ -537,13 +630,20 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
             </tr>
           </thead>
 
-          {/* Table Body */}
+          {/* Table Body - Enhanced */}
           <tbody>
             {normalizedRows.length > 0 ? (
               normalizedRows.map((row, rowIndex) => (
                 <tr 
                   key={rowIndex} 
-                  className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/80'} hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-blue-100/50 transition-all duration-200 group`}
+                  className={`${
+                    rowIndex % 2 === 0 
+                      ? 'bg-white/90 backdrop-blur-sm' 
+                      : 'bg-gradient-to-r from-gray-50/80 to-blue-50/30'
+                  } hover:bg-gradient-to-r hover:from-blue-50/70 hover:to-purple-50/40 transition-all duration-300 group relative`}
+                  style={{
+                    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                  }}
                 >
                   {cleanHeaders.map((_, cellIndex) => {
                     const cell = row[cellIndex];
