@@ -87,6 +87,10 @@ function CodePageContent() {
   const [isExportingPlaywright, setIsExportingPlaywright] = useState(false);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   
+  // Track changes for Save button
+  const [hasChanges, setHasChanges] = useState(false);
+  const initialStructureRef = useRef<SeparatedStructure | null>(null);
+  
   // Company branding state
   const [headerImage, setHeaderImage] = useState<string | undefined>(undefined);
   const [footerImage, setFooterImage] = useState<string | undefined>(undefined);
@@ -1491,10 +1495,16 @@ function CodePageContent() {
         const parsed = JSON.parse(storedExtractedData);
         // Ensure it's v2 format
         if (parsed && parsed.generated && parsed.user && parsed.layout) {
-          setStructure(parsed as SeparatedStructure);
+          const loadedStructure = parsed as SeparatedStructure;
+          setStructure(loadedStructure);
+          // Store as initial structure after load
+          setTimeout(() => {
+            initialStructureRef.current = JSON.parse(JSON.stringify(loadedStructure));
+            setHasChanges(false);
+          }, 0);
         } else if (parsed && (parsed.sections || parsed.tables)) {
           // Legacy format - migrate to v2
-          setStructure({
+          const migratedStructure = {
             generated: {
               sections: parsed.sections || [],
               tables: parsed.tables || []
@@ -1507,7 +1517,13 @@ function CodePageContent() {
               ...(parsed.tables || []).map((t: any) => t.id)
             ],
             meta: parsed.meta || {}
-          });
+          };
+          setStructure(migratedStructure);
+          // Store as initial structure after load
+          setTimeout(() => {
+            initialStructureRef.current = JSON.parse(JSON.stringify(migratedStructure));
+            setHasChanges(false);
+          }, 0);
         }
       } catch {
         // ignore parse errors
@@ -1521,7 +1537,13 @@ function CodePageContent() {
       try {
         const parsed = JSON.parse(uploadedStructure);
         if (parsed && parsed.generated && parsed.user && parsed.layout) {
-          setStructure(parsed as SeparatedStructure);
+          const loadedStructure = parsed as SeparatedStructure;
+          setStructure(loadedStructure);
+          // Store as initial structure after load
+          setTimeout(() => {
+            initialStructureRef.current = JSON.parse(JSON.stringify(loadedStructure));
+            setHasChanges(false);
+          }, 0);
         }
       } catch {
         // ignore parse errors
@@ -1529,6 +1551,31 @@ function CodePageContent() {
       sessionStorage.removeItem("uploadedStructure");
     }
   }, [searchParams]);
+
+  // Compare structures to detect changes
+  const compareStructures = useCallback((struct1: SeparatedStructure, struct2: SeparatedStructure): boolean => {
+    try {
+      // Deep comparison using JSON.stringify
+      return JSON.stringify(struct1) !== JSON.stringify(struct2);
+    } catch (error) {
+      console.error('Error comparing structures:', error);
+      return false;
+    }
+  }, []);
+
+  // Track changes whenever structure updates - immediate detection
+  useEffect(() => {
+    if (initialStructureRef.current === null) {
+      // First load - store initial structure
+      initialStructureRef.current = JSON.parse(JSON.stringify(structure));
+      setHasChanges(false);
+      return;
+    }
+    
+    // Compare with initial structure immediately (synchronous for immediate feedback)
+    const changed = compareStructures(structure, initialStructureRef.current);
+    setHasChanges(changed);
+  }, [structure, compareStructures]);
 
   const loadDocument = async (docId: string) => {
     try {
@@ -1540,14 +1587,16 @@ function CodePageContent() {
       setTotalVersions(doc.total_versions || 1);
       
       // Load v2 structure from extracted_data
+      let loadedStructure: SeparatedStructure | null = null;
       if (doc.extracted_data) {
         const extractedData = doc.extracted_data as any;
         // Ensure it's v2 format
         if (extractedData.generated && extractedData.user && extractedData.layout) {
-          setStructure(extractedData as SeparatedStructure);
+          loadedStructure = extractedData as SeparatedStructure;
+          setStructure(loadedStructure);
         } else if (extractedData.sections || extractedData.tables) {
           // Legacy format - migrate to v2
-          setStructure({
+          loadedStructure = {
             generated: {
               sections: extractedData.sections || [],
               tables: extractedData.tables || []
@@ -1560,8 +1609,17 @@ function CodePageContent() {
               ...(extractedData.tables || []).map((t: any) => t.id)
             ],
             meta: extractedData.meta || {}
-          });
+          };
+          setStructure(loadedStructure);
         }
+      }
+      
+      // Store as initial structure after load
+      if (loadedStructure) {
+        setTimeout(() => {
+          initialStructureRef.current = JSON.parse(JSON.stringify(loadedStructure));
+          setHasChanges(false);
+        }, 100);
       }
       
       if (doc.metadata) {
@@ -1743,6 +1801,11 @@ function CodePageContent() {
       alert("Please login to save documents");
       return;
     }
+    
+    if (!hasChanges) {
+      // No changes to save
+      return;
+    }
 
     setIsSaving(true);
     setSaveStatus("idle");
@@ -1788,6 +1851,11 @@ function CodePageContent() {
       }
 
       setSaveStatus("success");
+      
+      // Update initial structure reference after successful save
+      initialStructureRef.current = JSON.parse(JSON.stringify(structure));
+      setHasChanges(false);
+      
       setTimeout(() => setSaveStatus("idle"), 3000);
     } catch (err) {
       console.error("Save failed:", err);
@@ -1851,6 +1919,11 @@ function CodePageContent() {
         }
 
         setSaveStatus("success");
+        
+        // Update initial structure reference after successful save
+        initialStructureRef.current = JSON.parse(JSON.stringify(structure));
+        setHasChanges(false);
+        
         setTimeout(() => setSaveStatus("idle"), 3000);
       } catch (err) {
         console.error("Save failed:", err);
@@ -2075,9 +2148,11 @@ function CodePageContent() {
             {isAuthenticated() && (
               <button
                 onClick={handleSave}
-                disabled={isSaving}
+                disabled={isSaving || !hasChanges}
                 className={`px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm ${
-                  saveStatus === "success"
+                  !hasChanges
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : saveStatus === "success"
                     ? "bg-green-500 text-white hover:bg-green-600"
                     : saveStatus === "error"
                     ? "bg-red-500 text-white hover:bg-red-600"
@@ -2267,7 +2342,7 @@ function CodePageContent() {
         </div>
       </div>
     </div>
-  ), [handleExportCode, handleExportPDF, handleExportPDFWithPlaywright, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown, isExportingPlaywright]);
+  ), [handleExportCode, handleExportPDF, handleExportPDFWithPlaywright, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown, isExportingPlaywright, hasChanges]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-cyan-50 via-blue-50 to-lime-50 text-gray-900">
