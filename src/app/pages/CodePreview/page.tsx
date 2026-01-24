@@ -1415,6 +1415,9 @@ function CodePageContent() {
   const getInitialHotelSectionData = useCallback((): {
     title?: string;
     showTitle?: boolean;
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+    hotels?: any[];
   } | null => {
     if (!editingHotelId) {
       return null;
@@ -1431,7 +1434,10 @@ function CodePageContent() {
       
       return {
         title: element.data.title,
-        showTitle: element.data.showTitle
+        showTitle: element.data.showTitle,
+        direction: element.data.direction,
+        language: element.data.language,
+        hotels: element.data.hotels || []
       };
     } catch (error) {
       console.error('Error extracting hotel section data:', error);

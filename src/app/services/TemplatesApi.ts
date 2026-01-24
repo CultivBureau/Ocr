@@ -1,6 +1,6 @@
 // Templates API client
 import { getToken } from "./AuthApi";
-import { AirplaneSectionData } from "../types/ExtractTypes";
+import { AirplaneSectionData, HotelsSectionData } from "../types/ExtractTypes";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
@@ -62,7 +62,7 @@ export interface Template {
   company_id: string;
   template_type: "airplane" | "hotel" | "transport";
   name: string;
-  data: AirplaneSectionData;
+  data: AirplaneSectionData | HotelsSectionData;
   created_at: string;
   updated_at: string;
 }
@@ -76,7 +76,7 @@ export interface TemplateListResponse {
 export interface ExportTemplateData {
   name: string;
   template_type: "airplane" | "hotel" | "transport";
-  data: AirplaneSectionData;
+  data: AirplaneSectionData | HotelsSectionData;
   exported_at: string;
 }
 
@@ -159,6 +159,95 @@ export async function importAirplaneTemplate(
   data: AirplaneSectionData
 ): Promise<Template> {
   return authRequest("/templates/airplane/import", {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      data,
+    }),
+  });
+}
+
+// Hotel Template Functions
+
+/**
+ * Get all hotel templates for the current user
+ */
+export async function getHotelTemplates(): Promise<TemplateListResponse> {
+  return authRequest("/templates/hotel", {
+    method: "GET",
+  });
+}
+
+/**
+ * Save a new hotel template
+ */
+export async function saveHotelTemplate(
+  name: string,
+  data: HotelsSectionData
+): Promise<Template> {
+  return authRequest("/templates/hotel", {
+    method: "POST",
+    body: JSON.stringify({
+      template_type: "hotel",
+      name,
+      data,
+    }),
+  });
+}
+
+/**
+ * Get a specific hotel template
+ */
+export async function getHotelTemplate(templateId: string): Promise<Template> {
+  return authRequest(`/templates/hotel/${templateId}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Delete a hotel template
+ */
+export async function deleteHotelTemplate(templateId: string): Promise<void> {
+  return authRequest(`/templates/hotel/${templateId}`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Update a hotel template
+ */
+export async function updateHotelTemplate(
+  templateId: string,
+  name?: string,
+  data?: HotelsSectionData
+): Promise<Template> {
+  const updateData: any = {};
+  if (name !== undefined) updateData.name = name;
+  if (data !== undefined) updateData.data = data;
+
+  return authRequest(`/templates/hotel/${templateId}`, {
+    method: "PUT",
+    body: JSON.stringify(updateData),
+  });
+}
+
+/**
+ * Export a hotel template as JSON
+ */
+export async function exportHotelTemplate(templateId: string): Promise<ExportTemplateData> {
+  return authRequest(`/templates/hotel/${templateId}/export`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Import a hotel template from JSON
+ */
+export async function importHotelTemplate(
+  name: string,
+  data: HotelsSectionData
+): Promise<Template> {
+  return authRequest("/templates/hotel/import", {
     method: "POST",
     body: JSON.stringify({
       name,

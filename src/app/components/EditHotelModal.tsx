@@ -37,6 +37,7 @@ export default function EditHotelModal({
   const [includesAllOptions, setIncludesAllOptions] = useState<string[]>(["Includes All"]);
   const [showAddOptionModal, setShowAddOptionModal] = useState(false);
   const [language, setLanguage] = useState<"ar" | "en">("ar");
+  
 
   // Fetch includes all options from company settings
   const fetchIncludesAllOptions = async () => {
@@ -415,7 +416,7 @@ export default function EditHotelModal({
             onClick={onClose}
             className="px-5 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
           >
-            Cancel
+            {language === 'ar' ? 'إلغاء' : 'Cancel'}
           </button>
           <button
             type="submit"
@@ -425,7 +426,7 @@ export default function EditHotelModal({
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            Save Changes
+            {language === 'ar' ? 'حفظ التغييرات' : 'Save Changes'}
           </button>
         </div>
       </div>
