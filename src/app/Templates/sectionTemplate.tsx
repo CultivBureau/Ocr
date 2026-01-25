@@ -909,21 +909,22 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     if (e.key === 'Backspace' && isCursorAtStart() && currentIndex > 0) {
       e.preventDefault();
       
-      // Get current item's text
-      const currentText = e.currentTarget.textContent || '';
-      const previousItem = items[currentIndex - 1];
+      // Get current item's text from DOM (what user sees)
+      const currentText = (e.currentTarget.textContent || '').trim();
       
-      // Merge: previous item + current item (without bullet if it's a bullet list)
+      // Get previous item content (without bullet marker if present)
+      const previousItem = items[currentIndex - 1];
+      const prevContent = previousItem.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+      
+      // Create merged array
       const mergedItems = [...items];
       
       if (isBulletList) {
-        // For bullet lists, merge the content
-        const prevContent = previousItem.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
-        const currContent = currentText.trim();
-        mergedItems[currentIndex - 1] = `• ${prevContent}${currContent}`;
+        // For bullet lists: "prev content" + " " + "current content"
+        mergedItems[currentIndex - 1] = `• ${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
       } else {
-        // For regular paragraphs, just concatenate
-        mergedItems[currentIndex - 1] = previousItem + currentText;
+        // For paragraphs: just concatenate with space
+        mergedItems[currentIndex - 1] = `${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
       }
       
       // Remove current item
@@ -1056,14 +1057,28 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                             // Enhanced merge functionality
                             if (e.key === 'Backspace' && isCursorAtStart() && index > 0) {
                               e.preventDefault();
-                              const currentText = e.currentTarget.textContent || '';
-                              const previousItem = items[index - 1];
-                              const mergedItems = [...items];
                               
-                              // Smart merge - combine with previous item
-                              const prevContent = previousItem.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
-                              const currContent = currentText.trim();
-                              mergedItems[index - 1] = `• ${prevContent} ${currContent}`.trim();
+                              // Get current text from DOM
+                              const currentText = (e.currentTarget.textContent || '').trim();
+                              
+                              // Get ALL items from DOM (not from the items array which may be stale)
+                              const ul = e.currentTarget.closest('ul');
+                              if (!ul) return;
+                              
+                              const allLiElements = Array.from(ul.querySelectorAll('li'));
+                              const currentItems = allLiElements.map((li) => {
+                                const text = (li.querySelector('div[contenteditable]') as HTMLElement)?.textContent || 
+                                             (li as HTMLElement).textContent || '';
+                                return `• ${text.trim()}`;
+                              });
+                              
+                              // Get previous item content
+                              const prevContent = currentItems[index - 1]?.replace(/^[\s]*[•\-\*]\s*/, '').trim() || '';
+                              
+                              // Create merged array
+                              const mergedItems = [...currentItems];
+                              // Merge with space: "prev content" + " " + "current content"
+                              mergedItems[index - 1] = `• ${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
                               mergedItems.splice(index, 1);
                               
                               if (onContentChange) {
@@ -1075,9 +1090,20 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                             // Enter key creates new bullet point
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
-                              const currentText = e.currentTarget.textContent || '';
-                              const newItems = [...items];
-                              newItems[index] = `• ${currentText}`;
+                              
+                              // Get ALL items from DOM
+                              const ul = e.currentTarget.closest('ul');
+                              if (!ul) return;
+                              
+                              const allLiElements = Array.from(ul.querySelectorAll('li'));
+                              const currentItems = allLiElements.map((li) => {
+                                const text = (li.querySelector('div[contenteditable]') as HTMLElement)?.textContent || 
+                                             (li as HTMLElement).textContent || '';
+                                return `• ${text.trim()}`;
+                              });
+                              
+                              // Insert new bullet after current
+                              const newItems = [...currentItems];
                               newItems.splice(index + 1, 0, '• ');
                               
                               if (onContentChange) {
@@ -1151,9 +1177,12 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                                 // Enhanced merge functionality for paragraphs
                                 if (e.key === 'Backspace' && isCursorAtStart() && idx > 0) {
                                   e.preventDefault();
-                                  const currentText = e.currentTarget.textContent || '';
+                                  const currentText = (e.currentTarget.textContent || '').trim();
+                                  const prevContent = allLines[idx - 1].trim();
+                                  
                                   const mergedLines = [...allLines];
-                                  mergedLines[idx - 1] = mergedLines[idx - 1] + ' ' + currentText;
+                                  // Merge with space: "prev content" + " " + "current content"
+                                  mergedLines[idx - 1] = `${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
                                   mergedLines.splice(idx, 1);
                                   
                                   if (onContentChange) {
