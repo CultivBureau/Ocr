@@ -342,10 +342,6 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       return;
     }
     
-    // Simple splitting: entire selected text becomes a new line with bullet
-    // Add newline before bullet so it appears on a new line
-    const replacementText = `\n• ${trimmedText}`;
-    
     // Get the current selection and range
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
@@ -376,17 +372,16 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           if (tagName === 'BR') {
             text += '\n';
           } else if (tagName === 'LI') {
-            // For list items, add newline BEFORE if not first item
+            // For list items, add bullet point marker
             if (text.length > 0 && !text.endsWith('\n')) {
               text += '\n';
             }
+            text += '• ';
             
             // Process children to get the content
             for (let i = 0; i < element.childNodes.length; i++) {
               walkNodes(element.childNodes[i], tagName);
             }
-            
-            // DON'T add newline after - it will be added by the next LI
           } else if (['DIV', 'P'].includes(tagName)) {
             // For DIV and P, add newline before content if not first element
             if (text.length > 0 && !text.endsWith('\n')) {
@@ -427,11 +422,38 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     afterRange.setStart(range.endContainer, range.endOffset);
     const textAfter = extractTextFromRange(afterRange);
     
-    // Combine: text before + replacement (with newline and bullet) + text after
-    // replacementText already contains "\n• " prefix
-    const newContent = textBefore + replacementText + textAfter;
+    // Build new content properly:
+    // 1. Text before the selection (trimmed at end to remove trailing spaces)
+    // 2. New line with bullet for the selected text
+    // 3. Text after (preserve newlines and bullets)
     
-    // Update content - only plain text with bullet, no HTML
+    // Trim trailing whitespace from before (but keep leading)
+    const cleanBefore = textBefore.trimEnd();
+    
+    // For afterText, we need to handle it carefully:
+    // - Always ensure it starts on a new line
+    // - If it starts with bullet, preserve it
+    // - If it's text from same line, make it a new bullet
+    let cleanAfter = textAfter;
+    
+    if (cleanAfter.length > 0) {
+      // Always ensure after content starts on a new line
+      if (!cleanAfter.startsWith('\n')) {
+        // Check if it starts with a bullet (from next LI)
+        if (cleanAfter.startsWith('•')) {
+          // Just add newline before the bullet
+          cleanAfter = '\n' + cleanAfter;
+        } else {
+          // It's remaining text on same line - make it a new bullet
+          cleanAfter = '\n• ' + cleanAfter.trimStart();
+        }
+      }
+    }
+    
+    // Combine: before + newline + bullet + selected text + after
+    const newContent = cleanBefore + '\n• ' + trimmedText + cleanAfter;
+    
+    // Update content
     if (onContentChange) {
       onContentChange(newContent);
     }
