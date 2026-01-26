@@ -144,6 +144,11 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   // Color palette modal state
   const [showColorPaletteModal, setShowColorPaletteModal] = useState(false);
   
+  // Check if content currently has bullet points
+  const contentHasBullets = typeof content === 'string' && (
+    content.includes('•') || /^[\s]*[\-\*]/m.test(content)
+  );
+  
   // Current color palette (use provided or default)
   const currentPalette = colorPalette || PREDEFINED_PALETTES.default;
   
@@ -692,6 +697,31 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     setShowSplitButton(false);
     setSelectedText("");
     setSelectionRange(null);
+  };
+
+  // Handle toggle all bullets in section
+  const handleToggleAllBullets = () => {
+    if (typeof content !== 'string' || !onContentChange) return;
+    
+    if (contentHasBullets) {
+      // Remove all bullet points
+      const lines = content.split('\n');
+      const cleanedLines = lines.map(line => {
+        // Remove bullet markers from start of line
+        return line.replace(/^[\s]*[•\-\*]\s*/, '').trim();
+      }).filter(line => line.length > 0);
+      onContentChange(cleanedLines.join('\n'));
+    } else {
+      // Add bullet points to all lines
+      const lines = content.split('\n').filter(line => line.trim().length > 0);
+      const bulletLines = lines.map(line => {
+        const trimmed = line.trim();
+        // Don't add bullet if line already has one
+        if (/^[•\-\*]/.test(trimmed)) return trimmed;
+        return `• ${trimmed}`;
+      });
+      onContentChange(bulletLines.join('\n'));
+    }
   };
 
   // Handle underline text formatting - Simple and robust approach
@@ -1367,7 +1397,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
 
   return (
     <section className={containerClasses} style={containerStyle}>
-      {/* Edit Color Palette Button - Top Left */}
+      {/* Edit Color Palette Button - Top Left - Always visible */}
       {editable && onColorPaletteChange && (
         <button
           onClick={(e) => {
@@ -1375,12 +1405,12 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
             e.stopPropagation();
             setShowColorPaletteModal(true);
           }}
-          className="absolute top-3 left-3 p-2 rounded-full transition-all duration-200 hover:bg-blue-500 group no-pdf-export bg-white shadow-md border border-gray-200 hover:shadow-lg hover:scale-105 z-10"
+          className="absolute top-3 left-3 p-2 rounded-full transition-all duration-200 hover:bg-blue-500 group no-pdf-export bg-blue-100 shadow-md border border-blue-300 hover:shadow-lg hover:scale-105 z-10"
           title="Edit color palette"
           aria-label="Edit color palette"
         >
           <svg
-            className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors"
+            className="w-4 h-4 text-blue-600 group-hover:text-white transition-colors"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -1395,6 +1425,58 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
         </button>
       )}
 
+      {/* Toggle Bullets Button - Always visible with colored background */}
+      {editable && onContentChange && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleToggleAllBullets();
+          }}
+          className={`absolute top-3 right-14 p-2 rounded-full transition-all duration-200 no-pdf-export shadow-md border hover:shadow-lg hover:scale-105 z-10 ${
+            contentHasBullets 
+              ? 'bg-orange-100 border-orange-300 hover:bg-orange-500' 
+              : 'bg-green-100 border-green-300 hover:bg-green-500'
+          }`}
+          title={contentHasBullets ? "Remove all bullet points" : "Add bullet points to all lines"}
+          aria-label={contentHasBullets ? "Remove all bullet points" : "Add bullet points to all lines"}
+        >
+          <svg
+            className={`w-4 h-4 transition-colors ${
+              contentHasBullets 
+                ? 'text-orange-600 group-hover:text-white' 
+                : 'text-green-600 group-hover:text-white'
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            {contentHasBullets ? (
+              /* X icon - remove bullets */
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            ) : (
+              /* List icon - add bullets */
+              <>
+                <circle cx="5" cy="6" r="1.5" fill="currentColor" />
+                <circle cx="5" cy="12" r="1.5" fill="currentColor" />
+                <circle cx="5" cy="18" r="1.5" fill="currentColor" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6h10M10 12h10M10 18h10"
+                />
+              </>
+            )}
+          </svg>
+        </button>
+      )}
+
       {/* Delete Button - Top Right - Enhanced styling */}
       {editable && onDelete && (
         <>
@@ -1404,12 +1486,12 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
               e.stopPropagation();
               setShowDeleteModal(true);
             }}
-            className="absolute top-3 right-3 p-2 rounded-full transition-all duration-200 hover:bg-red-500 group no-pdf-export bg-white shadow-md border border-gray-200 hover:shadow-lg hover:scale-105 z-10"
+            className="absolute top-3 right-3 p-2 rounded-full transition-all duration-200 hover:bg-red-500 no-pdf-export bg-gray-100 shadow-md border border-gray-300 hover:shadow-lg hover:scale-105 z-10"
             title="Delete section"
             aria-label="Delete this section"
           >
             <svg
-              className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors"
+              className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
