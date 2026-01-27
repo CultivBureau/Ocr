@@ -26,7 +26,7 @@ import DeleteConfirmationModal from "../../components/DeleteConfirmationModal";
 import ComponentSuggestionModal from "../../components/ComponentSuggestionModal";
 import { Hotel } from "../../Templates/HotelsSection";
 import { isAuthenticated } from "../../services/AuthApi";
-import { saveDocument, updateDocument, getDocument } from "../../services/HistoryApi";
+import { saveDocument, updateDocument, getDocument, generatePublicLink, getPublicLink } from "../../services/HistoryApi";
 import { generatePDFWithPlaywright, downloadPDFBlob } from "../../services/PdfApi";
 import { getCompany } from "../../services/CompanyApi";
 import ProtectedRoute from "../../components/ProtectedRoute";
@@ -123,6 +123,8 @@ function CodePageContent() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
   const [isExportingPlaywright, setIsExportingPlaywright] = useState(false);
+  const [isCopyingLink, setIsCopyingLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   
   // Component suggestions state
@@ -2083,6 +2085,119 @@ function CodePageContent() {
     }
   }, [documentId, sourceMetadata, structure]);
 
+  // Fallback copy method for mobile and older browsers
+  const copyToClipboardFallback = (text: string): boolean => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.width = '2em';
+      textArea.style.height = '2em';
+      textArea.style.padding = '0';
+      textArea.style.border = 'none';
+      textArea.style.outline = 'none';
+      textArea.style.boxShadow = 'none';
+      textArea.style.background = 'transparent';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      return successful;
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+      return false;
+    }
+  };
+
+  const handleCopyPublicLink = useCallback(async () => {
+    if (!documentId) {
+      alert(isRTL ? 'الرجاء حفظ المستند أولاً' : 'Please save the document first');
+      return;
+    }
+
+    setIsCopyingLink(true);
+    setLinkCopied(false);
+    
+    try {
+      // Generate or get public link first
+      let publicLink: string | null = null;
+      
+      // First, try to generate a new link (this will create or regenerate)
+      try {
+        const result = await generatePublicLink(documentId);
+        publicLink = result.public_link;
+      } catch (generateErr) {
+        console.error('Failed to generate public link:', generateErr);
+        // If generation fails, try to get existing link
+        try {
+          const result = await getPublicLink(documentId);
+          publicLink = result.public_link;
+        } catch (getErr) {
+          console.error('Failed to get public link:', getErr);
+          throw new Error(isRTL ? 'تعذر إنشاء أو استرجاع الرابط العام. يرجى المحاولة مرة أخرى.' : 'Unable to create or retrieve public link. Please try again.');
+        }
+      }
+      
+      // Copy to clipboard (for mobile, we must use fallback method in user gesture context)
+      if (publicLink) {
+        let copied = false;
+        
+        // Detect mobile devices
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        // On mobile, always use fallback method as it works better with user gesture
+        // On desktop, try modern Clipboard API first
+        if (isMobile) {
+          // Use fallback method for mobile (works with user gesture even after async)
+          copied = copyToClipboardFallback(publicLink);
+        } else if (navigator.clipboard?.writeText) {
+          // Try modern Clipboard API for desktop (works on HTTPS)
+          try {
+            await navigator.clipboard.writeText(publicLink);
+            copied = true;
+          } catch (clipboardErr: any) {
+            console.warn('Clipboard API failed, trying fallback:', clipboardErr);
+            // If clipboard API fails, use fallback
+            copied = copyToClipboardFallback(publicLink);
+          }
+        } else {
+          // No clipboard API available, use fallback
+          copied = copyToClipboardFallback(publicLink);
+        }
+        
+        if (copied) {
+          setLinkCopied(true);
+          setTimeout(() => setLinkCopied(false), 2000);
+          setShowMenuDropdown(false);
+        } else {
+          // If copy failed, show link in a way user can copy manually
+          // Use prompt which allows user to select and copy on mobile
+          const userConfirmed = window.prompt(
+            isRTL ? 'تعذر النسخ تلقائياً. يرجى نسخ هذا الرابط:' : 'Unable to copy automatically. Please copy this link:',
+            publicLink
+          );
+          // If user interacted with prompt, consider it a success
+          if (userConfirmed !== null) {
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+            setShowMenuDropdown(false);
+          }
+        }
+      } else {
+        throw new Error(isRTL ? 'لا يوجد رابط عام متاح' : 'No public link available');
+      }
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      const errorMessage = err instanceof Error ? err.message : (isRTL ? 'فشل نسخ الرابط. يرجى المحاولة مرة أخرى.' : 'Failed to copy link. Please try again.');
+      alert(errorMessage);
+    } finally {
+      setIsCopyingLink(false);
+    }
+  }, [documentId, isRTL]);
+
   const handleAddAirplaneClick = useCallback(() => {
     setShowAddAirplaneModal(true);
     setShowMenuDropdown(false);
@@ -2612,6 +2727,34 @@ function CodePageContent() {
                       </button>
                     )}
                     
+                    <div className="border-t border-gray-200 my-1"></div>
+                    
+                    {/* Copy Public Link */}
+                    <button
+                      onClick={handleCopyPublicLink}
+                      disabled={!documentId || isCopyingLink}
+                      className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
+                      title={linkCopied ? (isRTL ? 'تم نسخ الرابط!' : 'Link copied!') : (isRTL ? 'نسخ الرابط العام' : 'Copy public link')}
+                    >
+                      {isCopyingLink ? (
+                        <svg className="animate-spin h-4 w-4 text-[#A4C639]" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : linkCopied ? (
+                        <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                      )}
+                      <span>
+                        {isCopyingLink ? (isRTL ? 'جاري النسخ...' : 'Copying...') : linkCopied ? (isRTL ? 'تم النسخ!' : 'Copied!') : (isRTL ? 'نسخ الرابط العام' : 'Copy Public Link')}
+                      </span>
+                    </button>
+                    
                     {/* Versions - only show if authenticated and has versions */}
                     {isAuthenticated() && documentId && totalVersions > 1 && (
                       <>
@@ -2661,7 +2804,7 @@ function CodePageContent() {
         </div>
       </div>
     </div>
-  ), [handleExportCode, handleExportPDF, handleExportPDFWithPlaywright, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown, isExportingPlaywright, hasChanges]);
+  ), [handleExportCode, handleExportPDF, handleExportPDFWithPlaywright, handleCopyPublicLink, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown, isExportingPlaywright, hasChanges, isCopyingLink, linkCopied]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-cyan-50 via-blue-50 to-lime-50 text-gray-900">
