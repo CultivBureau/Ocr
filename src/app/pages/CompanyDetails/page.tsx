@@ -12,12 +12,14 @@ import {
   getCompanyUsageHistory,
   getCompanyUsers,
   getCompanyPlanDetails,
+  getCompanyExportData,
   type Company,
   type CompanyUsageSummary,
   type CompanyUsersResponse,
   type CompanyPlanDetails,
   type UsageHistoryResponse,
 } from "@/app/services/CompanyApi";
+import { exportCompanyDataToExcel } from "@/app/utils/excelExport";
 import { format } from "date-fns";
 
 const API_BASE_URL =
@@ -45,6 +47,8 @@ function CompanyDetailsContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Usage filter
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -265,6 +269,33 @@ function CompanyDetailsContent() {
     }
   };
 
+  // Export handler
+  const handleExport = async (exportAll: boolean) => {
+    try {
+      setIsExporting(true);
+      setError("");
+      
+      const companyId = exportAll ? undefined : selectedCompanyId || undefined;
+      const data = await getCompanyExportData(companyId);
+      
+      const fileName = exportAll 
+        ? `all_companies_report_${format(new Date(), "yyyy-MM-dd")}`
+        : `${companyDetails?.name || "company"}_report_${format(new Date(), "yyyy-MM-dd")}`;
+      
+      exportCompanyDataToExcel(data, fileName);
+      setSuccess(exportAll ? "All companies data exported successfully!" : "Company data exported successfully!");
+      setShowExportModal(false);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to export data";
+      setError(message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50">
       {/* Header */}
@@ -319,11 +350,22 @@ function CompanyDetailsContent() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-black mb-2">
-            Company Details
-          </h1>
-          <p className="text-gray-700">Select and view detailed information for any company</p>
+        <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-4xl font-bold text-black mb-2">
+              Company Details
+            </h1>
+            <p className="text-gray-700">Select and view detailed information for any company</p>
+          </div>
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-xl hover:shadow-lg transition-all flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export to Excel
+          </button>
         </div>
 
         {/* Company Filter */}
@@ -819,6 +861,122 @@ function CompanyDetailsContent() {
           </div>
         )}
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 border-2 border-gray-200">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-black flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                Export Data
+              </h3>
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p className="text-gray-600 mb-6">
+              Choose what data you want to export to Excel. The export includes company information, plan details, usage statistics, and user lists.
+            </p>
+
+            <div className="space-y-3">
+              {/* Export All Companies */}
+              <button
+                onClick={() => handleExport(true)}
+                disabled={isExporting}
+                className="w-full p-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-between disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  <div className="text-left">
+                    <p className="font-bold">Export All Companies</p>
+                    <p className="text-sm text-blue-100">{companies.length} companies</p>
+                  </div>
+                </div>
+                {isExporting ? (
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
+              </button>
+
+              {/* Export Selected Company */}
+              <button
+                onClick={() => handleExport(false)}
+                disabled={isExporting || !selectedCompanyId}
+                className="w-full p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-between disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <div className="text-left">
+                    <p className="font-bold">Export Selected Company</p>
+                    <p className="text-sm text-green-100">
+                      {selectedCompanyId ? companyDetails?.name || "Selected company" : "No company selected"}
+                    </p>
+                  </div>
+                </div>
+                {isExporting ? (
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            <div className="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
+              <p className="text-sm text-amber-800 flex items-center gap-2">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  <strong>Excel Report includes:</strong> Companies overview, Plan details, Current & Historical usage, Users list
+                </span>
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowExportModal(false)}
+              className="w-full mt-4 px-4 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Success Toast */}
+      {success && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 z-50 animate-fade-in">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {success}
+        </div>
+      )}
     </div>
   );
 }

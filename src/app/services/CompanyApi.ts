@@ -465,3 +465,84 @@ export async function getCompanyPlanDetails(companyId: string): Promise<CompanyP
   });
 }
 
+// Export data types
+export interface ExportCompanyData {
+  company_id: string;
+  company_name: string;
+  is_active: boolean;
+  created_at: string | null;
+  plan_name: string;
+  plan_price_monthly: number;
+  plan_is_trial: boolean;
+  plan_started_at: string | null;
+  plan_expires_at: string | null;
+  uploads_limit: number;
+  pages_limit: number;
+  pdf_exports_limit: number;
+  users_limit: number;
+}
+
+export interface ExportUsageCurrentData {
+  company_id: string;
+  company_name: string;
+  period_start: string | null;
+  uploads_used: number;
+  uploads_limit: number;
+  uploads_percentage: number;
+  ocr_pages_used: number;
+  ocr_pages_limit: number;
+  ocr_pages_percentage: number;
+  pdf_exports_used: number;
+  pdf_exports_limit: number;
+  pdf_exports_percentage: number;
+  users_count: number;
+  users_limit: number;
+  users_percentage: number;
+}
+
+export interface ExportUsageHistoricalData {
+  company_id: string;
+  company_name: string;
+  total_uploads: number;
+  total_ocr_pages: number;
+  total_pdf_exports: number;
+  total_users: number;
+}
+
+export interface ExportUserData {
+  company_id: string;
+  company_name: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  user_role: string;
+  is_active: boolean;
+  created_at: string | null;
+}
+
+export interface CompanyExportResponse {
+  export_date: string;
+  export_type: string;
+  companies_count: number;
+  companies: ExportCompanyData[];
+  usage_current_period: ExportUsageCurrentData[];
+  usage_historical: ExportUsageHistoricalData[];
+  users: ExportUserData[];
+}
+
+/**
+ * Get company data for Excel export (Super Admin only)
+ * 
+ * @param companyId - Optional specific company ID, leave empty for all companies
+ */
+export async function getCompanyExportData(companyId?: string): Promise<CompanyExportResponse> {
+  const params = new URLSearchParams();
+  if (companyId) {
+    params.append("company_id", companyId);
+  }
+  
+  return authRequest(`/companies/export/data?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
