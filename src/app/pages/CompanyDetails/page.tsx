@@ -9,12 +9,14 @@ import {
   getAllCompanies,
   getCompany,
   getCompanyUsage,
+  getCompanyUsageHistory,
   getCompanyUsers,
   getCompanyPlanDetails,
   type Company,
   type CompanyUsageSummary,
   type CompanyUsersResponse,
   type CompanyPlanDetails,
+  type UsageHistoryResponse,
 } from "@/app/services/CompanyApi";
 import { format } from "date-fns";
 
@@ -37,6 +39,7 @@ function CompanyDetailsContent() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [companyDetails, setCompanyDetails] = useState<Company | null>(null);
   const [usage, setUsage] = useState<CompanyUsageSummary | null>(null);
+  const [usageHistory, setUsageHistory] = useState<UsageHistoryResponse | null>(null);
   const [plan, setPlan] = useState<CompanyPlanDetails | null>(null);
   const [companyUsers, setCompanyUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,6 +49,7 @@ function CompanyDetailsContent() {
   // Usage filter
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showCurrentPeriodOnly, setShowCurrentPeriodOnly] = useState(true);
 
   useEffect(() => {
     fetchCompanies();
@@ -57,10 +61,11 @@ function CompanyDetailsContent() {
     } else {
       setCompanyDetails(null);
       setUsage(null);
+      setUsageHistory(null);
       setPlan(null);
       setCompanyUsers([]);
     }
-  }, [selectedCompanyId, selectedMonth, selectedYear]);
+  }, [selectedCompanyId, selectedMonth, selectedYear, showCurrentPeriodOnly]);
 
   const fetchCompanies = async () => {
     try {
@@ -83,14 +88,16 @@ function CompanyDetailsContent() {
     try {
       setIsLoading(true);
       setError("");
-      const [detailsData, usageData, planData, usersData] = await Promise.all([
+      const [detailsData, usageData, usageHistoryData, planData, usersData] = await Promise.all([
         getCompany(selectedCompanyId),
-        getCompanyUsage(selectedCompanyId, selectedMonth, selectedYear),
+        getCompanyUsage(selectedCompanyId, selectedMonth, selectedYear, showCurrentPeriodOnly),
+        getCompanyUsageHistory(selectedCompanyId, 0, 100),
         getCompanyPlanDetails(selectedCompanyId),
         getCompanyUsers(selectedCompanyId, 0, 100),
       ]);
       setCompanyDetails(detailsData);
       setUsage(usageData);
+      setUsageHistory(usageHistoryData);
       setPlan(planData);
       setCompanyUsers(usersData.users || []);
     } catch (err) {
@@ -566,7 +573,22 @@ function CompanyDetailsContent() {
                   </div>
                   Usage Statistics
                 </h2>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap items-center">
+                  {/* Current Period Toggle */}
+                  <div className="flex items-center gap-2 mr-2">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showCurrentPeriodOnly}
+                        onChange={(e) => setShowCurrentPeriodOnly(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#C4B454]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C4B454]"></div>
+                      <span className="ml-2 text-sm font-medium text-gray-700">
+                        {showCurrentPeriodOnly ? "Current Period" : "All History"}
+                      </span>
+                    </label>
+                  </div>
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(Number(e.target.value))}
@@ -689,6 +711,65 @@ function CompanyDetailsContent() {
                 </div>
               ) : (
                 <p className="text-black bg-gray-100 p-4 rounded-lg">Loading usage statistics...</p>
+              )}
+
+              {/* Historical Usage Summary */}
+              {usageHistory && (
+                <div className="mt-6 pt-6 border-t-2 border-gray-200">
+                  <h3 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
+                    <span>📊</span> Usage Comparison
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Current Period Summary */}
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-200">
+                      <h4 className="text-sm font-bold text-green-700 mb-3 flex items-center gap-2">
+                        <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                        Current Plan Period
+                        {usageHistory.plan_started_at && (
+                          <span className="text-xs text-green-600 font-medium">
+                            (Since {format(new Date(usageHistory.plan_started_at), "MMM dd, yyyy")})
+                          </span>
+                        )}
+                      </h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">Uploads</p>
+                          <p className="text-xl font-bold text-green-700">{usageHistory.current_period_summary.total_uploads}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">OCR Pages</p>
+                          <p className="text-xl font-bold text-green-700">{usageHistory.current_period_summary.total_ocr_pages}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">PDF Exports</p>
+                          <p className="text-xl font-bold text-green-700">{usageHistory.current_period_summary.total_pdf_exports}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* All-Time Summary */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border-2 border-blue-200">
+                      <h4 className="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2">
+                        <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                        All-Time Total (Historical)
+                      </h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">Uploads</p>
+                          <p className="text-xl font-bold text-blue-700">{usageHistory.all_time_summary.total_uploads}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">OCR Pages</p>
+                          <p className="text-xl font-bold text-blue-700">{usageHistory.all_time_summary.total_ocr_pages}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">PDF Exports</p>
+                          <p className="text-xl font-bold text-blue-700">{usageHistory.all_time_summary.total_pdf_exports}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 

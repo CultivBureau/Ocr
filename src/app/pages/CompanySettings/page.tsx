@@ -11,6 +11,7 @@ import {
   getCompanySettings,
   updateCompanySettings,
   getCompanyUsage,
+  getCompanyUsageHistory,
   getCompanyUsers,
   getCompanyPlan,
   uploadCompanyHeaderImage,
@@ -24,6 +25,7 @@ import {
   type CompanySettings,
   type UsageSummary,
   type CompanyPlan,
+  type UsageHistoryResponse,
 } from "@/app/services/CompanySettingsApi";
 import { format } from "date-fns";
 
@@ -45,6 +47,7 @@ function CompanySettingsContent() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [usageHistory, setUsageHistory] = useState<UsageHistoryResponse | null>(null);
   const [plan, setPlan] = useState<CompanyPlan | null>(null);
   const [companyUsers, setCompanyUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +67,7 @@ function CompanySettingsContent() {
   // Usage filter
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showCurrentPeriodOnly, setShowCurrentPeriodOnly] = useState(true);
 
   // Airline companies and includes all options state
   const [newAirlineCompany, setNewAirlineCompany] = useState("");
@@ -73,20 +77,22 @@ function CompanySettingsContent() {
 
   useEffect(() => {
     fetchData();
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, showCurrentPeriodOnly]);
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
       setError("");
-      const [settingsData, usageData, planData, usersData] = await Promise.all([
+      const [settingsData, usageData, usageHistoryData, planData, usersData] = await Promise.all([
         getCompanySettings(),
-        getCompanyUsage(selectedMonth, selectedYear),
+        getCompanyUsage(selectedMonth, selectedYear, showCurrentPeriodOnly),
+        getCompanyUsageHistory(0, 100),
         getCompanyPlan(),
         getCompanyUsers(0, 100),
       ]);
       setSettings(settingsData);
       setUsage(usageData);
+      setUsageHistory(usageHistoryData);
       setPlan(planData);
       setCompanyUsers(usersData.users || []);
       setFormName(settingsData.name);
@@ -831,7 +837,7 @@ function CompanySettingsContent() {
 
             {/* Usage Statistics */}
             <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200 lg:col-span-2">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
                 <h2 className={`text-2xl font-bold text-black flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -840,7 +846,21 @@ function CompanySettingsContent() {
                   </div>
                   {t.companySettings.usageStatistics}
                 </h2>
-       
+                {/* Current Period Toggle */}
+                <div className="flex items-center gap-2">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showCurrentPeriodOnly}
+                      onChange={(e) => setShowCurrentPeriodOnly(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#C4B454]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C4B454]"></div>
+                    <span className={`${isRTL ? 'mr-2' : 'ml-2'} text-sm font-medium text-gray-700`}>
+                      {showCurrentPeriodOnly ? (isRTL ? "الفترة الحالية" : "Current Period") : (isRTL ? "كل السجلات" : "All History")}
+                    </span>
+                  </label>
+                </div>
               </div>
 
               {usage && plan?.plan && (
@@ -1003,6 +1023,65 @@ function CompanySettingsContent() {
               {usage && (
                 <div className="mt-4 text-xs text-black">
                   Period: {format(new Date(usage.period_start), "MMM d")} - {format(new Date(usage.period_end), "MMM d, yyyy")}
+                </div>
+              )}
+
+              {/* Historical Usage Summary */}
+              {usageHistory && (
+                <div className="mt-6 pt-6 border-t-2 border-gray-200">
+                  <h3 className={`text-lg font-bold text-black mb-4 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <span>📊</span> {isRTL ? "مقارنة الاستخدام" : "Usage Comparison"}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Current Period Summary */}
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-200">
+                      <h4 className={`text-sm font-bold text-green-700 mb-3 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                        {isRTL ? "الفترة الحالية للخطة" : "Current Plan Period"}
+                        {usageHistory.plan_started_at && (
+                          <span className="text-xs text-green-600 font-medium">
+                            ({isRTL ? "منذ" : "Since"} {format(new Date(usageHistory.plan_started_at), "MMM dd, yyyy")})
+                          </span>
+                        )}
+                      </h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">{isRTL ? "التحميلات" : "Uploads"}</p>
+                          <p className="text-xl font-bold text-green-700">{usageHistory.current_period_summary.total_uploads}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">{isRTL ? "صفحات OCR" : "OCR Pages"}</p>
+                          <p className="text-xl font-bold text-green-700">{usageHistory.current_period_summary.total_ocr_pages}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">{isRTL ? "تصدير PDF" : "PDF Exports"}</p>
+                          <p className="text-xl font-bold text-green-700">{usageHistory.current_period_summary.total_pdf_exports}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* All-Time Summary */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border-2 border-blue-200">
+                      <h4 className={`text-sm font-bold text-blue-700 mb-3 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                        {isRTL ? "الإجمالي الكلي (تاريخي)" : "All-Time Total (Historical)"}
+                      </h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">{isRTL ? "التحميلات" : "Uploads"}</p>
+                          <p className="text-xl font-bold text-blue-700">{usageHistory.all_time_summary.total_uploads}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">{isRTL ? "صفحات OCR" : "OCR Pages"}</p>
+                          <p className="text-xl font-bold text-blue-700">{usageHistory.all_time_summary.total_ocr_pages}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">{isRTL ? "تصدير PDF" : "PDF Exports"}</p>
+                          <p className="text-xl font-bold text-blue-700">{usageHistory.all_time_summary.total_pdf_exports}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

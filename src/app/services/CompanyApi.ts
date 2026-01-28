@@ -166,13 +166,31 @@ export async function deleteCompany(companyId: string): Promise<void> {
 
 /**
  * Assign plan to company (Super Admin only)
+ * This will reset usage counters by default when changing plans.
+ * 
+ * @param companyId - Company ID
+ * @param planId - Plan ID to assign
+ * @param resetUsage - Whether to reset usage counters (default: true)
  */
 export async function assignPlan(
   companyId: string,
-  planId: string
+  planId: string,
+  resetUsage: boolean = true
 ): Promise<Company> {
-  return authRequest(`/companies/${companyId}/plan?plan_id=${planId}`, {
+  return authRequest(`/companies/${companyId}/plan?plan_id=${planId}&reset_usage=${resetUsage}`, {
     method: "PUT",
+  });
+}
+
+/**
+ * Renew current plan for a company (Super Admin only)
+ * This resets the plan period and all usage counters to 0.
+ * 
+ * @param companyId - Company ID
+ */
+export async function renewPlan(companyId: string): Promise<Company> {
+  return authRequest(`/companies/${companyId}/plan/renew`, {
+    method: "POST",
   });
 }
 
@@ -295,6 +313,35 @@ export interface CompanyUsageSummary {
   period_end: string;
 }
 
+export interface UsageRecord {
+  id: string;
+  action: string;
+  pages: number;
+  cost: number;
+  created_at: string;
+  is_current_period: boolean;
+}
+
+export interface UsageHistoryResponse {
+  records: UsageRecord[];
+  total: number;
+  skip: number;
+  limit: number;
+  plan_started_at: string | null;
+  current_period_summary: {
+    total_uploads: number;
+    total_ocr_pages: number;
+    total_pdf_exports: number;
+    total_cost: number;
+  };
+  all_time_summary: {
+    total_uploads: number;
+    total_ocr_pages: number;
+    total_pdf_exports: number;
+    total_cost: number;
+  };
+}
+
 export interface CompanyPlanDetails {
   plan: {
     id: string;
@@ -334,11 +381,17 @@ export interface CompanyUsersResponse {
 
 /**
  * Get company usage statistics (Super Admin only)
+ * 
+ * @param companyId - Company ID
+ * @param month - Month (1-12)
+ * @param year - Year
+ * @param currentPeriodOnly - If true, only show usage since plan started
  */
 export async function getCompanyUsage(
   companyId: string,
   month?: number,
-  year?: number
+  year?: number,
+  currentPeriodOnly: boolean = true
 ): Promise<CompanyUsageSummary> {
   const params = new URLSearchParams();
   if (month !== undefined) {
@@ -347,8 +400,41 @@ export async function getCompanyUsage(
   if (year !== undefined) {
     params.append("year", year.toString());
   }
+  params.append("current_period_only", currentPeriodOnly.toString());
 
   return authRequest(`/companies/${companyId}/usage?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Get company usage history (Super Admin only)
+ * Returns all usage records including historical data from previous plan periods.
+ * 
+ * @param companyId - Company ID
+ * @param skip - Number of records to skip
+ * @param limit - Maximum number of records to return
+ * @param startDate - Filter records from this date (ISO string)
+ * @param endDate - Filter records until this date (ISO string)
+ */
+export async function getCompanyUsageHistory(
+  companyId: string,
+  skip: number = 0,
+  limit: number = 100,
+  startDate?: string,
+  endDate?: string
+): Promise<UsageHistoryResponse> {
+  const params = new URLSearchParams();
+  params.append("skip", skip.toString());
+  params.append("limit", limit.toString());
+  if (startDate) {
+    params.append("start_date", startDate);
+  }
+  if (endDate) {
+    params.append("end_date", endDate);
+  }
+
+  return authRequest(`/companies/${companyId}/usage/history?${params.toString()}`, {
     method: "GET",
   });
 }

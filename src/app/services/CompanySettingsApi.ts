@@ -71,6 +71,35 @@ export interface UsageSummary {
   period_end: string;
 }
 
+export interface UsageRecord {
+  id: string;
+  action: string;
+  pages: number;
+  cost: number;
+  created_at: string;
+  is_current_period: boolean;
+}
+
+export interface UsageHistoryResponse {
+  records: UsageRecord[];
+  total: number;
+  skip: number;
+  limit: number;
+  plan_started_at: string | null;
+  current_period_summary: {
+    total_uploads: number;
+    total_ocr_pages: number;
+    total_pdf_exports: number;
+    total_cost: number;
+  };
+  all_time_summary: {
+    total_uploads: number;
+    total_ocr_pages: number;
+    total_pdf_exports: number;
+    total_cost: number;
+  };
+}
+
 export interface CompanyPlan {
   plan: {
     id: string;
@@ -135,10 +164,15 @@ export async function updateCompanySettings(
 
 /**
  * Get company usage statistics (Company Admin only)
+ * 
+ * @param month - Month (1-12)
+ * @param year - Year
+ * @param currentPeriodOnly - If true, only show usage since plan started
  */
 export async function getCompanyUsage(
   month?: number,
-  year?: number
+  year?: number,
+  currentPeriodOnly: boolean = true
 ): Promise<UsageSummary> {
   const params = new URLSearchParams();
   if (month !== undefined) {
@@ -147,8 +181,39 @@ export async function getCompanyUsage(
   if (year !== undefined) {
     params.append("year", year.toString());
   }
+  params.append("current_period_only", currentPeriodOnly.toString());
 
   return authRequest(`/company/usage?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Get company usage history (Company Admin only)
+ * Returns all usage records including historical data from previous plan periods.
+ * 
+ * @param skip - Number of records to skip
+ * @param limit - Maximum number of records to return
+ * @param startDate - Filter records from this date (ISO string)
+ * @param endDate - Filter records until this date (ISO string)
+ */
+export async function getCompanyUsageHistory(
+  skip: number = 0,
+  limit: number = 100,
+  startDate?: string,
+  endDate?: string
+): Promise<UsageHistoryResponse> {
+  const params = new URLSearchParams();
+  params.append("skip", skip.toString());
+  params.append("limit", limit.toString());
+  if (startDate) {
+    params.append("start_date", startDate);
+  }
+  if (endDate) {
+    params.append("end_date", endDate);
+  }
+
+  return authRequest(`/company/usage/history?${params.toString()}`, {
     method: "GET",
   });
 }

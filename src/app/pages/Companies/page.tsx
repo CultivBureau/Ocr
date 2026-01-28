@@ -24,6 +24,7 @@ import {
   Sparkles,
   User,
   LogOut,
+  RefreshCw,
 } from "lucide-react";
 import {
   getAllCompanies,
@@ -31,6 +32,7 @@ import {
   updateCompany,
   deleteCompany,
   assignPlan,
+  renewPlan,
   activateCompany,
   uploadCompanyHeaderImage,
   uploadCompanyFooterImage,
@@ -90,6 +92,20 @@ function CompaniesContent() {
     companyId: null,
     type: "deactivate",
   });
+
+  // Renew plan modal state
+  const [renewModal, setRenewModal] = useState<{
+    isOpen: boolean;
+    companyId: string | null;
+    companyName: string;
+    planName: string;
+  }>({
+    isOpen: false,
+    companyId: null,
+    companyName: "",
+    planName: "",
+  });
+  const [isRenewing, setIsRenewing] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -261,13 +277,47 @@ function CompaniesContent() {
 
   const handleAssignPlan = async (companyId: string, planId: string) => {
     try {
-      await assignPlan(companyId, planId);
-      setSuccess("Plan assigned successfully");
+      await assignPlan(companyId, planId, true); // Reset usage when assigning new plan
+      setSuccess("Plan assigned successfully. Usage counters have been reset.");
       fetchData();
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to assign plan";
       setError(message);
+    }
+  };
+
+  const handleRenewPlanClick = (company: Company) => {
+    const plan = plans.find((p) => p.id === company.plan_id);
+    if (!plan) {
+      setError("Company has no plan assigned. Please assign a plan first.");
+      return;
+    }
+    setRenewModal({
+      isOpen: true,
+      companyId: company.id,
+      companyName: company.name,
+      planName: plan.name,
+    });
+  };
+
+  const confirmRenewPlan = async () => {
+    if (!renewModal.companyId) return;
+
+    setIsRenewing(true);
+    setError("");
+    
+    try {
+      await renewPlan(renewModal.companyId);
+      setSuccess(`Plan "${renewModal.planName}" renewed successfully for ${renewModal.companyName}. Usage counters have been reset.`);
+      setRenewModal({ isOpen: false, companyId: null, companyName: "", planName: "" });
+      fetchData();
+      setTimeout(() => setSuccess(""), 5000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to renew plan";
+      setError(message);
+    } finally {
+      setIsRenewing(false);
     }
   };
 
@@ -614,24 +664,37 @@ function CompaniesContent() {
 
                   {/* Plan Selector */}
                   {plans.length > 0 && (
-                    <div className="relative">
-                      <select
-                        value={company.plan_id || ""}
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            handleAssignPlan(company.id, e.target.value);
-                          }
-                        }}
-                        className="w-full px-3 py-2.5 text-black text-sm bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#B8A040] transition-all font-medium appearance-none cursor-pointer hover:border-[#C4B454]"
-                      >
-                        <option value="">No Plan</option>
-                        {plans.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <select
+                          value={company.plan_id || ""}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleAssignPlan(company.id, e.target.value);
+                            }
+                          }}
+                          className="w-full px-3 py-2.5 text-black text-sm bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#B8A040] transition-all font-medium appearance-none cursor-pointer hover:border-[#C4B454]"
+                        >
+                          <option value="">No Plan</option>
+                          {plans.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                      
+                      {/* Renew Plan Button - Only show if company has a plan */}
+                      {company.plan_id && (
+                        <button
+                          onClick={() => handleRenewPlanClick(company)}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 border-2 border-emerald-200 rounded-xl hover:from-emerald-100 hover:to-teal-100 font-semibold transition-all hover:shadow-md hover:border-emerald-300"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Renew Plan (Reset Usage)
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -945,6 +1008,83 @@ function CompaniesContent() {
         confirmButtonText={deleteModal.type === "deactivate" ? "Deactivate" : "Delete"}
         confirmButtonColor={deleteModal.type === "deactivate" ? "orange" : "red"}
       />
+
+      {/* Renew Plan Confirmation Modal */}
+      {renewModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                  <RefreshCw className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Renew Plan</h2>
+                  <p className="text-emerald-100 text-sm">Reset usage counters</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <div className="mb-6">
+                <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-4 mb-4">
+                  <p className="text-emerald-800 font-medium mb-2">
+                    You are about to renew the plan for:
+                  </p>
+                  <div className="bg-white rounded-lg p-3 border border-emerald-200">
+                    <p className="font-bold text-gray-900">{renewModal.companyName}</p>
+                    <p className="text-sm text-emerald-600 font-medium">
+                      Plan: {renewModal.planName}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+                  <p className="text-amber-800 font-semibold mb-2 flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    This action will:
+                  </p>
+                  <ul className="text-sm text-amber-700 space-y-1 ml-7">
+                    <li>• Reset all usage counters to <strong>0</strong></li>
+                    <li>• Restart the plan period from <strong>today</strong></li>
+                    <li>• Delete all current usage records</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRenewModal({ isOpen: false, companyId: null, companyName: "", planName: "" })}
+                  disabled={isRenewing}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-all disabled:opacity-50"
+                >
+                  <X className="w-5 h-5" />
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmRenewPlan}
+                  disabled={isRenewing}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold hover:from-emerald-600 hover:to-teal-600 hover:shadow-xl disabled:opacity-50 transition-all transform hover:scale-105 active:scale-95 shadow-lg"
+                >
+                  {isRenewing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Renewing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-5 h-5" />
+                      Renew Plan
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
