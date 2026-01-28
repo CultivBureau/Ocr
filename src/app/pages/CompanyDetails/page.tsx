@@ -106,6 +106,158 @@ function CompanyDetailsContent() {
     "July", "August", "September", "October", "November", "December",
   ];
 
+  // Helper function to calculate usage percentage
+  const calculatePercentage = (used: number, limit: number): number => {
+    if (limit === 0) return 0;
+    return Math.min(Math.round((used / limit) * 100), 100);
+  };
+
+  // Helper function to get color based on usage percentage
+  const getUsageColor = (percentage: number): { bg: string; bar: string; text: string; border: string } => {
+    if (percentage >= 90) {
+      return {
+        bg: "bg-red-50",
+        bar: "bg-gradient-to-r from-red-500 to-red-600",
+        text: "text-red-700",
+        border: "border-red-300"
+      };
+    } else if (percentage >= 70) {
+      return {
+        bg: "bg-amber-50",
+        bar: "bg-gradient-to-r from-amber-500 to-amber-600",
+        text: "text-amber-700",
+        border: "border-amber-300"
+      };
+    } else {
+      return {
+        bg: "bg-green-50",
+        bar: "bg-gradient-to-r from-green-500 to-green-600",
+        text: "text-green-700",
+        border: "border-green-300"
+      };
+    }
+  };
+
+  // Helper function to get status icon
+  const getStatusIcon = (percentage: number): string => {
+    if (percentage >= 90) return "🔴";
+    if (percentage >= 70) return "⚠️";
+    return "✅";
+  };
+
+  // Helper function to render usage metric with progress bar
+  const renderUsageMetric = (
+    label: string,
+    used: number,
+    limit: number,
+    icon: string,
+    accentColor: string
+  ) => {
+    const percentage = calculatePercentage(used, limit);
+    const colors = getUsageColor(percentage);
+    const statusIcon = getStatusIcon(percentage);
+    const isOverLimit = used > limit;
+
+    return (
+      <div className={`${colors.bg} rounded-xl p-5 border-2 ${colors.border} transition-all hover:shadow-md`}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">{icon}</span>
+            <span className="font-bold text-black text-base">{label}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{statusIcon}</span>
+            <span className={`text-2xl font-bold ${colors.text}`}>{percentage}%</span>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="relative w-full h-6 bg-white rounded-full overflow-hidden shadow-inner border border-gray-300 mb-3">
+          <div
+            className={`${colors.bar} h-full transition-all duration-500 ease-out flex items-center justify-end pr-2 shadow-md`}
+            style={{ width: `${Math.min(percentage, 100)}%` }}
+          >
+            {percentage > 10 && (
+              <span className="text-xs font-bold text-white drop-shadow">
+                {percentage}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Usage Numbers */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-600">Used</p>
+            <p className="text-xl font-bold text-black">{used.toLocaleString()}</p>
+          </div>
+          <div className="text-center px-3">
+            <p className="text-sm font-medium text-gray-600">of</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-medium text-gray-600">Limit</p>
+            <p className="text-xl font-bold text-black">{limit.toLocaleString()}</p>
+          </div>
+        </div>
+
+        {/* Warning messages */}
+        {isOverLimit && (
+          <div className="mt-3 p-2 bg-red-100 border border-red-300 rounded-lg">
+            <p className="text-xs font-bold text-red-700">
+              ⛔ OVER LIMIT: {(used - limit).toLocaleString()} over the allowed limit
+            </p>
+          </div>
+        )}
+        {!isOverLimit && percentage >= 90 && (
+          <div className="mt-3 p-2 bg-red-100 border border-red-300 rounded-lg">
+            <p className="text-xs font-bold text-red-700">
+              🚨 CRITICAL: Only {(limit - used).toLocaleString()} remaining
+            </p>
+          </div>
+        )}
+        {percentage >= 70 && percentage < 90 && (
+          <div className="mt-3 p-2 bg-amber-100 border border-amber-300 rounded-lg">
+            <p className="text-xs font-bold text-amber-700">
+              ⚠️ WARNING: {(limit - used).toLocaleString()} remaining ({100 - percentage}% available)
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Helper function to get overall status
+  const getOverallStatus = (
+    uploads: number,
+    uploadsLimit: number,
+    pages: number,
+    pagesLimit: number,
+    exports: number,
+    exportsLimit: number,
+    users: number,
+    usersLimit: number
+  ): string => {
+    const percentages = [
+      calculatePercentage(uploads, uploadsLimit),
+      calculatePercentage(pages, pagesLimit),
+      calculatePercentage(exports, exportsLimit),
+      calculatePercentage(users, usersLimit),
+    ];
+
+    const maxPercentage = Math.max(...percentages);
+    const hasOverLimit = uploads > uploadsLimit || pages > pagesLimit || exports > exportsLimit || users > usersLimit;
+
+    if (hasOverLimit) {
+      return "🔴 Over Limit - Action Required";
+    } else if (maxPercentage >= 90) {
+      return "🔴 Critical - Near Limit";
+    } else if (maxPercentage >= 70) {
+      return "⚠️ Warning - Monitor Usage";
+    } else {
+      return "✅ Healthy - Within Limits";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50">
       {/* Header */}
@@ -403,7 +555,7 @@ function CompanyDetailsContent() {
               )}
             </div>
 
-            {/* Usage Statistics */}
+            {/* Usage Statistics - Enhanced */}
             <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-200 hover:shadow-2xl transition-shadow">
               <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
                 <h2 className="text-2xl font-bold text-black flex items-center gap-3">
@@ -437,8 +589,86 @@ function CompanyDetailsContent() {
                 </div>
               </div>
 
-              {usage ? (
+              {usage && plan?.plan ? (
+                <div className="space-y-6">
+                  {/* Period Info */}
+                  <div className="text-sm text-black font-medium bg-gray-100 p-3 rounded-lg">
+                    📅 Period: {format(new Date(usage.period_start), "MMM dd, yyyy")} - {format(new Date(usage.period_end), "MMM dd, yyyy")}
+                  </div>
+
+                  {/* Usage Metrics with Progress Bars */}
+                  <div className="space-y-5">
+                    {/* Uploads */}
+                    {renderUsageMetric(
+                      "Uploads",
+                      usage.total_uploads,
+                      plan.plan.limits.uploads_per_month,
+                      "📤",
+                      "#C4B454"
+                    )}
+
+                    {/* OCR Pages */}
+                    {renderUsageMetric(
+                      "OCR Pages",
+                      usage.total_ocr_pages,
+                      plan.plan.limits.pages_per_month,
+                      "📄",
+                      "#B8A040"
+                    )}
+
+                    {/* PDF Exports */}
+                    {renderUsageMetric(
+                      "PDF Exports",
+                      usage.total_pdf_exports,
+                      plan.plan.limits.pdf_exports,
+                      "📑",
+                      "#A69035"
+                    )}
+
+                    {/* Active Users */}
+                    {renderUsageMetric(
+                      "Active Users",
+                      companyUsers.length,
+                      plan.plan.limits.users_limit,
+                      "👥",
+                      "#8B7355"
+                    )}
+                  </div>
+
+                  {/* Overall Status Summary */}
+                  <div className="mt-6 pt-6 border-t-2 border-gray-200">
+                    <div className="flex items-center justify-between bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Plan Status</p>
+                        <p className="text-lg font-bold text-black">
+                          {getOverallStatus(
+                            usage.total_uploads,
+                            plan.plan.limits.uploads_per_month,
+                            usage.total_ocr_pages,
+                            plan.plan.limits.pages_per_month,
+                            usage.total_pdf_exports,
+                            plan.plan.limits.pdf_exports,
+                            companyUsers.length,
+                            plan.plan.limits.users_limit
+                          )}
+                        </p>
+                      </div>
+                      {plan.plan_expires_at && (
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-gray-600">Plan Expires</p>
+                          <p className="text-lg font-bold text-black">
+                            {format(new Date(plan.plan_expires_at), "MMM dd, yyyy")}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : usage ? (
                 <div className="space-y-4">
+                  <div className="text-sm text-black font-medium bg-gray-100 p-3 rounded-lg">
+                    📅 Period: {format(new Date(usage.period_start), "MMM dd, yyyy")} - {format(new Date(usage.period_end), "MMM dd, yyyy")}
+                  </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 rounded-xl p-5 border-2 border-[#C4B454]/30 shadow-md">
                       <p className="text-sm text-black font-bold mb-2">Total Uploads</p>
@@ -453,9 +683,9 @@ function CompanyDetailsContent() {
                       <p className="text-3xl font-bold text-[#A69035]">{usage.total_pdf_exports}</p>
                     </div>
                   </div>
-                  <div className="text-sm text-black font-medium mt-4 bg-gray-100 p-3 rounded-lg">
-                    📅 Period: {format(new Date(usage.period_start), "MMM dd, yyyy")} - {format(new Date(usage.period_end), "MMM dd, yyyy")}
-                  </div>
+                  <p className="text-sm text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    ⚠️ No plan assigned - showing basic usage data only
+                  </p>
                 </div>
               ) : (
                 <p className="text-black bg-gray-100 p-4 rounded-lg">Loading usage statistics...</p>
