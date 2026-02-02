@@ -590,7 +590,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                   }}
                 >
                   {/* Subtle header accent */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                   {/* Delete Column Button */}
                   {editable && onRemoveColumn && cleanHeaders.length > 1 && (
                     <button
