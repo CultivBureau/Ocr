@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pdf-converter-frontend
+    ports:
+      - "3006:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - pdf-converter-shared-network
+
+networks:
+  pdf-converter-shared-network:
+    name: pdf-converter-shared-network
+    external: true
