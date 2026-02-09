@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   async headers() {
     // Get Bitrix24 domains from environment variable (comma-separated)
     const bitrixDomains = process.env.NEXT_PUBLIC_BITRIX24_DOMAINS?.split(',')
