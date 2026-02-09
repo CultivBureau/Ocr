@@ -5,8 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: pdfconverter:Prod
-    container_name: pdfconverter-prod
+    image: ${DOCKER_USERNAME}/ocr:Prod
+    container_name: ocr.prod
     ports:
       - "3006:3000"
     environment:
