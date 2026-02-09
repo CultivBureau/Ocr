@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME}/ocr:Stag
+    container_name: ocr.stag
+    ports:
+      - "3007:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - pdf-converter-shared-network
+
+networks:
+  pdf-converter-shared-network:
+    name: pdf-converter-shared-network
+    external: true
