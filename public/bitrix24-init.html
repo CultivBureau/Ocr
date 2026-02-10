@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bureau OCR - Initializing...</title>
+    <meta charset="utf-8">
+    <script src="//api.bitrix24.com/api/v1/"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .loader {
+            text-align: center;
+            color: white;
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader">
+        <div class="spinner"></div>
+        <h2>Loading Bureau OCR...</h2>
+        <p>Authenticating with Bitrix24...</p>
+    </div>
+    <script>
+        BX24.init(function() {
+            // Get current user info from Bitrix24
+            BX24.callMethod('user.current', {}, function(result) {
+                if(result.error()) {
+                    console.error('Error getting user:', result.error());
+                    alert('Failed to authenticate with Bitrix24: ' + result.error());
+                } else {
+                    var user = result.data();
+                    console.log('Bitrix24 user:', user);
+                    
+                    // Redirect to main app with user info
+                    // The app will use this to auto-login or create account
+                    window.location.href = '/?bitrix24=true&bitrix24_user_id=' + user.ID + 
+                        '&bitrix24_email=' + encodeURIComponent(user.EMAIL) +
+                        '&bitrix24_name=' + encodeURIComponent(user.NAME + ' ' + user.LAST_NAME);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
