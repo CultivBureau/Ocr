@@ -45,6 +45,7 @@ jobs:
             cd ~/Pdf-Converter
             echo "${{ secrets.ENV }}" > .env
             export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
-            docker compose down --remove-orphans
+            docker stop ocr.prod || true
+            docker rm ocr.prod || true
             docker compose pull
             docker compose up -d --force-recreate
