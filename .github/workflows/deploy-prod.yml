@@ -25,6 +25,12 @@ jobs:
       - name: Create .env file
         run: echo "${{ secrets.ENV }}" > .env
 
+      - name: Extract NEXT_PUBLIC_API_BASE_URL
+        id: extract_url
+        run: |
+          URL=$(grep NEXT_PUBLIC_API_BASE_URL .env | cut -d '=' -f2-)
+          echo "api_url=$URL" >> $GITHUB_OUTPUT
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -32,6 +38,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/ocr:Prod
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ steps.extract_url.outputs.api_url }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
