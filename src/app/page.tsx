@@ -10,6 +10,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Loading from "./components/Loading";
 import LanguageToggle from "./components/LanguageToggle";
 import { getRoleDisplayName, getRoleBadgeColor } from "./utils/rbac";
+import { useSearchParams } from "next/navigation";
 import { 
   Upload, 
   FileText, 
@@ -43,6 +44,16 @@ function HomeContent() {
   const { documents, toggleSidebar } = useHistory();
   const { t, isRTL, dir } = useLanguage();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const searchParams = useSearchParams();
+
+  // Check if opened from Bitrix24
+  useEffect(() => {
+    const isBitrix24 = searchParams.get("bitrix24");
+    if (isBitrix24 === "true") {
+      console.log("App opened from Bitrix24");
+      // You can add Bitrix24-specific initialization here
+    }
+  }, [searchParams]);
 
   const handleLogout = async () => {
     await logout();

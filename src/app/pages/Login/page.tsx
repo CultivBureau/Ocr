@@ -6,7 +6,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { User, Mail, Lock, AlertCircle, Loader2, Sparkles } from "lucide-react";
-import Bitrix24LoginButton from "@/app/components/Bitrix24LoginButton";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -120,21 +119,6 @@ export default function LoginPage() {
                 </div>
               </div>
             )}
-
-            {/* Bitrix24 Login */}
-            <div className="mb-6">
-              <Bitrix24LoginButton />
-            </div>
-
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with email</span>
-              </div>
-            </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
