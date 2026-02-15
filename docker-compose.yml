@@ -1,12 +1,16 @@
 services:
-  frontend:
+  ocr:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
     image: ${DOCKER_USERNAME}/ocr:Prod
     container_name: ocr.prod
     ports:
       - "3006:3000"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
     restart: unless-stopped
