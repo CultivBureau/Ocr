@@ -20,5 +20,6 @@ jobs:
             cd ~/Pdf-Converter
             git fetch origin
             git pull origin main
+            export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
             docker rm -f ocr.prod || true
             docker compose up -d --build
