@@ -20,6 +20,7 @@ jobs:
             cd ~/Pdf-Converter-Staging
             git fetch origin
             git pull origin Staging
+            set -a && source .env.staging && set +a
             export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
             docker rm -f ocr.stag || true
             docker compose -f docker-compose.staging.yml up -d --build
