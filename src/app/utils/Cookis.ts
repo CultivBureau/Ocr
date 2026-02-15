@@ -3,7 +3,11 @@ import Cookies from "js-cookie";
 
 // Set token in cookies (expires in 7 days to match backend JWT expiration)
 export const setAuthToken = (token: string): void => {
-  Cookies.set("auth_token", token, { expires: 7 });
+  Cookies.set("auth_token", token, { 
+    expires: 7,
+    sameSite: 'None',
+    secure: true
+  });
 };
 
 // Retrieve token from cookies

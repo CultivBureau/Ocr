@@ -10,6 +10,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Loading from "./components/Loading";
 import LanguageToggle from "./components/LanguageToggle";
 import { getRoleDisplayName, getRoleBadgeColor } from "./utils/rbac";
+import { useSearchParams } from "next/navigation";
 import { 
   Upload, 
   FileText, 
@@ -39,10 +40,57 @@ function HomeContent() {
     canManageUsers,
     canManageCompanySettings,
     logout,
+    refreshUser,
   } = useAuth();
   const { documents, toggleSidebar } = useHistory();
   const { t, isRTL, dir } = useLanguage();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const searchParams = useSearchParams();
+
+  // Handle Bitrix24 authentication
+  useEffect(() => {
+    const isBitrix24 = searchParams.get("bitrix24");
+    const bitrix24UserId = searchParams.get("bitrix24_user_id");
+    const bitrix24Email = searchParams.get("bitrix24_email");
+    const bitrix24Name = searchParams.get("bitrix24_name");
+
+    if (isBitrix24 === "true" && bitrix24UserId && !user && !isAuthenticating) {
+      console.log("Authenticating Bitrix24 user:", { bitrix24UserId, bitrix24Email, bitrix24Name });
+      setIsAuthenticating(true);
+      
+      // Authenticate with backend
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/bitrix24/authenticate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          bitrix24_user_id: bitrix24UserId,
+          email: bitrix24Email,
+          name: bitrix24Name,
+          bitrix24_domain: "portal.hl-tourism.com", // Your Bitrix24 domain
+        }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Authentication failed");
+          return res.json();
+        })
+        .then(() => {
+          console.log("Bitrix24 authentication successful");
+          // Refresh user data
+          refreshUser();
+        })
+        .catch((error) => {
+          console.error("Bitrix24 authentication error:", error);
+          alert("Failed to authenticate with Bitrix24. Please try again.");
+        })
+        .finally(() => {
+          setIsAuthenticating(false);
+        });
+    }
+  }, [searchParams, user, isAuthenticating, refreshUser]);
 
   const handleLogout = async () => {
     await logout();

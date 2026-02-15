@@ -53,5 +53,5 @@ jobs:
             cd ~/Pdf-Converter
             echo "${{ secrets.ENV }}" > .env
             export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
-            docker compose pull
-            docker compose up -d --force-recreate
+            docker compose -p ocr-prod pull
+            docker compose -p ocr-prod up -d --force-recreate
