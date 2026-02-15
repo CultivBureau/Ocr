@@ -53,5 +53,6 @@ jobs:
             cd ~/Pdf-Converter
             echo "${{ secrets.ENV_STAG }}" > .env.staging
             export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+            docker rm -f ocr.stag || true
             docker compose -p ocr-staging -f docker-compose.staging.yml pull
             docker compose -p ocr-staging -f docker-compose.staging.yml up -d --force-recreate
