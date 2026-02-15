@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+    image: ${DOCKER_USERNAME}/ocr:Stag
     container_name: ocr.stag
     ports:
       - "3007:3000"
