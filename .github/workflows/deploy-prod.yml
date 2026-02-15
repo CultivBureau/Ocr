@@ -17,6 +17,9 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            if [ ! -d ~/Pdf-Converter ]; then
+              git clone -b main https://github.com/CultivBureau/Ocr.git ~/Pdf-Converter
+            fi
             cd ~/Pdf-Converter
             git fetch origin
             git checkout main
