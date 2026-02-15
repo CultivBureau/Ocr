@@ -17,12 +17,8 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            if [ ! -d ~/Pdf-Converter-Staging ]; then
-              git clone -b Staging https://github.com/CultivBureau/Ocr.git ~/Pdf-Converter-Staging
-            fi
             cd ~/Pdf-Converter-Staging
             git fetch origin
-            git checkout Staging
             git pull origin Staging
             docker compose -f docker-compose.staging.yml down || true
             docker compose -f docker-compose.staging.yml up -d --build
