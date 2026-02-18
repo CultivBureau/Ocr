@@ -1,22 +1,42 @@
-/* Print-optimized CSS for PDF generation */
-/* This CSS ensures 100% accuracy when generating PDFs with Playwright */
+/* ==========================================================================
+   PDF Export Stylesheet — Optimized for Playwright/Chromium PDF generation
+   Targets: A4 page size, clean layout, smart page breaks, no interactive UI
+   ========================================================================== */
 
-/* CRITICAL: Page size (required for preferCSSPageSize) */
+/* ── Page Setup ───────────────────────────────────────────────────────────── */
 @page {
   size: A4;
-  margin: 1cm;
+  margin: 10mm 10mm 12mm 10mm;
 }
 
-/* Base styles - ensure white background */
+/* ── Global Resets for Print ──────────────────────────────────────────────── */
+* {
+  animation: none !important;
+  animation-duration: 0s !important;
+  transition: none !important;
+  transition-duration: 0s !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+}
+
+/* ── Base Document Styles ─────────────────────────────────────────────────── */
+body,
 body.pdf-document-body {
   margin: 0;
   padding: 0;
-  background: #ffffff;
-  color: #000000;
-  font-family: 'Cairo', 'IBM Plex Arabic', system-ui, sans-serif;
+  background: #ffffff !important;
+  color: #1a1a1a;
+  font-family: 'Cairo', 'IBM Plex Arabic', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.55;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
-/* Container for PDF content */
+/* ── Layout Containers ────────────────────────────────────────────────────── */
 .pdf-container {
   width: 100%;
   max-width: 100%;
@@ -25,49 +45,331 @@ body.pdf-document-body {
   margin: 0;
 }
 
-/* Structure renderer - remove all interactive elements */
 .pdf-structure-renderer {
   width: 100%;
   background: #ffffff;
 }
 
-/* Disable all animations and transitions */
-* {
-  animation: none !important;
-  transition: none !important;
+/* BaseTemplate content area — tighter padding for PDF */
+.base-template .px-6 {
+  padding-left: 4mm !important;
+  padding-right: 4mm !important;
+}
+.base-template .py-5 {
+  padding-top: 3mm !important;
+  padding-bottom: 3mm !important;
 }
 
-/* Hide non-PDF elements (buttons, navigation, etc.) */
+/* ── Hide ALL Interactive / Non-Print Elements ────────────────────────────── */
 .no-print,
+.no-pdf-export,
 button,
 [role="button"],
 nav,
-header:not(.pdf-header),
-footer:not(.pdf-footer),
 aside,
 [class*="sidebar"],
 [class*="menu"],
-[class*="toolbar"] {
+[class*="toolbar"],
+[class*="DeleteConfirmationModal"],
+[data-action],
+[contenteditable="true"]::selection {
   display: none !important;
 }
 
-/* Page break control */
+/* Hide edit/delete buttons even if they don't have the above classes */
+.section-template button,
+.hotels-section button,
+[class*="Section"] button,
+.group > .absolute button {
+  display: none !important;
+}
+
+/* ── RTL/LTR Text Alignment ──────────────────────────────────────────────── */
+[dir="rtl"] {
+  text-align: right;
+}
+[dir="ltr"] {
+  text-align: left;
+}
+
+/* ── Typography ───────────────────────────────────────────────────────────── */
+p, li, td, th, span, div {
+  orphans: 3;
+  widows: 3;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  orphans: 4;
+  widows: 4;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* Keep headings with following content */
+h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
+  break-before: avoid;
+  page-break-before: avoid;
+}
+
+/* ── Page Break Control ───────────────────────────────────────────────────── */
 .page-break {
-  page-break-after: always;
   break-after: page;
+  page-break-after: always;
 }
 
-.no-break {
-  page-break-inside: avoid;
+/* IMPORTANT: Allow content to break inside sections and hotel wrappers.
+   Without this, large blocks push to the next page leaving blank space. */
+.no-break,
+.hotels-section {
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+}
+
+/* Individual hotel cards — try to avoid break but allow if needed */
+.hotels-section > .space-y-6 > div {
   break-inside: avoid;
+  page-break-inside: avoid;
 }
 
-/* CRITICAL: Table page break prevention (Chromium bug fix) */
+/* ── Section Template Overrides ───────────────────────────────────────────── */
+.section-template {
+  /* Override Tailwind interactive classes */
+  border-radius: 10px !important;
+  padding: 14px 16px !important;
+  margin-bottom: 10px !important;
+  border: 1px solid #e5e7eb !important;
+  background: #ffffff !important;
+  position: relative;
+  /* Allow page breaks inside long sections */
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+}
+
+/* Remove gradient backgrounds from sections */
+.section-template[class*="bg-gradient"] {
+  background: #ffffff !important;
+}
+
+/* Section title — keep with content */
+.section-template .mb-6.text-center {
+  margin-bottom: 6px !important;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* Section title text */
+.section-template h2 {
+  font-size: 16px !important;
+  margin-bottom: 4px !important;
+  color: #1a1a1a !important;
+}
+
+/* Section title decorative bar */
+.section-template .mb-6.text-center .flex.items-center.justify-center {
+  margin-top: 2px !important;
+}
+
+/* Section content text */
+.section-template .content {
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+
+/* Bullet list items — compact for PDF */
+.section-template .content ul {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.section-template .content ul li {
+  padding: 3px 6px !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+
+/* Remove hover background on list items */
+.section-template .content ul li:hover {
+  background: transparent !important;
+}
+
+/* Bullet dots — keep them clean */
+.section-template .content ul li .flex-shrink-0 .w-2\.5 {
+  width: 6px !important;
+  height: 6px !important;
+  box-shadow: none !important;
+  ring: none !important;
+}
+
+/* Paragraphs in sections */
+.section-template p {
+  margin-bottom: 3px !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+
+/* Section dividers */
+.section-template .border-t {
+  margin-top: 6px !important;
+  margin-bottom: 6px !important;
+}
+
+/* Add Section button - hide */
+.section-template .flex.justify-center.mt-6.mb-2 {
+  display: none !important;
+}
+
+/* ── StructureRenderer Element Gaps ───────────────────────────────────────── */
+/* Reduce the mb-6 gap between layout elements */
+.pdf-structure-renderer .relative.group.mb-6,
+.pdf-structure-renderer > div > .relative.group.mb-6 {
+  margin-bottom: 10px !important;
+}
+
+/* ── Hotels Section Overrides ─────────────────────────────────────────────── */
+.hotels-section {
+  margin-bottom: 10px !important;
+}
+
+/* Hotel title bar */
+.hotels-section .flex.items-center.justify-center.mb-6 {
+  margin-bottom: 8px !important;
+}
+
+.hotels-section .bg-\[\#3B5998\] {
+  padding: 6px 20px !important;
+  border-radius: 20px !important;
+}
+
+.hotels-section .bg-\[\#3B5998\] h2 {
+  font-size: 16px !important;
+}
+
+/* Space between hotel cards */
+.hotels-section .space-y-6 > * + * {
+  margin-top: 10px !important;
+}
+
+/* Hotel card */
+.hotels-section .border-2.border-blue-300 {
+  padding: 12px 14px !important;
+  padding-top: 20px !important;
+  border-radius: 10px !important;
+  border-width: 1.5px !important;
+  margin-top: 14px !important;
+}
+
+/* City badge adjustments */
+.hotels-section .absolute.-top-4 {
+  top: -12px !important;
+}
+
+.hotels-section .bg-\[\#FF6B35\] {
+  padding: 2px 10px !important;
+  font-size: 11px !important;
+}
+
+.hotels-section .bg-\[\#1E88E5\] {
+  padding: 4px 12px !important;
+  font-size: 13px !important;
+}
+
+.hotels-section .bg-\[\#1E88E5\] .bg-white {
+  padding: 1px 8px !important;
+  font-size: 11px !important;
+}
+
+/* Day info badges on hotel cards */
+.hotels-section .absolute.top-2 {
+  font-size: 12px !important;
+}
+
+.hotels-section .absolute.top-2 .bg-\[\#1E88E5\].rounded-full {
+  padding: 3px !important;
+}
+
+.hotels-section .absolute.top-2 svg {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+/* Hotel name bar */
+.hotels-section .mt-8.w-1\/2 {
+  margin-top: 10px !important;
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+  width: 65% !important;
+}
+
+.hotels-section .mt-8.w-1\/2 span {
+  font-size: 12px !important;
+  width: auto !important;
+}
+
+/* Room details grid */
+.hotels-section .mt-4.grid {
+  margin-top: 6px !important;
+  gap: 6px !important;
+}
+
+.hotels-section .mt-4.grid .bg-\[\#1E88E5\] {
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+}
+
+.hotels-section .mt-3 .bg-\[\#1E88E5\] {
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+}
+
+.hotels-section .mt-3 {
+  margin-top: 6px !important;
+}
+
+/* Date row */
+.hotels-section .mt-4.bg-\[\#FF6B35\] {
+  margin-top: 6px !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+}
+
+/* Add hotel dashed card — hide */
+.hotels-section .border-dashed {
+  display: none !important;
+}
+
+/* ── Airplane Section Overrides ───────────────────────────────────────────── */
+[class*="airplane-section"],
+[data-airplane-section-id] {
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+  margin-bottom: 10px !important;
+}
+
+/* ── Transport Section Overrides ──────────────────────────────────────────── */
+[class*="transport-section"],
+[data-transport-section-id] {
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+  margin-bottom: 10px !important;
+}
+
+/* ── Dynamic Table Overrides ──────────────────────────────────────────────── */
+/* Tables should try not to break, but allow it for large tables */
 table {
-  break-inside: avoid;
-  page-break-inside: avoid;
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+  border-collapse: collapse;
+  width: 100%;
 }
 
+/* Individual rows should not break */
 tr {
   break-inside: avoid;
   page-break-inside: avoid;
@@ -81,69 +383,124 @@ tfoot {
   display: table-footer-group;
 }
 
-/* Ensure images don't break pages */
-img {
-  max-width: 100%;
-  height: auto;
-  page-break-inside: avoid;
-  break-inside: avoid;
+/* Table container styling */
+.mb-10 {
+  margin-bottom: 10px !important;
 }
 
-/* Prevent orphaned text */
-p, h1, h2, h3, h4, h5, h6 {
-  orphans: 3;
-  widows: 3;
+/* Table cells */
+td, th {
+  padding: 5px 8px !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
 }
 
-/* Remove shadows and borders for print */
-* {
+/* Table title */
+[class*="dynamicTable"] h3,
+[class*="table"] h3 {
+  font-size: 15px !important;
+  margin-bottom: 6px !important;
+}
+
+/* Table wrapper shadow removal */
+[class*="shadow-2xl"],
+[class*="shadow-xl"],
+[class*="shadow-lg"],
+[class*="shadow-md"],
+[class*="shadow-sm"] {
   box-shadow: none !important;
-  text-shadow: none !important;
 }
 
-/* Ensure proper text alignment for RTL/LTR */
-[dir="rtl"] {
-  text-align: right;
+/* ── Images ───────────────────────────────────────────────────────────────── */
+img {
+  max-width: 100% !important;
+  height: auto !important;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
-[dir="ltr"] {
-  text-align: left;
+/* Header/Footer images in BaseTemplate */
+.base-template img {
+  display: block;
+  width: 100%;
 }
 
-/* Print media query - additional rules */
+/* ── Global Tailwind Class Overrides for Print ────────────────────────────── */
+/* Remove hover effects that may linger */
+[class*="hover\:shadow"],
+[class*="hover\:bg"],
+[class*="hover\:from"],
+[class*="hover\:to"],
+[class*="hover\:via"],
+[class*="hover\:border"],
+[class*="hover\:scale"] {
+  transform: none !important;
+}
+
+/* Remove backdrop blur */
+[class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Ensure background colors are printed */
+[class*="bg-gradient"],
+[class*="bg-\["] {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+/* Override rounded-2xl to smaller radius for print */
+.rounded-2xl {
+  border-radius: 10px !important;
+}
+
+/* Override excessive padding */
+.p-8 {
+  padding: 14px 16px !important;
+}
+
+.p-5, .md\:p-6 {
+  padding: 12px 14px !important;
+}
+
+/* Override spacing classes */
+.mb-8 {
+  margin-bottom: 10px !important;
+}
+
+.mb-6 {
+  margin-bottom: 8px !important;
+}
+
+.space-y-6 > * + * {
+  margin-top: 10px !important;
+}
+
+.space-y-2 > * + * {
+  margin-top: 3px !important;
+}
+
+/* ── Print Media Query (Safety net) ───────────────────────────────────────── */
 @media print {
   @page {
     size: A4;
-    margin: 1cm;
+    margin: 10mm 10mm 12mm 10mm;
   }
 
   body {
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #1a1a1a !important;
   }
 
-  /* Ensure no content clipping */
-  * {
-    overflow: visible !important;
-  }
-
-  /* Remove all interactive elements */
+  /* Links — keep readable colors */
   a {
-    color: #000000;
-    text-decoration: underline;
+    color: inherit !important;
+    text-decoration: none !important;
   }
 
-  /* Ensure tables render correctly */
-  table {
-    border-collapse: collapse;
-    width: 100%;
-  }
-
-  /* Section styling for print */
-  section,
-  [class*="section"] {
-    page-break-inside: avoid;
-    break-inside: avoid;
+  a[href*="http"] {
+    color: #1E88E5 !important;
   }
 }
 
