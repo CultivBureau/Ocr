@@ -213,6 +213,12 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
           belt-and-suspenders fix for the shadow issue that appears only in
           production builds where the print.css bundle may load after Tailwind. */}
       <style dangerouslySetInnerHTML={{ __html: `
+        /* Force light mode CSS variables — prevents Docker dark mode */
+        :root {
+          color-scheme: light !important;
+          --background: #ffffff !important;
+          --foreground: #171717 !important;
+        }
         /* PDF Shadow Removal — production safeguard */
         *, *::before, *::after {
           box-shadow: none !important;

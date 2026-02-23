@@ -31,7 +31,8 @@ export default function HistorySidebar() {
   
   // Hide sidebar on login page
   const isLoginPage = pathname?.includes("/Login");
-  const shouldShow = isAuthenticated && !isLoginPage;
+  const isPdfPage = pathname?.startsWith("/pdf/");
+  const shouldShow = isAuthenticated && !isLoginPage && !isPdfPage;
   
   // Debounce search
   useEffect(() => {
