@@ -17,8 +17,9 @@ import {
   Sparkles
 } from "lucide-react";
 import { 
-  uploadFile, 
-  extractStructured
+  uploadFileWithProgress, 
+  startExtraction,
+  getExtractionJob,
 } from "../../services/PdfApi";
 import type { SeparatedStructure } from "../../types/ExtractTypes";
 import { isAuthenticated } from "../../services/AuthApi";
@@ -39,6 +40,7 @@ const PdfConverterContent: React.FC = () => {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [companyName, setCompanyName] = useState<string | null>(null);
   
   // Error Dialog State
@@ -121,27 +123,49 @@ const PdfConverterContent: React.FC = () => {
     try {
       setIsProcessing(true);
       setError("");
+      setUploadPercent(0);
       setStatus(t.pdfConverter.uploadingFile);
 
-      // Step 1: Upload PDF
-      const uploadResponse = await uploadFile(selectedFile);
+      // Step 1: Upload PDF with progress
+      const uploadResponse = await uploadFileWithProgress(selectedFile, (_, __, percent) => {
+        setUploadPercent(percent);
+      });
+      setUploadPercent(null);
       if (!uploadResponse.file_path) {
         throw new Error(t.pdfConverter.uploadFailed);
       }
 
-      // Step 2: Extract structured data (v2 format: { generated, user, layout, meta })
+      // Step 2: Start extraction job and poll until completed (avoids long-lived request timeouts)
       setStatus(t.pdfConverter.extractingContent);
-      const extractResponse: SeparatedStructure = await extractStructured(uploadResponse.file_path);
-      
-      if (!extractResponse.generated || (!extractResponse.generated.sections?.length && !extractResponse.generated.tables?.length)) {
+      const { job_id } = await startExtraction(uploadResponse.file_path);
+      let extractResponse: SeparatedStructure | null = null;
+      const pollIntervalMs = 2500;
+      const pollTimeoutMs = 5 * 60 * 1000; // 5 minutes max for extraction
+      const startedAt = Date.now();
+      while (true) {
+        if (Date.now() - startedAt > pollTimeoutMs) {
+          throw new Error("Extraction is taking longer than expected. Please try again.");
+        }
+        const job = await getExtractionJob(job_id);
+        if (job.status === "completed" && job.result) {
+          extractResponse = job.result;
+          break;
+        }
+        if (job.status === "failed") {
+          throw new Error(job.error || t.pdfConverter.extractionFailed);
+        }
+        await new Promise((r) => setTimeout(r, pollIntervalMs));
+      }
+      if (!extractResponse?.generated || (!extractResponse.generated.sections?.length && !extractResponse.generated.tables?.length)) {
         throw new Error(t.pdfConverter.extractionFailed);
       }
+      const result: SeparatedStructure = extractResponse;
 
       // Store in sessionStorage for CodePreview page (v2 format)
       if (typeof window !== "undefined") {
         sessionStorage.setItem(
           "codePreview.extractedData",
-          JSON.stringify(extractResponse),
+          JSON.stringify(result),
         );
         sessionStorage.setItem("codePreview.filePath", uploadResponse.file_path);
         sessionStorage.setItem("codePreview.originalFilename", uploadResponse.original_filename || selectedFile.name);
@@ -150,8 +174,8 @@ const PdfConverterContent: React.FC = () => {
           JSON.stringify({
             filename: uploadResponse.filename || selectedFile.name,
             uploadedAt: new Date().toISOString(),
-            sectionsCount: extractResponse.generated.sections?.length || 0,
-            tablesCount: extractResponse.generated.tables?.length || 0,
+            sectionsCount: result.generated.sections?.length || 0,
+            tablesCount: result.generated.tables?.length || 0,
           }),
         );
       }
@@ -166,12 +190,12 @@ const PdfConverterContent: React.FC = () => {
             title: docTitle,
             original_filename: uploadResponse.original_filename || selectedFile.name,
             file_path: uploadResponse.file_path,
-            extracted_data: extractResponse, // Full v2 structure
+            extracted_data: result, // Full v2 structure
             metadata: {
               filename: uploadResponse.filename || selectedFile.name,
               uploadedAt: new Date().toISOString(),
-              sectionsCount: extractResponse.generated.sections?.length || 0,
-              tablesCount: extractResponse.generated.tables?.length || 0,
+              sectionsCount: result.generated.sections?.length || 0,
+              tablesCount: result.generated.tables?.length || 0,
             },
           });
           
@@ -234,8 +258,10 @@ const PdfConverterContent: React.FC = () => {
         setError(message);
       }
       setStatus("");
+      setUploadPercent(null);
     } finally {
       setIsProcessing(false);
+      setUploadPercent(null);
     }
   };
 
@@ -368,8 +394,21 @@ const PdfConverterContent: React.FC = () => {
             {status && (
               <div className="rounded-lg bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/5 border border-[#C4B454]/30 p-4">
                 <div className="flex items-center gap-3">
-                  <Loader2 className="w-5 h-5 text-[#B8A040] animate-spin" />
-                  <p className="text-sm font-medium text-gray-900">{status}</p>
+                  <Loader2 className="w-5 h-5 text-[#B8A040] animate-spin shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900">{status}</p>
+                    {uploadPercent !== null && (
+                      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#C4B454]/20">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-[#C4B454] to-[#B8A040] transition-[width] duration-300"
+                          style={{ width: `${uploadPercent}%` }}
+                        />
+                      </div>
+                    )}
+                    {status === t.pdfConverter.extractingContent && (
+                      <p className="mt-1 text-xs text-gray-500">{t.pdfConverter.extractingContentNote}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

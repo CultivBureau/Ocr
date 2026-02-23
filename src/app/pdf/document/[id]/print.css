@@ -3,6 +3,15 @@
    Targets: A4 page size, clean layout, smart page breaks, no interactive UI
    ========================================================================== */
 
+/* ── Force light background on PDF document page (this file is only loaded here) ── */
+/* Prevents dark theme from globals.css (prefers-color-scheme: dark) causing
+   a shadow/gray overlay when PDF is generated in production headless browser. */
+html,
+body {
+  background: #ffffff !important;
+  color: #1a1a1a !important;
+}
+
 /* ── Page Setup ───────────────────────────────────────────────────────────── */
 @page {
   size: A4;

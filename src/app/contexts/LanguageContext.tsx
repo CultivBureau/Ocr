@@ -187,6 +187,7 @@ export const translations = {
       // Status messages
       uploadingFile: "Uploading file…",
       extractingContent: "Extracting content from PDF…",
+      extractingContentNote: "This may take a minute for larger files.",
       savingToHistory: "Saving to history…",
       openingEditor: "Opening editor…",
     },
@@ -1130,6 +1131,7 @@ export const translations = {
       // Status messages
       uploadingFile: "جاري رفع الملف...",
       extractingContent: "جاري استخراج المحتوى من PDF...",
+      extractingContentNote: "قد يستغرق ذلك دقيقة للملفات الكبيرة.",
       savingToHistory: "جاري الحفظ في السجل...",
       openingEditor: "جاري فتح المحرر...",
     },

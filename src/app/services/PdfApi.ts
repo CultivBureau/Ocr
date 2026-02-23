@@ -82,50 +82,94 @@ async function request(path: string, init: RequestInit = {}) {
   }
 }
 
-/**
- * Upload PDF file to backend
- */
-export async function uploadFile(file: File): Promise<{
+export type UploadResponse = {
   file_path: string;
   filename: string;
   original_filename: string;
   message: string;
   company_id?: string | null;
-}> {
-  // Pre-upload file size guard (20 MB matches backend MAX_UPLOAD_SIZE_MB).
-  // This prevents the request from being sent at all when the file exceeds
-  // the limit, avoiding nginx 413 responses that lack CORS headers.
+};
+
+/**
+ * Upload PDF file to backend with optional progress callback.
+ * Uses XMLHttpRequest to report upload progress (loaded/total and percent).
+ */
+export function uploadFileWithProgress(
+  file: File,
+  onProgress?: (loaded: number, total: number, percent: number) => void
+): Promise<UploadResponse> {
   const MAX_UPLOAD_SIZE_MB = 20;
   if (file.size > MAX_UPLOAD_SIZE_MB * 1024 * 1024) {
-    throw new Error(
-      `File too large. Maximum size is ${MAX_UPLOAD_SIZE_MB}MB. Supports JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 pages, 20MB max).`
+    return Promise.reject(
+      new Error(
+        `File too large. Maximum size is ${MAX_UPLOAD_SIZE_MB}MB. Supports JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 pages, 20MB max).`
+      )
     );
   }
 
+  const token = getToken();
+  if (!token) {
+    return Promise.reject(new Error("Not authenticated. Please login again."));
+  }
+
+  const url = `${API_BASE_URL}/upload/`;
   const formData = new FormData();
   formData.append("file", file);
 
-  // Verify token exists before making request
-  const token = getToken();
-  if (!token) {
-    throw new Error("Not authenticated. Please login again.");
-  }
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
 
-  return request("/upload/", {
-    method: "POST",
-    body: formData,
-    headers: {},
-  }) as Promise<{
-    file_path: string;
-    filename: string;
-    original_filename: string;
-    message: string;
-    company_id?: string | null;
-  }>;
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable && typeof onProgress === "function") {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        onProgress(e.loaded, e.total, percent);
+      }
+    });
+
+    xhr.addEventListener("load", () => {
+      const contentType = xhr.getResponseHeader("content-type");
+      const isJson = contentType != null && contentType.includes("application/json");
+      const payload = isJson ? JSON.parse(xhr.responseText) : xhr.responseText;
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(payload as UploadResponse);
+      } else {
+        const errorMessage =
+          isJson && payload?.detail
+            ? typeof payload.detail === "string"
+              ? payload.detail
+              : JSON.stringify(payload.detail)
+            : isJson && payload?.message
+              ? payload.message
+              : payload || xhr.statusText;
+        reject(new Error(errorMessage || "Request failed"));
+      }
+    });
+
+    xhr.addEventListener("error", () => {
+      reject(new Error(`[PdfApi] Network request failed for ${url}: Failed to fetch`));
+    });
+
+    xhr.addEventListener("abort", () => {
+      reject(new Error("[PdfApi] Upload aborted"));
+    });
+
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.withCredentials = true;
+    xhr.send(formData);
+  });
 }
 
 /**
- * Extract structured data from uploaded PDF
+ * Upload PDF file to backend (no progress)
+ */
+export async function uploadFile(file: File): Promise<UploadResponse> {
+  return uploadFileWithProgress(file);
+}
+
+/**
+ * Extract structured data from uploaded PDF (blocking; waits for full response).
  * Returns v2 format: { generated: { sections, tables }, user: { elements }, layout, meta }
  */
 export async function extractStructured(filePath: string): Promise<SeparatedStructure> {
@@ -136,6 +180,40 @@ export async function extractStructured(filePath: string): Promise<SeparatedStru
     },
     body: JSON.stringify({ file_path: filePath }),
   }) as Promise<SeparatedStructure>;
+}
+
+export type ExtractionJobStatus = "processing" | "completed" | "failed";
+
+export type StartExtractionResponse = {
+  job_id: string;
+  file_path: string;
+  status: ExtractionJobStatus;
+};
+
+export type ExtractionJobResponse = {
+  status: ExtractionJobStatus;
+  result: SeparatedStructure | null;
+  error: string | null;
+};
+
+/**
+ * Start extraction in the background. Poll getExtractionJob(jobId) until status is completed or failed.
+ */
+export async function startExtraction(filePath: string): Promise<StartExtractionResponse> {
+  return request("/extract/structured/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file_path: filePath }),
+  }) as Promise<StartExtractionResponse>;
+}
+
+/**
+ * Get extraction job status and result. Poll every 2–3s until status is completed or failed.
+ */
+export async function getExtractionJob(jobId: string): Promise<ExtractionJobResponse> {
+  return request(`/extract/jobs/${encodeURIComponent(jobId)}`, {
+    method: "GET",
+  }) as Promise<ExtractionJobResponse>;
 }
 
 export interface PDFGenerateRequest {
