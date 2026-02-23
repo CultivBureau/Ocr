@@ -82,8 +82,7 @@ body,
 }
 
 /* ── Base Document Styles ─────────────────────────────────────────────────── */
-body,
-body.pdf-document-body {
+body {
   margin: 0;
   padding: 0;
   background: #ffffff !important;
@@ -93,6 +92,14 @@ body.pdf-document-body {
   line-height: 1.55;
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
+}
+
+/* NOTE: .pdf-document-body is a <div>, NOT the <body> element.
+   The old selector  body.pdf-document-body  never matched anything.
+   This is the corrected rule that actually targets the div. */
+.pdf-document-body {
+  background: #ffffff !important;
+  color: #1a1a1a !important;
 }
 
 /* ── Layout Containers ────────────────────────────────────────────────────── */

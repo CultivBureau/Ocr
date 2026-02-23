@@ -200,11 +200,11 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       baseClasses.push(
         "rounded-2xl", "p-8",
         "shadow-lg",
-        "border", "border-gray-200/60",
-        "backdrop-blur-sm"
+        "border", "border-gray-200",
+        // NOTE: no backdrop-blur — causes gray tint in headless/PDF rendering
       );
     } else {
-      // Type-specific styling - Modern enhanced sections with better color schemes
+      // Type-specific styling
       if (type === 'day') {
         baseClasses.push(
           "bg-gradient-to-br", "from-cyan-50", "to-blue-50",
@@ -213,7 +213,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           "shadow-lg",
           "hover:from-cyan-100", "hover:to-blue-100",
           "hover:border-cyan-500",
-          "backdrop-blur-sm"
+          // NOTE: no backdrop-blur
         );
       } else if (type === 'included' || type === 'excluded') {
         const colorScheme = type === 'included' 
@@ -225,7 +225,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           "border-l-4",
           "rounded-2xl", "p-8",
           "shadow-lg",
-          "backdrop-blur-sm"
+          // NOTE: no backdrop-blur
         );
       } else if (backgroundColor && !backgroundColor.startsWith("bg-")) {
         baseClasses.push(
@@ -233,7 +233,6 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           "shadow-lg",
           "border", "border-gray-200",
           "bg-white",
-          "backdrop-blur-sm",
           "hover:shadow-xl"
         );
       } else if (backgroundColor) {
@@ -242,20 +241,21 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           "rounded-2xl", "p-8",
           "shadow-lg",
           "border", "border-gray-200",
-          "backdrop-blur-sm",
           "hover:shadow-xl"
         );
       } else {
-        // Default enhanced section with modern styling and better colors
+        // Default section — fully opaque gradient (no alpha /50 or /30 modifiers).
+        // Alpha-transparent stops blended against a dark body (#0a0a0a in dark mode)
+        // produce gray tones in headless Chromium even with color-scheme overrides.
         baseClasses.push(
-          "bg-gradient-to-br", "from-white", "via-gray-50/50", "to-blue-50/30",
-          "border", "border-gray-200/60",
+          "bg-gradient-to-br", "from-white", "via-gray-50", "to-blue-50",
+          "border", "border-gray-200",
           "rounded-2xl", "p-8",
           "shadow-lg",
           "hover:shadow-xl",
-          "hover:from-blue-50/30", "hover:via-white", "hover:to-purple-50/20",
-          "hover:border-blue-200/40",
-          "backdrop-blur-sm"
+          "hover:from-blue-50", "hover:via-white", "hover:to-purple-50",
+          "hover:border-blue-200",
+          // NOTE: no backdrop-blur
         );
       }
     }
