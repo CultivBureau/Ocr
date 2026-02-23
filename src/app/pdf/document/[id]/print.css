@@ -6,10 +6,23 @@
 /* ── Force light background on PDF document page (this file is only loaded here) ── */
 /* Prevents dark theme from globals.css (prefers-color-scheme: dark) causing
    a shadow/gray overlay when PDF is generated in production headless browser. */
+:root {
+  --background: #ffffff !important;
+  --foreground: #1a1a1a !important;
+}
 html,
-body {
+body,
+.pdf-document-wrapper,
+.pdf-document-body,
+.pdf-container {
   background: #ffffff !important;
   color: #1a1a1a !important;
+}
+.base-template {
+  background: #ffffff !important;
+}
+.base-template > div {
+  background: #ffffff !important;
 }
 
 /* ── Page Setup ───────────────────────────────────────────────────────────── */
@@ -154,9 +167,15 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   page-break-inside: auto !important;
 }
 
-/* Remove gradient backgrounds from sections */
-.section-template[class*="bg-gradient"] {
+/* Remove gradient/tinted backgrounds from sections — force white for PDF */
+.section-template,
+.section-template[class*="bg-gradient"],
+.section-template[class*="bg-"],
+.section-template[class*="from-"],
+.section-template[class*="to-"],
+.section-template[class*="via-"] {
   background: #ffffff !important;
+  background-color: #ffffff !important;
 }
 
 /* Section title — keep with content */
