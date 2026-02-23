@@ -177,7 +177,8 @@ function AdminTicketsPageContent() {
     });
   };
 
-  const getCompanyName = (companyId: string) => {
+  const getCompanyName = (companyId: string | null | undefined) => {
+    if (!companyId) return "Super Admin";
     if (companyId === "superadmin") return "Super Admin";
     const company = companies.find((c) => c.id === companyId);
     return company?.name || companyId.slice(-8);

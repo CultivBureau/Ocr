@@ -180,7 +180,7 @@ export const translations = {
       addNewTrip: "Add New Trip",
       // Error messages
       pleasChoosePdf: "Please choose a PDF before submitting.",
-      uploadLimitReached: "Upload Limit Reached - Please Contact Support to upgrade your plan",
+      uploadLimitReached: "Limit exceeded",
       uploadFailed: "Upload failed: No file path returned.",
       extractionFailed: "Extraction returned no content.",
       error: "Error",
@@ -1123,7 +1123,7 @@ export const translations = {
       addNewTrip: "إضافة رحلة جديدة",
       // Error messages
       pleasChoosePdf: "يرجى اختيار ملف PDF قبل الإرسال.",
-      uploadLimitReached: "تم الوصول لحد الرفع - يرجى الاتصال بالدعم لترقية خطتك",
+      uploadLimitReached: "تجاوز الحد",
       uploadFailed: "فشل في الرفع: لم يتم إرجاع مسار الملف.",
       extractionFailed: "لم يتم إرجاع أي محتوى من عملية الاستخراج.",
       error: "خطأ",

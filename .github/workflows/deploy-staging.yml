@@ -23,4 +23,5 @@ jobs:
             set -a && source .env.staging && set +a
             export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
             docker rm -f ocr.stag || true
-            docker compose -f docker-compose.staging.yml up -d --build
+            docker compose -p ocr-staging -f docker-compose.staging.yml pull
+            docker compose -p ocr-staging -f docker-compose.staging.yml up -d --force-recreate

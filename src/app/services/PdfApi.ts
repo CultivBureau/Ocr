@@ -92,6 +92,16 @@ export async function uploadFile(file: File): Promise<{
   message: string;
   company_id?: string | null;
 }> {
+  // Pre-upload file size guard (20 MB matches backend MAX_UPLOAD_SIZE_MB).
+  // This prevents the request from being sent at all when the file exceeds
+  // the limit, avoiding nginx 413 responses that lack CORS headers.
+  const MAX_UPLOAD_SIZE_MB = 20;
+  if (file.size > MAX_UPLOAD_SIZE_MB * 1024 * 1024) {
+    throw new Error(
+      `File too large. Maximum size is ${MAX_UPLOAD_SIZE_MB}MB. Supports JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 pages, 20MB max).`
+    );
+  }
+
   const formData = new FormData();
   formData.append("file", file);
 

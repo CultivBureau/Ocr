@@ -191,6 +191,7 @@ function PlansContent() {
                 className="object-contain cursor-pointer"
                 priority
               />
+              ..
             </Link>
           </div>
           <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>

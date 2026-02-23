@@ -207,24 +207,56 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
   }
 
   return (
-    <BaseTemplate
-      headerImage={headerImage}
-      footerImage={footerImage}
-      showHeader={!!headerImage} // Only show header if image exists
-      showFooter={!!footerImage} // Only show footer if image exists
-      pageSize="A4"
-    >
-      <div className="pdf-document-body" dir={direction}>
-        <div className="pdf-container">
-          <StructureRenderer
-            structure={structure}
-            editable={false}
-            className="pdf-structure-renderer"
-            skipBaseTemplate={true} // Skip BaseTemplate since we're already wrapped in one
-          />
+    <>
+      {/* Inline style tag — guaranteed to be present in the HTML regardless of
+          how Next.js bundles / chunks external CSS files.  This is the
+          belt-and-suspenders fix for the shadow issue that appears only in
+          production builds where the print.css bundle may load after Tailwind. */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        /* PDF Shadow Removal — production safeguard */
+        *, *::before, *::after {
+          box-shadow: none !important;
+          text-shadow: none !important;
+        }
+        .shadow-sm, .shadow, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl, .shadow-3xl,
+        [class*="shadow"] {
+          box-shadow: none !important;
+        }
+        .section-template, .dynamic-table, .hotels-section,
+        .base-template, .pdf-container, .pdf-structure-renderer,
+        [class*="rounded-2xl"], [class*="border-2"] {
+          box-shadow: none !important;
+        }
+        /* Remove backdrop blur for clean PDF rendering */
+        [class*="backdrop-blur"] {
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+        }
+        /* Disable transitions/animations */
+        * {
+          transition: none !important;
+          animation: none !important;
+        }
+      `}} />
+      <BaseTemplate
+        headerImage={headerImage}
+        footerImage={footerImage}
+        showHeader={!!headerImage} // Only show header if image exists
+        showFooter={!!footerImage} // Only show footer if image exists
+        pageSize="A4"
+      >
+        <div className="pdf-document-body" dir={direction}>
+          <div className="pdf-container">
+            <StructureRenderer
+              structure={structure}
+              editable={false}
+              className="pdf-structure-renderer"
+              skipBaseTemplate={true} // Skip BaseTemplate since we're already wrapped in one
+            />
+          </div>
         </div>
-      </div>
-    </BaseTemplate>
+      </BaseTemplate>
+    </>
   );
 }
 

@@ -85,8 +85,30 @@ const PdfConverterContent: React.FC = () => {
     });
   };
 
+  // Upload limits (must match backend config.py)
+  const MAX_UPLOAD_SIZE_MB = 20;
+  const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedFile(event.target.files?.[0] || null);
+    const file = event.target.files?.[0] || null;
+    setError("");
+
+    // Client-side file size validation — catches large files before they hit
+    // nginx (which returns 413 without CORS headers, causing an opaque error).
+    if (file && file.size > MAX_UPLOAD_SIZE_BYTES) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      showErrorDialog(
+        t.pdfConverter.uploadLimitReached,
+        `${isRTL ? 'حجم الملف' : 'File size'} (${sizeMB}MB) ${isRTL ? 'يتجاوز الحد الأقصى' : 'exceeds the maximum'} ${MAX_UPLOAD_SIZE_MB}MB. ${isRTL ? 'يدعم JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 صفحة، 20 ميجابايت كحد أقصى).' : 'Supports JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 pages, 20MB max).'}`,
+        "warning"
+      );
+      setSelectedFile(null);
+      // Reset file input
+      event.target.value = "";
+      return;
+    }
+
+    setSelectedFile(file);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -169,16 +191,38 @@ const PdfConverterContent: React.FC = () => {
       const message =
         err instanceof Error ? err.message : "Unexpected error occurred.";
       
-      // Check if it's a limit error
-      if (message.toLowerCase().includes("limit") || 
-          message.toLowerCase().includes("quota") || 
-          message.toLowerCase().includes("maximum") ||
-          message.toLowerCase().includes("exceeded")) {
-        
+      // Check if it's a CORS / network error caused by nginx rejecting a large file (413)
+      // When nginx returns 413 without CORS headers, the browser throws an opaque
+      // "Failed to fetch" / "NetworkError" that masks the real 413 status.
+      const lowerMsg = message.toLowerCase();
+      const isCorsOrNetworkError =
+        lowerMsg.includes("failed to fetch") ||
+        lowerMsg.includes("networkerror") ||
+        lowerMsg.includes("network request failed") ||
+        lowerMsg.includes("cors") ||
+        lowerMsg.includes("blocked");
+
+      // Check if it's a limit error from the backend (that did pass through)
+      const isLimitError =
+        lowerMsg.includes("limit") ||
+        lowerMsg.includes("quota") ||
+        lowerMsg.includes("maximum") ||
+        lowerMsg.includes("exceeded") ||
+        lowerMsg.includes("too large") ||
+        lowerMsg.includes("too many pages") ||
+        lowerMsg.includes("413");
+
+      if (isLimitError || (isCorsOrNetworkError && selectedFile && selectedFile.size > 5 * 1024 * 1024)) {
         // Clean up the error message - remove technical prefixes
         let cleanMessage = message;
         cleanMessage = cleanMessage.replace(/^\[\w+\]\s*/i, ''); // Remove [PdfApi] prefix
         cleanMessage = cleanMessage.replace(/Network request failed for [^:]+:\s*/i, ''); // Remove network request info
+        
+        // If it was a CORS error, show a user-friendly message instead of the raw error
+        if (isCorsOrNetworkError) {
+          const sizeMB = selectedFile ? (selectedFile.size / (1024 * 1024)).toFixed(1) : '?';
+          cleanMessage = `${isRTL ? 'حجم الملف' : 'File size'} (${sizeMB}MB) ${isRTL ? 'يتجاوز الحد المسموح به من الخادم.' : 'exceeds the server upload limit.'} ${isRTL ? 'يدعم JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 صفحة، 20 ميجابايت كحد أقصى).' : 'Supports JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 pages, 20MB max).'}`;
+        }
         
         showErrorDialog(
           t.pdfConverter.uploadLimitReached,

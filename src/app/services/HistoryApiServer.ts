@@ -81,6 +81,11 @@ export async function getDocumentServer(
       // Also add auth token as Bearer if available (for logged-in users)
       if (authToken) {
         headers["Authorization"] = `Bearer ${authToken}`;
+      } else {
+        // When no auth cookie is available (e.g., Playwright PDF generation),
+        // send the PDF token as Bearer header as a fallback authentication method.
+        // The backend can validate PDF tokens from both query params and Bearer headers.
+        headers["Authorization"] = `Bearer ${token}`;
       }
     } else if (authToken) {
       // If no PDF token but user is logged in, use their auth token
