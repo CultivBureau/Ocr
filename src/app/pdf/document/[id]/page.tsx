@@ -213,6 +213,34 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
           belt-and-suspenders fix for the shadow issue that appears only in
           production builds where the print.css bundle may load after Tailwind. */}
       <style dangerouslySetInnerHTML={{ __html: `
+        /* PDF Background — force white regardless of system color scheme.
+           This inline style is the last line of defence: it is injected directly
+           into the HTML string Playwright receives, so it always wins over any
+           external stylesheet (globals.css, Tailwind dark-mode utilities, etc.)
+           that may load in an unpredictable order in production builds. */
+        :root {
+          --background: #ffffff !important;
+          --foreground: #1a1a1a !important;
+        }
+        @media (prefers-color-scheme: dark) {
+          :root {
+            --background: #ffffff !important;
+            --foreground: #1a1a1a !important;
+          }
+          html, body,
+          .pdf-document-wrapper, .pdf-document-body, .pdf-container,
+          .base-template, .base-template > div {
+            background: #ffffff !important;
+            color: #1a1a1a !important;
+          }
+        }
+        html, body,
+        .pdf-document-wrapper, .pdf-document-body, .pdf-container,
+        .base-template, .base-template > div {
+          background: #ffffff !important;
+          color: #1a1a1a !important;
+        }
+
         /* PDF Shadow Removal — production safeguard */
         *, *::before, *::after {
           box-shadow: none !important;
