@@ -3,6 +3,13 @@
    Targets: A4 page size, clean layout, smart page breaks, no interactive UI
    ========================================================================== */
 
+/* ── Force light color-scheme & CSS variables for Docker headless Chromium ── */
+:root {
+  color-scheme: light !important;
+  --background: #ffffff !important;
+  --foreground: #171717 !important;
+}
+
 /* ── Force light background on PDF document page (this file is only loaded here) ── */
 /* Prevents dark theme from globals.css (prefers-color-scheme: dark) causing
    a shadow/gray overlay when PDF is generated in production headless browser. */
@@ -574,5 +581,13 @@ img {
   a[href*="http"] {
     color: #1E88E5 !important;
   }
+}
+
+
+/* ── Hide fixed overlays (sidebar mobile overlay, modals, etc.) ──────────── */
+/* Belt-and-suspenders: even if the component renders, hide any full-screen
+   fixed overlay with a semi-transparent background in print/PDF mode */
+[class*="fixed"][class*="inset-0"] {
+  display: none !important;
 }
 
