@@ -213,50 +213,55 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
           belt-and-suspenders fix for the shadow issue that appears only in
           production builds where the print.css bundle may load after Tailwind. */}
       <style dangerouslySetInnerHTML={{ __html: `
-        /* PDF Background — force white regardless of system color scheme.
-           This inline style is the last line of defence: it is injected directly
-           into the HTML string Playwright receives, so it always wins over any
-           external stylesheet (globals.css, Tailwind dark-mode utilities, etc.)
-           that may load in an unpredictable order in production builds. */
+        /*
+         * INLINE STYLE — highest priority, injected last into the HTML.
+         *
+         * KEY FIX: color-scheme: light
+         * Tailwind v4 preflight sets  color-scheme: light dark  on :root which
+         * allows Chromium (headless/Docker) to activate dark UA rendering.
+         * Overriding it here to  light  is the definitive fix for the gray
+         * overlay that appears on all transparent containers in production.
+         */
         :root {
+          color-scheme: light !important;
           --background: #ffffff !important;
           --foreground: #1a1a1a !important;
         }
+        html, body {
+          color-scheme: light !important;
+          background: #ffffff !important;
+          color: #1a1a1a !important;
+        }
         @media (prefers-color-scheme: dark) {
           :root {
+            color-scheme: light !important;
             --background: #ffffff !important;
             --foreground: #1a1a1a !important;
           }
           html, body,
           .pdf-document-wrapper, .pdf-document-body, .pdf-container,
           .base-template, .base-template > div {
+            color-scheme: light !important;
             background: #ffffff !important;
             color: #1a1a1a !important;
           }
         }
-        html, body,
         .pdf-document-wrapper, .pdf-document-body, .pdf-container,
         .base-template, .base-template > div {
           background: #ffffff !important;
           color: #1a1a1a !important;
         }
 
-        /* PDF Shadow Removal — production safeguard */
+        /* Shadow removal */
         *, *::before, *::after {
           box-shadow: none !important;
           text-shadow: none !important;
         }
-        .shadow-sm, .shadow, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl, .shadow-3xl,
         [class*="shadow"] {
           box-shadow: none !important;
         }
-        .section-template, .dynamic-table, .hotels-section,
-        .base-template, .pdf-container, .pdf-structure-renderer,
-        [class*="rounded-2xl"], [class*="border-2"] {
-          box-shadow: none !important;
-        }
-        /* Remove backdrop blur for clean PDF rendering */
-        [class*="backdrop-blur"] {
+        /* Backdrop blur removal — prevents frosted-glass tint in headless */
+        *, [class*="backdrop-blur"] {
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
         }
