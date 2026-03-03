@@ -2892,7 +2892,7 @@ function CodePageContent() {
                   type: 'section',
                   id: newSectionId,
                   title: 'New Section',
-                  content: 'Enter section content here...',
+                  content: '• Enter section content here...',
                   order: structure.generated.sections.length,
                   parent_id: null
                 };
