@@ -748,6 +748,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   };
 
   // Handle backspace at start of line to merge with previous line
+  // Uses the original items array (from content string) so formatting markers are preserved.
   const handleKeyDownForMerge = (
     e: React.KeyboardEvent<HTMLElement>,
     currentIndex: number,
@@ -757,28 +758,30 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     if (e.key === 'Backspace' && isCursorAtStart() && currentIndex > 0) {
       e.preventDefault();
       
-      // Get current item's text from DOM (what user sees)
-      const currentText = (e.currentTarget.textContent || '').trim();
+      // Use the original item text (which has **, __, [CENTER] markers)
+      // instead of reading from DOM which strips them.
+      const currentItem = items[currentIndex];
+      const currentBody = currentItem
+        .replace(/^[\s]*[•\-\*]\s*/, '')
+        .replace(/^\d+\.\s*/, '')
+        .trim();
       
-      // Get previous item content (without bullet marker if present)
       const previousItem = items[currentIndex - 1];
-      const prevContent = previousItem.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+      const prevBody = previousItem
+        .replace(/^[\s]*[•\-\*]\s*/, '')
+        .replace(/^\d+\.\s*/, '')
+        .trim();
       
-      // Create merged array
       const mergedItems = [...items];
       
       if (isBulletList) {
-        // For bullet lists: "prev content" + " " + "current content"
-        mergedItems[currentIndex - 1] = `• ${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
+        mergedItems[currentIndex - 1] = `• ${prevBody} ${currentBody}`.replace(/\s+/g, ' ').trim();
       } else {
-        // For paragraphs: just concatenate with space
-        mergedItems[currentIndex - 1] = `${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
+        mergedItems[currentIndex - 1] = `${prevBody} ${currentBody}`.replace(/\s+/g, ' ').trim();
       }
       
-      // Remove current item
       mergedItems.splice(currentIndex, 1);
       
-      // Update content
       if (onContentChange) {
         const newContent = mergedItems.join('\n');
         onContentChange(newContent);
@@ -902,60 +905,51 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                         {...(shouldUseHTML ? { dangerouslySetInnerHTML: { __html: displayItem } } : { children: cleanItem })}
                         onKeyDown={(e) => {
                           if (editable) {
-                            // Enhanced merge functionality
+                            // Enhanced merge functionality — uses original content to preserve formatting markers
                             if (e.key === 'Backspace' && isCursorAtStart() && index > 0) {
                               e.preventDefault();
                               
-                              // Get current text from DOM
-                              const currentText = (e.currentTarget.textContent || '').trim();
+                              // Work with original content lines (preserves **bold**, __underline__, [CENTER] markers)
+                              const currentContent = contentRef.current;
+                              if (typeof currentContent !== 'string') return;
                               
-                              // Get ALL items from DOM (not from the items array which may be stale)
-                              const ul = e.currentTarget.closest('ul');
-                              if (!ul) return;
+                              const allLines = currentContent.split('\n').filter(line => line.trim());
+                              if (index <= 0 || index >= allLines.length) return;
                               
-                              const allLiElements = Array.from(ul.querySelectorAll('li'));
-                              const currentItems = allLiElements.map((li) => {
-                                const text = (li.querySelector('div[contenteditable]') as HTMLElement)?.textContent || 
-                                             (li as HTMLElement).textContent || '';
-                                return `• ${text.trim()}`;
-                              });
+                              // Get previous and current lines WITH their formatting markers
+                              const prevLine = allLines[index - 1];
+                              const currLine = allLines[index];
                               
-                              // Get previous item content
-                              const prevContent = currentItems[index - 1]?.replace(/^[\s]*[•\-\*]\s*/, '').trim() || '';
+                              // Strip only bullet prefix, keep formatting markers
+                              const prevBody = prevLine.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+                              const currBody = currLine.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
                               
-                              // Create merged array
-                              const mergedItems = [...currentItems];
-                              // Merge with space: "prev content" + " " + "current content"
-                              mergedItems[index - 1] = `• ${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
-                              mergedItems.splice(index, 1);
+                              // Merge the two lines — all other lines stay untouched
+                              const mergedLines = [...allLines];
+                              mergedLines[index - 1] = `• ${prevBody} ${currBody}`.replace(/\s+/g, ' ').trim();
+                              mergedLines.splice(index, 1);
                               
                               if (onContentChange) {
-                                onContentChange(mergedItems.join('\n'));
+                                onContentChange(mergedLines.join('\n'));
                               }
                               return;
                             }
                             
-                            // Enter key creates new bullet point
+                            // Enter key creates new bullet point — uses original content to preserve formatting
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
                               
-                              // Get ALL items from DOM
-                              const ul = e.currentTarget.closest('ul');
-                              if (!ul) return;
+                              const currentContent = contentRef.current;
+                              if (typeof currentContent !== 'string') return;
                               
-                              const allLiElements = Array.from(ul.querySelectorAll('li'));
-                              const currentItems = allLiElements.map((li) => {
-                                const text = (li.querySelector('div[contenteditable]') as HTMLElement)?.textContent || 
-                                             (li as HTMLElement).textContent || '';
-                                return `• ${text.trim()}`;
-                              });
+                              const allLines = currentContent.split('\n').filter(line => line.trim());
                               
-                              // Insert new bullet after current
-                              const newItems = [...currentItems];
-                              newItems.splice(index + 1, 0, '• ');
+                              // Insert new empty bullet after current line, all other lines stay untouched
+                              const newLines = [...allLines];
+                              newLines.splice(index + 1, 0, '• ');
                               
                               if (onContentChange) {
-                                onContentChange(newItems.join('\n'));
+                                onContentChange(newLines.join('\n'));
                               }
                             }
                           }
@@ -1022,15 +1016,16 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                             {...(shouldUsePHTML ? { dangerouslySetInnerHTML: { __html: displayPText } } : { children: pText })}
                             onKeyDown={(e) => {
                               if (editable) {
-                                // Enhanced merge functionality for paragraphs
+                                // Enhanced merge functionality for paragraphs — uses original lines to preserve formatting
                                 if (e.key === 'Backspace' && isCursorAtStart() && idx > 0) {
                                   e.preventDefault();
-                                  const currentText = (e.currentTarget.textContent || '').trim();
-                                  const prevContent = allLines[idx - 1].trim();
+                                  
+                                  // Use original allLines (from content string) which have formatting markers
+                                  const prevBody = allLines[idx - 1].trim();
+                                  const currBody = allLines[idx].trim();
                                   
                                   const mergedLines = [...allLines];
-                                  // Merge with space: "prev content" + " " + "current content"
-                                  mergedLines[idx - 1] = `${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
+                                  mergedLines[idx - 1] = `${prevBody} ${currBody}`.replace(/\s+/g, ' ').trim();
                                   mergedLines.splice(idx, 1);
                                   
                                   if (onContentChange) {
