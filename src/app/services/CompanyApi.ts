@@ -85,6 +85,7 @@ export interface Company {
   created_at: string;
   plan_started_at: string | null;
   plan_expires_at: string | null;
+  terms_and_conditions?: string | null;
 }
 
 export interface CompanyCreate {

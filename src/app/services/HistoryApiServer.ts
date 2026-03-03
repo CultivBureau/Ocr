@@ -140,9 +140,9 @@ export async function getCompanyBrandingServer(
   companyId: string,
   token?: string,
   documentId?: string
-): Promise<{ header_image: string | null; footer_image: string | null }> {
+): Promise<{ header_image: string | null; footer_image: string | null; terms_and_conditions: string | null }> {
   if (!companyId) {
-    return { header_image: null, footer_image: null };
+    return { header_image: null, footer_image: null, terms_and_conditions: null };
   }
 
   const headers: Record<string, string> = {
@@ -193,7 +193,7 @@ export async function getCompanyBrandingServer(
 
     if (!response.ok) {
       // If company not found or access denied, return null images
-      return { header_image: null, footer_image: null };
+      return { header_image: null, footer_image: null, terms_and_conditions: null };
     }
 
     // Handle both direct response and wrapped response
@@ -202,7 +202,7 @@ export async function getCompanyBrandingServer(
       // Check if it's wrapped in a "company" property or direct
       company = (payload as any).company || payload;
     } else {
-      return { header_image: null, footer_image: null };
+      return { header_image: null, footer_image: null, terms_and_conditions: null };
     }
     
     // Convert relative paths to absolute URLs if needed
@@ -221,11 +221,12 @@ export async function getCompanyBrandingServer(
     return {
       header_image: headerImage,
       footer_image: footerImage,
+      terms_and_conditions: company.terms_and_conditions || null,
     };
   } catch (error) {
     // If error, return null images (fallback to defaults)
     console.error(`[HistoryApiServer] Failed to fetch company branding: ${error}`);
-    return { header_image: null, footer_image: null };
+    return { header_image: null, footer_image: null, terms_and_conditions: null };
   }
 }
 

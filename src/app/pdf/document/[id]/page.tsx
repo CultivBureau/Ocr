@@ -138,6 +138,7 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
   // Fetch company branding from logged-in user's company_id
   let headerImage: string | undefined = undefined;
   let footerImage: string | undefined = undefined;
+  let termsAndConditions: string | null = null;
   
   // Get user's company_id from auth token (server-side)
   let companyId: string | null = null;
@@ -200,6 +201,10 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
           const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000";
           footerImage = `${API_BASE_URL}${footerImage.startsWith("/") ? "" : "/"}${footerImage}`;
         }
+      }
+
+      if (branding.terms_and_conditions) {
+        termsAndConditions = branding.terms_and_conditions;
       }
     }
   } catch (error) {
@@ -274,8 +279,9 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
       <BaseTemplate
         headerImage={headerImage}
         footerImage={footerImage}
-        showHeader={!!headerImage} // Only show header if image exists
-        showFooter={!!footerImage} // Only show footer if image exists
+        showHeader={!!headerImage}
+        showFooter={!!footerImage}
+        termsAndConditions={termsAndConditions}
         pageSize="A4"
       >
         <div className="pdf-document-body" dir={direction}>

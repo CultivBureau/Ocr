@@ -138,6 +138,7 @@ function CodePageContent() {
   // Company branding state
   const [headerImage, setHeaderImage] = useState<string | undefined>(undefined);
   const [footerImage, setFooterImage] = useState<string | undefined>(undefined);
+  const [termsAndConditions, setTermsAndConditions] = useState<string | null>(null);
   
   // Load saved suggestions when document ID changes
   // Load suggestions from document structure
@@ -1724,16 +1725,20 @@ function CodePageContent() {
           } else {
             setFooterImage(undefined);
           }
+
+          setTermsAndConditions(company.terms_and_conditions || null);
         } catch (err) {
           console.error("Failed to fetch company branding:", err);
           // Don't set images if fetch fails
           setHeaderImage(undefined);
           setFooterImage(undefined);
+          setTermsAndConditions(null);
         }
       } else {
         // No company_id, clear branding
         setHeaderImage(undefined);
         setFooterImage(undefined);
+        setTermsAndConditions(null);
       }
     } catch (err) {
       console.error("Failed to load document:", err);
@@ -1780,14 +1785,18 @@ function CodePageContent() {
           } else {
             setFooterImage(undefined);
           }
+
+          setTermsAndConditions(company.terms_and_conditions || null);
         } catch (err) {
           console.error("Failed to fetch company branding:", err);
           setHeaderImage(undefined);
           setFooterImage(undefined);
+          setTermsAndConditions(null);
         }
       } else {
         setHeaderImage(undefined);
         setFooterImage(undefined);
+        setTermsAndConditions(null);
       }
     } catch (err) {
       console.error("Failed to load document metadata:", err);
@@ -2831,6 +2840,7 @@ function CodePageContent() {
               editable={true}
               headerImage={headerImage}
               footerImage={footerImage}
+              termsAndConditions={termsAndConditions}
               onMoveUp={handleMoveUp}
               onMoveDown={handleMoveDown}
               onSectionEdit={(section) => {

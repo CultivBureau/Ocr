@@ -60,6 +60,7 @@ export interface CompanySettings {
   plan_expires_at: string | null;
   airline_companies: string[];
   includes_all_options: string[];
+  terms_and_conditions: string | null;
 }
 
 export interface UsageSummary {
@@ -392,6 +393,18 @@ export async function addIncludesAllOptionUser(option: string): Promise<{ messag
   return authRequest("/company/settings/includes-all-options/user", {
     method: "POST",
     body: JSON.stringify({ option }),
+  });
+}
+
+/**
+ * Update terms and conditions for company (Company Admin only)
+ */
+export async function updateTermsAndConditions(
+  terms_and_conditions: string
+): Promise<{ message: string; terms_and_conditions: string | null }> {
+  return authRequest("/company/settings/terms", {
+    method: "PUT",
+    body: JSON.stringify({ terms_and_conditions }),
   });
 }
 

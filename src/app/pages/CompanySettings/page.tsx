@@ -22,6 +22,7 @@ import {
   removeAirlineCompany,
   addIncludesAllOption,
   removeIncludesAllOption,
+  updateTermsAndConditions,
   type CompanySettings,
   type UsageSummary,
   type CompanyPlan,
@@ -75,6 +76,12 @@ function CompanySettingsContent() {
   const [isManagingAirlineCompanies, setIsManagingAirlineCompanies] = useState(false);
   const [isManagingIncludesAll, setIsManagingIncludesAll] = useState(false);
 
+  // Terms & conditions state
+  const [termsText, setTermsText] = useState("");
+  const [termsDraft, setTermsDraft] = useState("");
+  const [isEditingTerms, setIsEditingTerms] = useState(false);
+  const [isSavingTerms, setIsSavingTerms] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, [selectedMonth, selectedYear, showCurrentPeriodOnly]);
@@ -96,6 +103,9 @@ function CompanySettingsContent() {
       setPlan(planData);
       setCompanyUsers(usersData.users || []);
       setFormName(settingsData.name);
+      setTermsText(settingsData.terms_and_conditions || "");
+      setTermsDraft(settingsData.terms_and_conditions || "");
+      setIsEditingTerms(false);
       setHeaderImageFile(null);
       setFooterImageFile(null);
     } catch (err) {
@@ -324,6 +334,24 @@ function CompanySettingsContent() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to remove includes all option";
       setError(message);
+    }
+  };
+
+  const handleSaveTerms = async () => {
+    setIsSavingTerms(true);
+    setError("");
+    try {
+      const result = await updateTermsAndConditions(termsDraft);
+      setSettings({ ...settings!, terms_and_conditions: result.terms_and_conditions });
+      setTermsText(termsDraft);
+      setIsEditingTerms(false);
+      setSuccess(isRTL ? "تم حفظ الشروط والأحكام بنجاح" : "Terms and conditions saved successfully");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save terms and conditions";
+      setError(message);
+    } finally {
+      setIsSavingTerms(false);
     }
   };
 
@@ -692,6 +720,92 @@ function CompanySettingsContent() {
                         <p className="text-sm text-gray-500 text-center py-4">No airline companies added yet</p>
                       )}
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Terms & Conditions Management */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className={`flex items-center justify-between mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <h3 className="text-lg font-bold text-black flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#C4B454]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    {isRTL ? "الشروط والأحكام" : "Terms & Conditions"}
+                  </h3>
+                  {!isEditingTerms && (
+                    <button
+                      onClick={() => {
+                        setTermsDraft(termsText);
+                        setIsEditingTerms(true);
+                      }}
+                      className="px-3 py-1.5 text-sm bg-[#C4B454] text-white rounded-lg hover:bg-[#B8A040] font-medium"
+                    >
+                      {isRTL ? "تعديل" : "Edit"}
+                    </button>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 mb-3">
+                  {isRTL
+                    ? "اكتب الشروط والأحكام الخاصة بشركتك. ستظهر تلقائياً في جميع المستندات المُنشأة لهذه الشركة."
+                    : "Write your company's terms and conditions. They will automatically appear on all documents generated for this company."}
+                </p>
+
+                {isEditingTerms ? (
+                  <>
+                    <textarea
+                      value={termsDraft}
+                      onChange={(e) => setTermsDraft(e.target.value)}
+                      rows={8}
+                      dir="auto"
+                      placeholder={
+                        isRTL
+                          ? "أدخل الشروط والأحكام هنا...\n\nمثال:\n- يُعتمد في المطار قبل الطيران بـ ثلاث ساعات\n- لاستئجار السيارة يجب توفر الرخصة الدولية – الرخصة السعودية – كريديت كارد"
+                          : "Enter your terms and conditions here...\n\nExample:\n- Arrive at the airport 3 hours before departure\n- Car rental requires International License – Saudi License – Credit Card"
+                      }
+                      className="w-full px-4 py-3 border-2 border-[#C4B454] rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 text-black font-medium resize-y text-sm leading-relaxed"
+                      style={{ fontFamily: "'Cairo', 'Arial', sans-serif" }}
+                      autoFocus
+                    />
+                    <div className={`flex items-center justify-between mt-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <p className="text-xs text-gray-500">
+                        {termsDraft.length} {isRTL ? "حرف" : "characters"}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setTermsDraft(termsText);
+                            setIsEditingTerms(false);
+                          }}
+                          className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+                        >
+                          {isRTL ? "إلغاء" : "Cancel"}
+                        </button>
+                        <button
+                          onClick={handleSaveTerms}
+                          disabled={isSavingTerms}
+                          className="px-5 py-2 text-sm bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-lg hover:shadow-lg font-semibold disabled:opacity-50 transition-all"
+                        >
+                          {isSavingTerms
+                            ? (isRTL ? "جاري الحفظ..." : "Saving...")
+                            : (isRTL ? "حفظ" : "Save")}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm leading-relaxed min-h-[80px]"
+                    dir="auto"
+                    style={{ fontFamily: "'Cairo', 'Arial', sans-serif", whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                  >
+                    {termsText ? (
+                      <span className="text-black">{termsText}</span>
+                    ) : (
+                      <span className="text-gray-400 italic">
+                        {isRTL ? "لم يتم إضافة شروط وأحكام بعد. اضغط تعديل للبدء." : "No terms and conditions set yet. Click Edit to add."}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
