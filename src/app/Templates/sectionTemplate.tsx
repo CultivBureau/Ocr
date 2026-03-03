@@ -392,137 +392,130 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     }
   }, [enableTextSplitting]);
   
-  // Handle text splitting
+  // Handle text splitting — works on the ORIGINAL content string to preserve
+  // all formatting markers (**bold**, __underline__, [CENTER]...[/CENTER]).
+  // The old approach extracted plain text from DOM nodes, which stripped every
+  // marker and caused the entire section to lose formatting on split.
   const handleSplitText = () => {
-    if (!selectedText) {
-      return;
-    }
-    
-    if (typeof content !== 'string') {
-      return;
-    }
-    
+    if (!selectedText) return;
+    if (typeof content !== 'string') return;
+
     const trimmedText = selectedText.trim();
-    
-    if (trimmedText.length === 0) {
-      setShowSplitButton(false);
-      return;
-    }
-    
-    // Use stored selection range (more reliable than re-reading live selection)
-    const range = selectionRange;
-    if (!range) return;
-    const contentElement = contentContainerRef.current;
-    if (!contentElement) return;
-    
-    // Helper function to extract text from range while preserving newlines properly
-    const extractTextFromRange = (range: Range): string => {
-      const clone = range.cloneContents();
-      let text = '';
-      
-      // Walk through cloned nodes and extract text, converting block elements to \n
-      const walkNodes = (node: Node, parentTag?: string) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          text += node.textContent || '';
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          const element = node as HTMLElement;
-          const tagName = element.tagName.toUpperCase();
-          
-          // Skip elements with no-pdf-export class (like Split/Bold buttons)
-          if (element.classList && element.classList.contains('no-pdf-export')) {
-            return;
-          }
-          
-          // Handle block-level elements that create line breaks
-          if (tagName === 'BR') {
-            text += '\n';
-          } else if (tagName === 'LI') {
-            // For list items, add bullet point marker
-            if (text.length > 0 && !text.endsWith('\n')) {
-              text += '\n';
-            }
-            text += '• ';
-            
-            // Process children to get the content
-            for (let i = 0; i < element.childNodes.length; i++) {
-              walkNodes(element.childNodes[i], tagName);
-            }
-          } else if (['DIV', 'P'].includes(tagName)) {
-            // For DIV and P, add newline before content if not first element
-            if (text.length > 0 && !text.endsWith('\n')) {
-              text += '\n';
-            }
-            
-            // Process children
-            for (let i = 0; i < element.childNodes.length; i++) {
-              walkNodes(element.childNodes[i], tagName);
-            }
-          } else {
-            // For other elements (UL, OL, SPAN, STRONG, etc.), just process children
-            for (let i = 0; i < element.childNodes.length; i++) {
-              walkNodes(element.childNodes[i], tagName);
-            }
-          }
-        } else {
-          // Walk through child nodes for other node types
-          for (let i = 0; i < node.childNodes.length; i++) {
-            walkNodes(node.childNodes[i], parentTag);
-          }
-        }
-      };
-      
-      walkNodes(clone);
-      return text;
+    if (trimmedText.length === 0) { setShowSplitButton(false); return; }
+
+    // --- Helpers -----------------------------------------------------------
+
+    /** Strip formatting markers to get the "rendered" plain text */
+    const stripMarkers = (text: string): string => {
+      return text
+        .replace(/\*\*/g, '')
+        .replace(/__/g, '')
+        .replace(/\[CENTER\]/g, '')
+        .replace(/\[\/CENTER\]/g, '');
     };
-    
-    // Create a range from start of content to start of selection
-    const beforeRange = document.createRange();
-    beforeRange.selectNodeContents(contentElement);
-    beforeRange.setEnd(range.startContainer, range.startOffset);
-    const textBefore = extractTextFromRange(beforeRange);
-    
-    // Create a range from end of selection to end of content
-    const afterRange = document.createRange();
-    afterRange.selectNodeContents(contentElement);
-    afterRange.setStart(range.endContainer, range.endOffset);
-    const textAfter = extractTextFromRange(afterRange);
-    
-    // Build new content properly:
-    // 1. Text before the selection (trimmed at end to remove trailing spaces)
-    // 2. New line with bullet for the selected text
-    // 3. Text after (preserve newlines and bullets)
-    
-    // Trim trailing whitespace from before (but keep leading)
-    const cleanBefore = textBefore.trimEnd();
-    
-    // For afterText, we need to handle it carefully:
-    // - Always ensure it starts on a new line
-    // - If it starts with bullet, preserve it
-    // - If it's text from same line, make it a new bullet
-    let cleanAfter = textAfter;
-    
-    if (cleanAfter.length > 0) {
-      // Always ensure after content starts on a new line
-      if (!cleanAfter.startsWith('\n')) {
-        // Check if it starts with a bullet (from next LI)
-        if (cleanAfter.startsWith('•')) {
-          // Just add newline before the bullet
-          cleanAfter = '\n' + cleanAfter;
+
+    /**
+     * Build a position map: renderedIndex → sourceIndex.
+     * Walking the source string, we skip over marker sequences (**, __,
+     * [CENTER], [/CENTER]) and record which source index each visible
+     * character corresponds to.  An extra sentinel at the end maps to the
+     * source length so we can slice cleanly.
+     */
+    const buildRenderedToSourceMap = (source: string): number[] => {
+      const map: number[] = [];
+      let si = 0;
+      while (si < source.length) {
+        if (source.substring(si, si + 2) === '**')       { si += 2; continue; }
+        if (source.substring(si, si + 2) === '__')       { si += 2; continue; }
+        if (source.substring(si, si + 8) === '[CENTER]') { si += 8; continue; }
+        if (source.substring(si, si + 9) === '[/CENTER]'){ si += 9; continue; }
+        map.push(si);
+        si++;
+      }
+      map.push(si); // end sentinel
+      return map;
+    };
+
+    const lines = content.split('\n');
+
+    // ── Case 1: We know which line the selection belongs to ────────────
+    if (selectedLineIndex >= 0 && selectedLineIndex < lines.length) {
+      const originalLine = lines[selectedLineIndex];
+
+      // Parse bullet / number prefix so we can re-attach it later
+      const bulletMatch = originalLine.match(/^([\s]*[•\-\*]\s*|\s*\d+\.\s*)/);
+      const bulletPrefix = bulletMatch ? bulletMatch[0] : '';
+      const lineContent = originalLine.substring(bulletPrefix.length);
+
+      // Rendered (visible) version of the line body
+      const renderedLine = stripMarkers(lineContent);
+      const selStart = renderedLine.indexOf(trimmedText);
+
+      if (selStart === -1) {
+        // Selection text not found on this line — bail out safely
+        clearToolbar();
+        return;
+      }
+
+      const selEnd = selStart + trimmedText.length;
+
+      // Map rendered positions → source positions
+      const posMap = buildRenderedToSourceMap(lineContent);
+      const srcStart = posMap[selStart];
+      const srcEnd   = posMap[selEnd];
+
+      // Split the source line into three slices (markers stay intact)
+      const beforePart  = lineContent.substring(0, srcStart).trimEnd();
+      const selectedPart = lineContent.substring(srcStart, srcEnd).trim();
+      const afterPart   = lineContent.substring(srcEnd).trimStart();
+
+      // Build replacement lines
+      const newBulletPrefix = bulletPrefix || '• ';
+      const replacementLines: string[] = [];
+
+      if (beforePart) {
+        replacementLines.push(bulletPrefix + beforePart);
+      }
+      replacementLines.push(newBulletPrefix + selectedPart);
+      if (afterPart) {
+        replacementLines.push(newBulletPrefix + afterPart);
+      }
+
+      // Splice into lines array — every OTHER line is untouched
+      const newLines = [...lines];
+      newLines.splice(selectedLineIndex, 1, ...replacementLines);
+
+      const newContent = newLines.join('\n');
+      if (onContentChange) onContentChange(newContent);
+
+    // ── Case 2: Fallback — line index unknown, search full content ─────
+    } else {
+      const renderedContent = stripMarkers(content);
+      const selStart = renderedContent.indexOf(trimmedText);
+
+      if (selStart === -1) { clearToolbar(); return; }
+
+      const selEnd = selStart + trimmedText.length;
+      const posMap = buildRenderedToSourceMap(content);
+      const srcStart = posMap[selStart];
+      const srcEnd   = posMap[selEnd];
+
+      const beforePart  = content.substring(0, srcStart).trimEnd();
+      const selectedPart = content.substring(srcStart, srcEnd).trim();
+      const afterPart   = content.substring(srcEnd).trimStart();
+
+      let newContent = beforePart + '\n• ' + selectedPart;
+      if (afterPart) {
+        if (afterPart.startsWith('•') || afterPart.startsWith('\n')) {
+          newContent += '\n' + afterPart;
         } else {
-          // It's remaining text on same line - make it a new bullet
-          cleanAfter = '\n• ' + cleanAfter.trimStart();
+          newContent += '\n• ' + afterPart;
         }
       }
+
+      if (onContentChange) onContentChange(newContent);
     }
-    
-    // Combine: before + newline + bullet + selected text + after
-    const newContent = cleanBefore + '\n• ' + trimmedText + cleanAfter;
-    
-    // Update content
-    if (onContentChange) {
-      onContentChange(newContent);
-    }
-    
+
     clearToolbar();
   };
 
