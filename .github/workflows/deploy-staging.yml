@@ -23,9 +23,9 @@ jobs:
             git pull origin Staging
             echo "$ENV_STAG" > .env.staging
             export DOCKER_USERNAME=$DOCKER_USERNAME
-            docker compose -p ocr-staging -f docker-compose.staging.yml build
+            docker compose -p ocr-staging -f docker-compose.staging.yml --env-file .env.staging build
             docker rm -f ocr.stag || true
-            docker compose -p ocr-staging -f docker-compose.staging.yml up -d --force-recreate
+            docker compose -p ocr-staging -f docker-compose.staging.yml --env-file .env.staging up -d --force-recreate
         env:
           ENV_STAG: ${{ secrets.ENV_STAG }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
