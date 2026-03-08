@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Deploy to VM
         uses: appleboy/ssh-action@v1.0.3
@@ -16,12 +16,16 @@ jobs:
           host: ${{ secrets.VM_IP }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ENV_STAG,DOCKER_USERNAME
           script: |
             cd ~/Pdf-Converter-Staging
             git fetch origin
             git pull origin Staging
-            set -a && source .env.staging && set +a
-            export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+            echo "$ENV_STAG" > .env.staging
+            export DOCKER_USERNAME=$DOCKER_USERNAME
+            docker compose -p ocr-staging -f docker-compose.staging.yml build
             docker rm -f ocr.stag || true
-            docker compose -p ocr-staging -f docker-compose.staging.yml pull
             docker compose -p ocr-staging -f docker-compose.staging.yml up -d --force-recreate
+        env:
+          ENV_STAG: ${{ secrets.ENV_STAG }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
