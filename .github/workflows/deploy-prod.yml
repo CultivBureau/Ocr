@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Deploy to VM
         uses: appleboy/ssh-action@v1.0.3
@@ -16,14 +16,16 @@ jobs:
           host: ${{ secrets.VM_IP }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ENV,DOCKER_USERNAME
           script: |
-            if [ ! -d ~/Pdf-Converter ]; then
-              git clone -b main https://github.com/CultivBureau/Ocr.git ~/Pdf-Converter
-            fi
             cd ~/Pdf-Converter
             git fetch origin
             git pull origin main
-            set -a && source .env && set +a
-            export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+            echo "$ENV" > .env
+            export DOCKER_USERNAME=$DOCKER_USERNAME
+            docker compose build
             docker rm -f ocr.prod || true
-            docker compose up -d --build
+            docker compose up -d --force-recreate
+        env:
+          ENV: ${{ secrets.ENV }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
