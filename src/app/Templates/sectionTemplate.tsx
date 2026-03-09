@@ -144,6 +144,12 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   // Color palette modal state
   const [showColorPaletteModal, setShowColorPaletteModal] = useState(false);
   
+  // Toolbar interaction tracking - prevents selection loss when clicking formatting buttons
+  const isToolbarClickingRef = useRef(false);
+  const [selectedLineIndex, setSelectedLineIndex] = useState<number>(-1);
+  const contentRef = useRef(content);
+  contentRef.current = content;
+
   // Check if content currently has bullet points
   const contentHasBullets = typeof content === 'string' && (
     content.includes('•') || /^[\s]*[\-\*]/m.test(content)
@@ -200,11 +206,11 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       baseClasses.push(
         "rounded-2xl", "p-8",
         "shadow-lg",
-        "border", "border-gray-200/60",
-        "backdrop-blur-sm"
+        "border", "border-gray-200",
+        // NOTE: no backdrop-blur — causes gray tint in headless/PDF rendering
       );
     } else {
-      // Type-specific styling - Modern enhanced sections with better color schemes
+      // Type-specific styling
       if (type === 'day') {
         baseClasses.push(
           "bg-gradient-to-br", "from-cyan-50", "to-blue-50",
@@ -213,7 +219,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           "shadow-lg",
           "hover:from-cyan-100", "hover:to-blue-100",
           "hover:border-cyan-500",
-          "backdrop-blur-sm"
+          // NOTE: no backdrop-blur
         );
       } else if (type === 'included' || type === 'excluded') {
         const colorScheme = type === 'included' 
@@ -225,7 +231,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           "border-l-4",
           "rounded-2xl", "p-8",
           "shadow-lg",
-          "backdrop-blur-sm"
+          // NOTE: no backdrop-blur
         );
       } else if (backgroundColor && !backgroundColor.startsWith("bg-")) {
         baseClasses.push(
@@ -233,7 +239,6 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           "shadow-lg",
           "border", "border-gray-200",
           "bg-white",
-          "backdrop-blur-sm",
           "hover:shadow-xl"
         );
       } else if (backgroundColor) {
@@ -242,20 +247,21 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
           "rounded-2xl", "p-8",
           "shadow-lg",
           "border", "border-gray-200",
-          "backdrop-blur-sm",
           "hover:shadow-xl"
         );
       } else {
-        // Default enhanced section with modern styling and better colors
+        // Default section — fully opaque gradient (no alpha /50 or /30 modifiers).
+        // Alpha-transparent stops blended against a dark body (#0a0a0a in dark mode)
+        // produce gray tones in headless Chromium even with color-scheme overrides.
         baseClasses.push(
-          "bg-gradient-to-br", "from-white", "via-gray-50/50", "to-blue-50/30",
-          "border", "border-gray-200/60",
+          "bg-gradient-to-br", "from-white", "via-gray-50", "to-blue-50",
+          "border", "border-gray-200",
           "rounded-2xl", "p-8",
           "shadow-lg",
           "hover:shadow-xl",
-          "hover:from-blue-50/30", "hover:via-white", "hover:to-purple-50/20",
-          "hover:border-blue-200/40",
-          "backdrop-blur-sm"
+          "hover:from-blue-50", "hover:via-white", "hover:to-purple-50",
+          "hover:border-blue-200",
+          // NOTE: no backdrop-blur
         );
       }
     }
@@ -270,29 +276,78 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
 
   const containerClasses = getSectionClasses();
 
-  // Detect text selection
+  // Helper: find which line index the current selection belongs to
+  const findLineIndexForSelection = (range: Range): number => {
+    const currentContent = contentRef.current;
+    if (typeof currentContent !== 'string') return -1;
+    
+    let contextNode: Node | null = range.startContainer;
+    while (contextNode && contextNode.nodeType !== Node.ELEMENT_NODE) {
+      contextNode = contextNode.parentNode;
+    }
+    
+    let el = contextNode as HTMLElement;
+    while (el && el !== contentContainerRef.current && !['LI', 'P'].includes(el.tagName)) {
+      el = el.parentElement as HTMLElement;
+    }
+    
+    if (!el || el === contentContainerRef.current) return -1;
+    
+    const elementText = (el.textContent || '').trim();
+    const lines = currentContent.split('\n');
+    
+    for (let i = 0; i < lines.length; i++) {
+      const clean = lines[i]
+        .replace(/^[\s]*[•\-\*]\s*/, '')
+        .replace(/^\d+\.\s*/, '')
+        .trim()
+        .replace(/\*\*/g, '')
+        .replace(/__/g, '')
+        .replace(/\[CENTER\]/g, '')
+        .replace(/\[\/CENTER\]/g, '');
+      if (clean === elementText) return i;
+    }
+    return -1;
+  };
+
+  // Helper: clear toolbar and all selection state
+  const clearToolbar = () => {
+    window.getSelection()?.removeAllRanges();
+    setShowSplitButton(false);
+    setSelectedText("");
+    setSelectionRange(null);
+    setSelectedLineIndex(-1);
+    isToolbarClickingRef.current = false;
+  };
+
+  // Detect text selection - robust handling that survives toolbar clicks
   useEffect(() => {
-    const handleMouseUp = (e: MouseEvent) => {
-      // Small delay to ensure selection is complete
+    const handleMouseUp = () => {
+      // Don't process if user is clicking the toolbar
+      if (isToolbarClickingRef.current) return;
+      
       setTimeout(() => {
+        if (isToolbarClickingRef.current) return;
+        
         const selection = window.getSelection();
         if (selection && selection.toString().trim() && enableTextSplitting) {
-          const selectedText = selection.toString().trim();
+          const text = selection.toString().trim();
           
-          if (selectedText.length > 0) {
-            setSelectedText(selectedText);
+          if (text.length > 0) {
+            setSelectedText(text);
             
             try {
               const range = selection.getRangeAt(0);
               setSelectionRange(range.cloneRange());
+              // Pre-capture line index while selection is still active
+              setSelectedLineIndex(findLineIndexForSelection(range));
               
-              // Get position for split button (near selection)
               const rect = range.getBoundingClientRect();
               const containerRect = contentContainerRef.current?.getBoundingClientRect();
               
               if (containerRect) {
                 setSplitButtonPosition({
-                  top: rect.top - containerRect.top - 40,
+                  top: rect.top - containerRect.top - 45,
                   left: rect.left - containerRect.left + rect.width / 2,
                 });
                 setShowSplitButton(true);
@@ -310,11 +365,18 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       }, 10);
     };
     
-    // Also listen for selection changes
+    // Selection change listener - guarded against toolbar interaction
     const handleSelectionChange = () => {
+      if (isToolbarClickingRef.current) return;
+      
       const selection = window.getSelection();
       if (!selection || !selection.toString().trim()) {
-        setShowSplitButton(false);
+        // Delay to avoid race with toolbar clicks
+        setTimeout(() => {
+          if (!isToolbarClickingRef.current) {
+            setShowSplitButton(false);
+          }
+        }, 150);
       }
     };
     
@@ -330,260 +392,165 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     }
   }, [enableTextSplitting]);
   
-  // Handle text splitting
+  // Handle text splitting — works on the ORIGINAL content string to preserve
+  // all formatting markers (**bold**, __underline__, [CENTER]...[/CENTER]).
+  // The old approach extracted plain text from DOM nodes, which stripped every
+  // marker and caused the entire section to lose formatting on split.
   const handleSplitText = () => {
-    if (!selectedText) {
-      return;
-    }
-    
-    if (typeof content !== 'string') {
-      return;
-    }
-    
-    const trimmedText = selectedText.trim();
-    
-    if (trimmedText.length === 0) {
-      setShowSplitButton(false);
-      return;
-    }
-    
-    // Get the current selection and range
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-    
-    const range = selection.getRangeAt(0);
-    const contentElement = contentContainerRef.current;
-    if (!contentElement) return;
-    
-    // Helper function to extract text from range while preserving newlines properly
-    const extractTextFromRange = (range: Range): string => {
-      const clone = range.cloneContents();
-      let text = '';
-      
-      // Walk through cloned nodes and extract text, converting block elements to \n
-      const walkNodes = (node: Node, parentTag?: string) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          text += node.textContent || '';
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          const element = node as HTMLElement;
-          const tagName = element.tagName.toUpperCase();
-          
-          // Skip elements with no-pdf-export class (like Split/Bold buttons)
-          if (element.classList && element.classList.contains('no-pdf-export')) {
-            return;
-          }
-          
-          // Handle block-level elements that create line breaks
-          if (tagName === 'BR') {
-            text += '\n';
-          } else if (tagName === 'LI') {
-            // For list items, add bullet point marker
-            if (text.length > 0 && !text.endsWith('\n')) {
-              text += '\n';
-            }
-            text += '• ';
-            
-            // Process children to get the content
-            for (let i = 0; i < element.childNodes.length; i++) {
-              walkNodes(element.childNodes[i], tagName);
-            }
-          } else if (['DIV', 'P'].includes(tagName)) {
-            // For DIV and P, add newline before content if not first element
-            if (text.length > 0 && !text.endsWith('\n')) {
-              text += '\n';
-            }
-            
-            // Process children
-            for (let i = 0; i < element.childNodes.length; i++) {
-              walkNodes(element.childNodes[i], tagName);
-            }
-          } else {
-            // For other elements (UL, OL, SPAN, STRONG, etc.), just process children
-            for (let i = 0; i < element.childNodes.length; i++) {
-              walkNodes(element.childNodes[i], tagName);
-            }
-          }
-        } else {
-          // Walk through child nodes for other node types
-          for (let i = 0; i < node.childNodes.length; i++) {
-            walkNodes(node.childNodes[i], parentTag);
-          }
-        }
-      };
-      
-      walkNodes(clone);
-      return text;
-    };
-    
-    // Create a range from start of content to start of selection
-    const beforeRange = document.createRange();
-    beforeRange.selectNodeContents(contentElement);
-    beforeRange.setEnd(range.startContainer, range.startOffset);
-    const textBefore = extractTextFromRange(beforeRange);
-    
-    // Create a range from end of selection to end of content
-    const afterRange = document.createRange();
-    afterRange.selectNodeContents(contentElement);
-    afterRange.setStart(range.endContainer, range.endOffset);
-    const textAfter = extractTextFromRange(afterRange);
-    
-    // Build new content properly:
-    // 1. Text before the selection (trimmed at end to remove trailing spaces)
-    // 2. New line with bullet for the selected text
-    // 3. Text after (preserve newlines and bullets)
-    
-    // Trim trailing whitespace from before (but keep leading)
-    const cleanBefore = textBefore.trimEnd();
-    
-    // For afterText, we need to handle it carefully:
-    // - Always ensure it starts on a new line
-    // - If it starts with bullet, preserve it
-    // - If it's text from same line, make it a new bullet
-    let cleanAfter = textAfter;
-    
-    if (cleanAfter.length > 0) {
-      // Always ensure after content starts on a new line
-      if (!cleanAfter.startsWith('\n')) {
-        // Check if it starts with a bullet (from next LI)
-        if (cleanAfter.startsWith('•')) {
-          // Just add newline before the bullet
-          cleanAfter = '\n' + cleanAfter;
-        } else {
-          // It's remaining text on same line - make it a new bullet
-          cleanAfter = '\n• ' + cleanAfter.trimStart();
-        }
-      }
-    }
-    
-    // Combine: before + newline + bullet + selected text + after
-    const newContent = cleanBefore + '\n• ' + trimmedText + cleanAfter;
-    
-    // Update content
-    if (onContentChange) {
-      onContentChange(newContent);
-    }
-    
-    // Clear selection
-    window.getSelection()?.removeAllRanges();
-    setShowSplitButton(false);
-    setSelectedText("");
-    setSelectionRange(null);
-  };
+    if (!selectedText) return;
+    if (typeof content !== 'string') return;
 
-  // Handle bold text formatting - Simple and robust approach
-  const handleBoldText = () => {
-    if (!selectedText || typeof content !== 'string') {
-      setShowSplitButton(false);
-      return;
-    }
-    
     const trimmedText = selectedText.trim();
-    if (trimmedText.length === 0) {
-      setShowSplitButton(false);
-      return;
-    }
-    
-    // Simple approach: Find ALL occurrences of the selected text in content
-    // and determine which one to bold based on context
-    
-    // First, check if text is already bold anywhere (has ** around it)
-    const alreadyBoldPattern = new RegExp(`\\*\\*${escapeRegExp(trimmedText)}\\*\\*`, 'g');
-    if (alreadyBoldPattern.test(content)) {
-      // Remove bold from this text
-      const newContent = content.replace(`**${trimmedText}**`, trimmedText);
-      lastContentRef.current = newContent;
-      if (onContentChange) {
-        onContentChange(newContent);
+    if (trimmedText.length === 0) { setShowSplitButton(false); return; }
+
+    // --- Helpers -----------------------------------------------------------
+
+    /** Strip formatting markers to get the "rendered" plain text */
+    const stripMarkers = (text: string): string => {
+      return text
+        .replace(/\*\*/g, '')
+        .replace(/__/g, '')
+        .replace(/\[CENTER\]/g, '')
+        .replace(/\[\/CENTER\]/g, '');
+    };
+
+    /**
+     * Build a position map: renderedIndex → sourceIndex.
+     * Walking the source string, we skip over marker sequences (**, __,
+     * [CENTER], [/CENTER]) and record which source index each visible
+     * character corresponds to.  An extra sentinel at the end maps to the
+     * source length so we can slice cleanly.
+     */
+    const buildRenderedToSourceMap = (source: string): number[] => {
+      const map: number[] = [];
+      let si = 0;
+      while (si < source.length) {
+        if (source.substring(si, si + 2) === '**')       { si += 2; continue; }
+        if (source.substring(si, si + 2) === '__')       { si += 2; continue; }
+        if (source.substring(si, si + 8) === '[CENTER]') { si += 8; continue; }
+        if (source.substring(si, si + 9) === '[/CENTER]'){ si += 9; continue; }
+        map.push(si);
+        si++;
       }
-    } else {
-      // Need to find the correct occurrence to bold
-      // Get selection context from DOM to identify which occurrence
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) {
-        setShowSplitButton(false);
+      map.push(si); // end sentinel
+      return map;
+    };
+
+    const lines = content.split('\n');
+
+    // ── Case 1: We know which line the selection belongs to ────────────
+    if (selectedLineIndex >= 0 && selectedLineIndex < lines.length) {
+      const originalLine = lines[selectedLineIndex];
+
+      // Parse bullet / number prefix so we can re-attach it later
+      const bulletMatch = originalLine.match(/^([\s]*[•\-\*]\s*|\s*\d+\.\s*)/);
+      const bulletPrefix = bulletMatch ? bulletMatch[0] : '';
+      const lineContent = originalLine.substring(bulletPrefix.length);
+
+      // Rendered (visible) version of the line body
+      const renderedLine = stripMarkers(lineContent);
+      const selStart = renderedLine.indexOf(trimmedText);
+
+      if (selStart === -1) {
+        // Selection text not found on this line — bail out safely
+        clearToolbar();
         return;
       }
-      
-      const range = selection.getRangeAt(0);
-      
-      // Find the closest LI or P or DIV parent to get context
-      let contextNode: Node | null = range.startContainer;
-      while (contextNode && contextNode.nodeType !== Node.ELEMENT_NODE) {
-        contextNode = contextNode.parentNode;
+
+      const selEnd = selStart + trimmedText.length;
+
+      // Map rendered positions → source positions
+      const posMap = buildRenderedToSourceMap(lineContent);
+      const srcStart = posMap[selStart];
+      const srcEnd   = posMap[selEnd];
+
+      // Split the source line into three slices (markers stay intact)
+      const beforePart  = lineContent.substring(0, srcStart).trimEnd();
+      const selectedPart = lineContent.substring(srcStart, srcEnd).trim();
+      const afterPart   = lineContent.substring(srcEnd).trimStart();
+
+      // Build replacement lines
+      const newBulletPrefix = bulletPrefix || '• ';
+      const replacementLines: string[] = [];
+
+      if (beforePart) {
+        replacementLines.push(bulletPrefix + beforePart);
       }
-      
-      // Get the full text of the context element (the bullet item or paragraph)
-      let contextElement = contextNode as HTMLElement;
-      // Walk up to find LI, P, or the content container
-      while (contextElement && 
-             contextElement !== contentContainerRef.current &&
-             !['LI', 'P'].includes(contextElement.tagName)) {
-        contextElement = contextElement.parentElement as HTMLElement;
+      replacementLines.push(newBulletPrefix + selectedPart);
+      if (afterPart) {
+        replacementLines.push(newBulletPrefix + afterPart);
       }
-      
-      if (contextElement && contextElement !== contentContainerRef.current) {
-        // We're inside a specific LI or P element
-        const elementText = contextElement.textContent || '';
-        
-        // Find which bullet/paragraph this corresponds to in the original content
-        // Split content by newlines and find matching line
-        const lines = content.split('\n');
-        let targetLineIndex = -1;
-        
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          // Remove bullet markers for comparison
-          const cleanLine = line.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
-          // Also remove any existing ** markers for comparison
-          const cleanLineNoBold = cleanLine.replace(/\*\*/g, '');
-          
-          if (cleanLineNoBold === elementText.trim() || cleanLine === elementText.trim()) {
-            targetLineIndex = i;
-            break;
-          }
-        }
-        
-        if (targetLineIndex >= 0) {
-          // Found the line, now bold the selected text within this line only
-          const originalLine = lines[targetLineIndex];
-          
-          // Check if this specific occurrence is already bold
-          if (originalLine.includes(`**${trimmedText}**`)) {
-            // Remove bold
-            lines[targetLineIndex] = originalLine.replace(`**${trimmedText}**`, trimmedText);
-          } else if (originalLine.includes(trimmedText)) {
-            // Add bold - replace only in this line
-            lines[targetLineIndex] = originalLine.replace(trimmedText, `**${trimmedText}**`);
-          }
-          
-          const newContent = lines.join('\n');
-          lastContentRef.current = newContent;
-          if (onContentChange) {
-            onContentChange(newContent);
-          }
+
+      // Splice into lines array — every OTHER line is untouched
+      const newLines = [...lines];
+      newLines.splice(selectedLineIndex, 1, ...replacementLines);
+
+      const newContent = newLines.join('\n');
+      if (onContentChange) onContentChange(newContent);
+
+    // ── Case 2: Fallback — line index unknown, search full content ─────
+    } else {
+      const renderedContent = stripMarkers(content);
+      const selStart = renderedContent.indexOf(trimmedText);
+
+      if (selStart === -1) { clearToolbar(); return; }
+
+      const selEnd = selStart + trimmedText.length;
+      const posMap = buildRenderedToSourceMap(content);
+      const srcStart = posMap[selStart];
+      const srcEnd   = posMap[selEnd];
+
+      const beforePart  = content.substring(0, srcStart).trimEnd();
+      const selectedPart = content.substring(srcStart, srcEnd).trim();
+      const afterPart   = content.substring(srcEnd).trimStart();
+
+      let newContent = beforePart + '\n• ' + selectedPart;
+      if (afterPart) {
+        if (afterPart.startsWith('•') || afterPart.startsWith('\n')) {
+          newContent += '\n' + afterPart;
         } else {
-          // Fallback: just replace first occurrence in full content
-          const newContent = content.replace(trimmedText, `**${trimmedText}**`);
-          lastContentRef.current = newContent;
-          if (onContentChange) {
-            onContentChange(newContent);
-          }
+          newContent += '\n• ' + afterPart;
         }
+      }
+
+      if (onContentChange) onContentChange(newContent);
+    }
+
+    clearToolbar();
+  };
+
+  // Handle bold text formatting - uses pre-captured selection context
+  const handleBoldText = () => {
+    if (!selectedText || typeof content !== 'string') {
+      clearToolbar();
+      return;
+    }
+    
+    const trimmedText = selectedText.trim();
+    if (!trimmedText) { clearToolbar(); return; }
+    
+    const lines = content.split('\n');
+    let newContent: string;
+    
+    if (selectedLineIndex >= 0 && selectedLineIndex < lines.length) {
+      const line = lines[selectedLineIndex];
+      if (line.includes(`**${trimmedText}**`)) {
+        lines[selectedLineIndex] = line.replace(`**${trimmedText}**`, trimmedText);
+      } else if (line.includes(trimmedText)) {
+        lines[selectedLineIndex] = line.replace(trimmedText, `**${trimmedText}**`);
+      }
+      newContent = lines.join('\n');
+    } else {
+      if (content.includes(`**${trimmedText}**`)) {
+        newContent = content.replace(`**${trimmedText}**`, trimmedText);
       } else {
-        // Not in a specific element, use simple replacement
-        const newContent = content.replace(trimmedText, `**${trimmedText}**`);
-        lastContentRef.current = newContent;
-        if (onContentChange) {
-          onContentChange(newContent);
-        }
+        newContent = content.replace(trimmedText, `**${trimmedText}**`);
       }
     }
     
-    // Clear selection
-    window.getSelection()?.removeAllRanges();
-    setShowSplitButton(false);
-    setSelectedText("");
-    setSelectionRange(null);
+    lastContentRef.current = newContent;
+    onContentChange?.(newContent);
+    clearToolbar();
   };
   
   // Helper to escape special regex characters
@@ -591,112 +558,38 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   };
 
-  // Handle center text formatting
+  // Handle center text formatting - uses pre-captured selection context
   const handleCenterText = () => {
     if (!selectedText || typeof content !== 'string') {
-      setShowSplitButton(false);
+      clearToolbar();
       return;
     }
     
     const trimmedText = selectedText.trim();
-    if (trimmedText.length === 0) {
-      setShowSplitButton(false);
-      return;
-    }
+    if (!trimmedText) { clearToolbar(); return; }
     
-    // Check if text is already centered
-    const alreadyCenteredPattern = new RegExp(`\\[CENTER\\]${escapeRegExp(trimmedText)}\\[\\/CENTER\\]`, 'g');
-    if (alreadyCenteredPattern.test(content)) {
-      // Remove center markers
-      const newContent = content.replace(`[CENTER]${trimmedText}[/CENTER]`, trimmedText);
-      lastContentRef.current = newContent;
-      if (onContentChange) {
-        onContentChange(newContent);
+    const lines = content.split('\n');
+    let newContent: string;
+    
+    if (selectedLineIndex >= 0 && selectedLineIndex < lines.length) {
+      const line = lines[selectedLineIndex];
+      if (line.includes(`[CENTER]${trimmedText}[/CENTER]`)) {
+        lines[selectedLineIndex] = line.replace(`[CENTER]${trimmedText}[/CENTER]`, trimmedText);
+      } else if (line.includes(trimmedText)) {
+        lines[selectedLineIndex] = line.replace(trimmedText, `[CENTER]${trimmedText}[/CENTER]`);
       }
+      newContent = lines.join('\n');
     } else {
-      // Need to find the correct occurrence to center
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) {
-        setShowSplitButton(false);
-        return;
-      }
-      
-      const range = selection.getRangeAt(0);
-      
-      // Find the closest LI or P parent to get context
-      let contextNode: Node | null = range.startContainer;
-      while (contextNode && contextNode.nodeType !== Node.ELEMENT_NODE) {
-        contextNode = contextNode.parentNode;
-      }
-      
-      let contextElement = contextNode as HTMLElement;
-      while (contextElement && 
-             contextElement !== contentContainerRef.current &&
-             !['LI', 'P'].includes(contextElement.tagName)) {
-        contextElement = contextElement.parentElement as HTMLElement;
-      }
-      
-      if (contextElement && contextElement !== contentContainerRef.current) {
-        // We're inside a specific LI or P element
-        const elementText = contextElement.textContent || '';
-        
-        // Find which bullet/paragraph this corresponds to in the original content
-        const lines = content.split('\n');
-        let targetLineIndex = -1;
-        
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          // Remove bullet markers and formatting markers for comparison
-          const cleanLine = line.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
-          const cleanLineNoFormatting = cleanLine.replace(/\*\*/g, '').replace(/__/g, '').replace(/\[CENTER\]/g, '').replace(/\[\/CENTER\]/g, '');
-          
-          if (cleanLineNoFormatting === elementText.trim() || cleanLine === elementText.trim()) {
-            targetLineIndex = i;
-            break;
-          }
-        }
-        
-        if (targetLineIndex >= 0) {
-          // Found the line, now center the selected text within this line only
-          const originalLine = lines[targetLineIndex];
-          
-          // Check if this specific occurrence is already centered
-          if (originalLine.includes(`[CENTER]${trimmedText}[/CENTER]`)) {
-            // Remove center
-            lines[targetLineIndex] = originalLine.replace(`[CENTER]${trimmedText}[/CENTER]`, trimmedText);
-          } else if (originalLine.includes(trimmedText)) {
-            // Add center - replace only in this line
-            lines[targetLineIndex] = originalLine.replace(trimmedText, `[CENTER]${trimmedText}[/CENTER]`);
-          }
-          
-          const newContent = lines.join('\n');
-          lastContentRef.current = newContent;
-          if (onContentChange) {
-            onContentChange(newContent);
-          }
-        } else {
-          // Fallback: just replace first occurrence in full content
-          const newContent = content.replace(trimmedText, `[CENTER]${trimmedText}[/CENTER]`);
-          lastContentRef.current = newContent;
-          if (onContentChange) {
-            onContentChange(newContent);
-          }
-        }
+      if (content.includes(`[CENTER]${trimmedText}[/CENTER]`)) {
+        newContent = content.replace(`[CENTER]${trimmedText}[/CENTER]`, trimmedText);
       } else {
-        // Not in a specific element, use simple replacement
-        const newContent = content.replace(trimmedText, `[CENTER]${trimmedText}[/CENTER]`);
-        lastContentRef.current = newContent;
-        if (onContentChange) {
-          onContentChange(newContent);
-        }
+        newContent = content.replace(trimmedText, `[CENTER]${trimmedText}[/CENTER]`);
       }
     }
     
-    // Clear selection
-    window.getSelection()?.removeAllRanges();
-    setShowSplitButton(false);
-    setSelectedText("");
-    setSelectionRange(null);
+    lastContentRef.current = newContent;
+    onContentChange?.(newContent);
+    clearToolbar();
   };
 
   // Handle toggle all bullets in section
@@ -724,113 +617,38 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     }
   };
 
-  // Handle underline text formatting - Simple and robust approach
+  // Handle underline text formatting - uses pre-captured selection context
   const handleUnderlineText = () => {
     if (!selectedText || typeof content !== 'string') {
-      setShowSplitButton(false);
+      clearToolbar();
       return;
     }
     
     const trimmedText = selectedText.trim();
-    if (trimmedText.length === 0) {
-      setShowSplitButton(false);
-      return;
-    }
+    if (!trimmedText) { clearToolbar(); return; }
     
-    // First, check if text is already underlined anywhere (has __ around it)
-    const alreadyUnderlinePattern = new RegExp(`__${escapeRegExp(trimmedText)}__`, 'g');
-    if (alreadyUnderlinePattern.test(content)) {
-      // Remove underline from this text
-      const newContent = content.replace(`__${trimmedText}__`, trimmedText);
-      lastContentRef.current = newContent;
-      if (onContentChange) {
-        onContentChange(newContent);
+    const lines = content.split('\n');
+    let newContent: string;
+    
+    if (selectedLineIndex >= 0 && selectedLineIndex < lines.length) {
+      const line = lines[selectedLineIndex];
+      if (line.includes(`__${trimmedText}__`)) {
+        lines[selectedLineIndex] = line.replace(`__${trimmedText}__`, trimmedText);
+      } else if (line.includes(trimmedText)) {
+        lines[selectedLineIndex] = line.replace(trimmedText, `__${trimmedText}__`);
       }
+      newContent = lines.join('\n');
     } else {
-      // Need to find the correct occurrence to underline
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) {
-        setShowSplitButton(false);
-        return;
-      }
-      
-      const range = selection.getRangeAt(0);
-      
-      // Find the closest LI or P parent to get context
-      let contextNode: Node | null = range.startContainer;
-      while (contextNode && contextNode.nodeType !== Node.ELEMENT_NODE) {
-        contextNode = contextNode.parentNode;
-      }
-      
-      let contextElement = contextNode as HTMLElement;
-      while (contextElement && 
-             contextElement !== contentContainerRef.current &&
-             !['LI', 'P'].includes(contextElement.tagName)) {
-        contextElement = contextElement.parentElement as HTMLElement;
-      }
-      
-      if (contextElement && contextElement !== contentContainerRef.current) {
-        // We're inside a specific LI or P element
-        const elementText = contextElement.textContent || '';
-        
-        // Find which bullet/paragraph this corresponds to in the original content
-        const lines = content.split('\n');
-        let targetLineIndex = -1;
-        
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          // Remove bullet markers for comparison
-          const cleanLine = line.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
-          // Also remove any existing ** or __ markers for comparison
-          const cleanLineNoFormatting = cleanLine.replace(/\*\*/g, '').replace(/__/g, '');
-          
-          if (cleanLineNoFormatting === elementText.trim() || cleanLine === elementText.trim()) {
-            targetLineIndex = i;
-            break;
-          }
-        }
-        
-        if (targetLineIndex >= 0) {
-          // Found the line, now underline the selected text within this line only
-          const originalLine = lines[targetLineIndex];
-          
-          // Check if this specific occurrence is already underlined
-          if (originalLine.includes(`__${trimmedText}__`)) {
-            // Remove underline
-            lines[targetLineIndex] = originalLine.replace(`__${trimmedText}__`, trimmedText);
-          } else if (originalLine.includes(trimmedText)) {
-            // Add underline - replace only in this line
-            lines[targetLineIndex] = originalLine.replace(trimmedText, `__${trimmedText}__`);
-          }
-          
-          const newContent = lines.join('\n');
-          lastContentRef.current = newContent;
-          if (onContentChange) {
-            onContentChange(newContent);
-          }
-        } else {
-          // Fallback: just replace first occurrence in full content
-          const newContent = content.replace(trimmedText, `__${trimmedText}__`);
-          lastContentRef.current = newContent;
-          if (onContentChange) {
-            onContentChange(newContent);
-          }
-        }
+      if (content.includes(`__${trimmedText}__`)) {
+        newContent = content.replace(`__${trimmedText}__`, trimmedText);
       } else {
-        // Not in a specific element, use simple replacement
-        const newContent = content.replace(trimmedText, `__${trimmedText}__`);
-        lastContentRef.current = newContent;
-        if (onContentChange) {
-          onContentChange(newContent);
-        }
+        newContent = content.replace(trimmedText, `__${trimmedText}__`);
       }
     }
     
-    // Clear selection
-    window.getSelection()?.removeAllRanges();
-    setShowSplitButton(false);
-    setSelectedText("");
-    setSelectionRange(null);
+    lastContentRef.current = newContent;
+    onContentChange?.(newContent);
+    clearToolbar();
   };
 
   // Build underline classes
@@ -930,6 +748,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   };
 
   // Handle backspace at start of line to merge with previous line
+  // Uses the original items array (from content string) so formatting markers are preserved.
   const handleKeyDownForMerge = (
     e: React.KeyboardEvent<HTMLElement>,
     currentIndex: number,
@@ -939,28 +758,30 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
     if (e.key === 'Backspace' && isCursorAtStart() && currentIndex > 0) {
       e.preventDefault();
       
-      // Get current item's text from DOM (what user sees)
-      const currentText = (e.currentTarget.textContent || '').trim();
+      // Use the original item text (which has **, __, [CENTER] markers)
+      // instead of reading from DOM which strips them.
+      const currentItem = items[currentIndex];
+      const currentBody = currentItem
+        .replace(/^[\s]*[•\-\*]\s*/, '')
+        .replace(/^\d+\.\s*/, '')
+        .trim();
       
-      // Get previous item content (without bullet marker if present)
       const previousItem = items[currentIndex - 1];
-      const prevContent = previousItem.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+      const prevBody = previousItem
+        .replace(/^[\s]*[•\-\*]\s*/, '')
+        .replace(/^\d+\.\s*/, '')
+        .trim();
       
-      // Create merged array
       const mergedItems = [...items];
       
       if (isBulletList) {
-        // For bullet lists: "prev content" + " " + "current content"
-        mergedItems[currentIndex - 1] = `• ${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
+        mergedItems[currentIndex - 1] = `• ${prevBody} ${currentBody}`.replace(/\s+/g, ' ').trim();
       } else {
-        // For paragraphs: just concatenate with space
-        mergedItems[currentIndex - 1] = `${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
+        mergedItems[currentIndex - 1] = `${prevBody} ${currentBody}`.replace(/\s+/g, ' ').trim();
       }
       
-      // Remove current item
       mergedItems.splice(currentIndex, 1);
       
-      // Update content
       if (onContentChange) {
         const newContent = mergedItems.join('\n');
         onContentChange(newContent);
@@ -1084,60 +905,51 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                         {...(shouldUseHTML ? { dangerouslySetInnerHTML: { __html: displayItem } } : { children: cleanItem })}
                         onKeyDown={(e) => {
                           if (editable) {
-                            // Enhanced merge functionality
+                            // Enhanced merge functionality — uses original content to preserve formatting markers
                             if (e.key === 'Backspace' && isCursorAtStart() && index > 0) {
                               e.preventDefault();
                               
-                              // Get current text from DOM
-                              const currentText = (e.currentTarget.textContent || '').trim();
+                              // Work with original content lines (preserves **bold**, __underline__, [CENTER] markers)
+                              const currentContent = contentRef.current;
+                              if (typeof currentContent !== 'string') return;
                               
-                              // Get ALL items from DOM (not from the items array which may be stale)
-                              const ul = e.currentTarget.closest('ul');
-                              if (!ul) return;
+                              const allLines = currentContent.split('\n').filter(line => line.trim());
+                              if (index <= 0 || index >= allLines.length) return;
                               
-                              const allLiElements = Array.from(ul.querySelectorAll('li'));
-                              const currentItems = allLiElements.map((li) => {
-                                const text = (li.querySelector('div[contenteditable]') as HTMLElement)?.textContent || 
-                                             (li as HTMLElement).textContent || '';
-                                return `• ${text.trim()}`;
-                              });
+                              // Get previous and current lines WITH their formatting markers
+                              const prevLine = allLines[index - 1];
+                              const currLine = allLines[index];
                               
-                              // Get previous item content
-                              const prevContent = currentItems[index - 1]?.replace(/^[\s]*[•\-\*]\s*/, '').trim() || '';
+                              // Strip only bullet prefix, keep formatting markers
+                              const prevBody = prevLine.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+                              const currBody = currLine.replace(/^[\s]*[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
                               
-                              // Create merged array
-                              const mergedItems = [...currentItems];
-                              // Merge with space: "prev content" + " " + "current content"
-                              mergedItems[index - 1] = `• ${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
-                              mergedItems.splice(index, 1);
+                              // Merge the two lines — all other lines stay untouched
+                              const mergedLines = [...allLines];
+                              mergedLines[index - 1] = `• ${prevBody} ${currBody}`.replace(/\s+/g, ' ').trim();
+                              mergedLines.splice(index, 1);
                               
                               if (onContentChange) {
-                                onContentChange(mergedItems.join('\n'));
+                                onContentChange(mergedLines.join('\n'));
                               }
                               return;
                             }
                             
-                            // Enter key creates new bullet point
+                            // Enter key creates new bullet point — uses original content to preserve formatting
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
                               
-                              // Get ALL items from DOM
-                              const ul = e.currentTarget.closest('ul');
-                              if (!ul) return;
+                              const currentContent = contentRef.current;
+                              if (typeof currentContent !== 'string') return;
                               
-                              const allLiElements = Array.from(ul.querySelectorAll('li'));
-                              const currentItems = allLiElements.map((li) => {
-                                const text = (li.querySelector('div[contenteditable]') as HTMLElement)?.textContent || 
-                                             (li as HTMLElement).textContent || '';
-                                return `• ${text.trim()}`;
-                              });
+                              const allLines = currentContent.split('\n').filter(line => line.trim());
                               
-                              // Insert new bullet after current
-                              const newItems = [...currentItems];
-                              newItems.splice(index + 1, 0, '• ');
+                              // Insert new empty bullet after current line, all other lines stay untouched
+                              const newLines = [...allLines];
+                              newLines.splice(index + 1, 0, '• ');
                               
                               if (onContentChange) {
-                                onContentChange(newItems.join('\n'));
+                                onContentChange(newLines.join('\n'));
                               }
                             }
                           }
@@ -1204,15 +1016,16 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
                             {...(shouldUsePHTML ? { dangerouslySetInnerHTML: { __html: displayPText } } : { children: pText })}
                             onKeyDown={(e) => {
                               if (editable) {
-                                // Enhanced merge functionality for paragraphs
+                                // Enhanced merge functionality for paragraphs — uses original lines to preserve formatting
                                 if (e.key === 'Backspace' && isCursorAtStart() && idx > 0) {
                                   e.preventDefault();
-                                  const currentText = (e.currentTarget.textContent || '').trim();
-                                  const prevContent = allLines[idx - 1].trim();
+                                  
+                                  // Use original allLines (from content string) which have formatting markers
+                                  const prevBody = allLines[idx - 1].trim();
+                                  const currBody = allLines[idx].trim();
                                   
                                   const mergedLines = [...allLines];
-                                  // Merge with space: "prev content" + " " + "current content"
-                                  mergedLines[idx - 1] = `${prevContent} ${currentText}`.replace(/\s+/g, ' ').trim();
+                                  mergedLines[idx - 1] = `${prevBody} ${currBody}`.replace(/\s+/g, ' ').trim();
                                   mergedLines.splice(idx, 1);
                                   
                                   if (onContentChange) {
@@ -1585,12 +1398,12 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
         ref={contentContainerRef}
         className={`${contentClasses} relative`}
         onMouseLeave={() => {
-          // Hide split button when mouse leaves content area
+          // Hide toolbar when mouse leaves - but not if interacting with toolbar
           setTimeout(() => {
-            if (!window.getSelection()?.toString().trim()) {
+            if (!isToolbarClickingRef.current && !window.getSelection()?.toString().trim()) {
               setShowSplitButton(false);
             }
-          }, 100);
+          }, 300);
         }}
       >
         {renderContent()}
@@ -1600,6 +1413,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
         {enableTextSplitting && showSplitButton && selectedText && !document.querySelector('.pdf-exporting') && (
           <div
             className="absolute flex items-center gap-1 no-pdf-export"
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); isToolbarClickingRef.current = true; }}
             style={{
               top: `${Math.max(0, splitButtonPosition.top)}px`,
               left: `${splitButtonPosition.left}px`,

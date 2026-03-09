@@ -9,6 +9,7 @@ import { useLanguage } from "./contexts/LanguageContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Loading from "./components/Loading";
 import LanguageToggle from "./components/LanguageToggle";
+import WhatsNewButton from "./components/WhatsNewButton";
 import { getRoleDisplayName, getRoleBadgeColor } from "./utils/rbac";
 import { useSearchParams } from "next/navigation";
 import { 
@@ -115,7 +116,10 @@ function HomeContent() {
           <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
             {/* Language Toggle */}
             <LanguageToggle variant="compact" />
-            
+
+            {/* What's New bell */}
+            <WhatsNewButton />
+
             {user && (
               <button
                 onClick={toggleSidebar}
@@ -218,6 +222,17 @@ function HomeContent() {
                         {isSuperAdmin ? t.home.allDocuments : isCompanyAdmin ? t.home.companyDocuments : t.home.myDocuments}
                       </span>
                     </Link>
+                    {isSuperAdmin && (
+                      <Link
+                        href="/pages/WhatsNew/admin"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Zap className="w-4 h-4 text-[#A4C639]" />
+                          Manage What&apos;s New
+                        </span>
+                      </Link>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"

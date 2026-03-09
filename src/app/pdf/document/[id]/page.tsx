@@ -138,6 +138,7 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
   // Fetch company branding from logged-in user's company_id
   let headerImage: string | undefined = undefined;
   let footerImage: string | undefined = undefined;
+  let termsAndConditions: string | null = null;
   
   // Get user's company_id from auth token (server-side)
   let companyId: string | null = null;
@@ -201,6 +202,10 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
           footerImage = `${API_BASE_URL}${footerImage.startsWith("/") ? "" : "/"}${footerImage}`;
         }
       }
+
+      if (branding.terms_and_conditions) {
+        termsAndConditions = branding.terms_and_conditions;
+      }
     }
   } catch (error) {
     // Don't set images if branding fetch fails - will show no header/footer
@@ -213,28 +218,55 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
           belt-and-suspenders fix for the shadow issue that appears only in
           production builds where the print.css bundle may load after Tailwind. */}
       <style dangerouslySetInnerHTML={{ __html: `
-        /* Force light mode CSS variables — prevents Docker dark mode */
+        /*
+         * INLINE STYLE — highest priority, injected last into the HTML.
+         *
+         * KEY FIX: color-scheme: light
+         * Tailwind v4 preflight sets  color-scheme: light dark  on :root which
+         * allows Chromium (headless/Docker) to activate dark UA rendering.
+         * Overriding it here to  light  is the definitive fix for the gray
+         * overlay that appears on all transparent containers in production.
+         */
         :root {
           color-scheme: light !important;
           --background: #ffffff !important;
-          --foreground: #171717 !important;
+          --foreground: #1a1a1a !important;
         }
-        /* PDF Shadow Removal — production safeguard */
+        html, body {
+          color-scheme: light !important;
+          background: #ffffff !important;
+          color: #1a1a1a !important;
+        }
+        @media (prefers-color-scheme: dark) {
+          :root {
+            color-scheme: light !important;
+            --background: #ffffff !important;
+            --foreground: #1a1a1a !important;
+          }
+          html, body,
+          .pdf-document-wrapper, .pdf-document-body, .pdf-container,
+          .base-template, .base-template > div {
+            color-scheme: light !important;
+            background: #ffffff !important;
+            color: #1a1a1a !important;
+          }
+        }
+        .pdf-document-wrapper, .pdf-document-body, .pdf-container,
+        .base-template, .base-template > div {
+          background: #ffffff !important;
+          color: #1a1a1a !important;
+        }
+
+        /* Shadow removal */
         *, *::before, *::after {
           box-shadow: none !important;
           text-shadow: none !important;
         }
-        .shadow-sm, .shadow, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl, .shadow-3xl,
         [class*="shadow"] {
           box-shadow: none !important;
         }
-        .section-template, .dynamic-table, .hotels-section,
-        .base-template, .pdf-container, .pdf-structure-renderer,
-        [class*="rounded-2xl"], [class*="border-2"] {
-          box-shadow: none !important;
-        }
-        /* Remove backdrop blur for clean PDF rendering */
-        [class*="backdrop-blur"] {
+        /* Backdrop blur removal — prevents frosted-glass tint in headless */
+        *, [class*="backdrop-blur"] {
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
         }
@@ -247,8 +279,9 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
       <BaseTemplate
         headerImage={headerImage}
         footerImage={footerImage}
-        showHeader={!!headerImage} // Only show header if image exists
-        showFooter={!!footerImage} // Only show footer if image exists
+        showHeader={!!headerImage}
+        showFooter={!!footerImage}
+        termsAndConditions={termsAndConditions}
         pageSize="A4"
       >
         <div className="pdf-document-body" dir={direction}>

@@ -25,6 +25,22 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* ── PDF pages: lock to light background regardless of system color scheme.
+   The .pdf-document-wrapper class is applied by the PDF layout. This re-declares
+   background on the elements that are direct ancestors of PDF content so that
+   even if the @media (prefers-color-scheme: dark) block above sets --background
+   to #0a0a0a on :root, the elements inside the PDF wrapper are forced white. */
+@media (prefers-color-scheme: dark) {
+  .pdf-document-wrapper,
+  .pdf-document-wrapper body,
+  .pdf-document-body,
+  .pdf-container,
+  .base-template {
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+  }
+}
+
 /* Prevent width overflow for tables and sections */
 table {
   max-width: 100%;

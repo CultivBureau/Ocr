@@ -5,12 +5,16 @@ export const metadata: Metadata = {
   description: "PDF document view",
 };
 
-// Configure viewport for mobile responsiveness
+// Force light color scheme at the browser/meta level.
+// This is the MOST authoritative way to prevent Chromium (headless/Docker)
+// from activating dark UA rendering caused by Tailwind v4 preflight
+// setting  color-scheme: light dark  on :root.
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  colorScheme: 'light',  // injects <meta name="color-scheme" content="light">
 };
 
 export default function PDFLayout({
@@ -18,10 +22,11 @@ export default function PDFLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Don't render html/body here - Next.js root layout already provides them
-  // This layout is just for metadata and styling
   return (
-    <div className="pdf-document-wrapper" style={{ margin: 0, padding: 0 }}>
+    <div
+      className="pdf-document-wrapper"
+      style={{ margin: 0, padding: 0, background: '#ffffff', colorScheme: 'light' }}
+    >
       {children}
     </div>
   );

@@ -30,6 +30,7 @@ interface StructureRendererProps {
   // Branding props - if provided, will use company branding instead of defaults
   headerImage?: string;
   footerImage?: string;
+  termsAndConditions?: string | null;
   // If true, won't render BaseTemplate wrapper (useful when already wrapped)
   skipBaseTemplate?: boolean;
 }
@@ -57,6 +58,7 @@ export default function StructureRenderer({
   className = "",
   headerImage,
   footerImage,
+  termsAndConditions,
   skipBaseTemplate = false,
 }: StructureRendererProps) {
   // Normalize structure to SeparatedStructure format
@@ -478,8 +480,9 @@ export default function StructureRenderer({
     <BaseTemplate
       headerImage={headerImage}
       footerImage={footerImage}
-      showHeader={!!headerImage} // Only show if image provided
-      showFooter={!!footerImage} // Only show if image provided
+      showHeader={!!headerImage}
+      showFooter={!!footerImage}
+      termsAndConditions={termsAndConditions}
       className={className}
     >
       {content}

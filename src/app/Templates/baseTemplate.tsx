@@ -26,6 +26,9 @@ export interface BaseTemplateProps {
   footerImageAlt?: string;
   showFooter?: boolean;
   footerClassName?: string;
+
+  // Terms & Conditions
+  termsAndConditions?: string | null;
   
   // Background Configuration
   backgroundColor?: string;
@@ -75,6 +78,8 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
   footerImageAlt = "Footer",
   showFooter = true,
   footerClassName = "",
+  // Terms & Conditions
+  termsAndConditions,
   // Background
   backgroundColor,
   backgroundGradient,
@@ -200,6 +205,37 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
         <div className={contentAreaClasses} style={contentStyle}>
           {children}
         </div>
+
+        {/* Terms & Conditions */}
+        {termsAndConditions && (
+          <div
+            className="w-full px-6 pb-4"
+            dir="auto"
+            style={{ pageBreakInside: "avoid" }}
+          >
+            <div
+              style={{
+                borderTop: "1.5px solid #C4B454",
+                marginBottom: "8px",
+              }}
+            />
+            <div
+              style={{
+                fontFamily: "'Cairo', 'Arial', sans-serif",
+                fontSize: "14px",
+                fontWeight:900,
+                lineHeight: "1.8",
+                color: "#1a1a1a",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                textAlign: "right",
+                direction: "rtl",
+              }}
+            >
+              {termsAndConditions}
+            </div>
+          </div>
+        )}
 
         {/* Footer Image */}
         {showFooter && footerImage && (

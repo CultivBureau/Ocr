@@ -13,10 +13,60 @@
 /* ── Force light background on PDF document page (this file is only loaded here) ── */
 /* Prevents dark theme from globals.css (prefers-color-scheme: dark) causing
    a shadow/gray overlay when PDF is generated in production headless browser. */
+
+/* ── THE ROOT FIX: color-scheme: light ────────────────────────────────────
+   Tailwind v4 (@import "tailwindcss") injects  color-scheme: light dark  on
+   :root in its preflight. That single declaration tells headless Chromium
+   "this page supports dark mode", so when production Docker has no explicit
+   light preference, Chromium activates dark UA styles and paints every
+   transparent/semi-transparent container with a gray overlay.
+   Setting  color-scheme: light  here overrides Tailwind's preflight and locks
+   the UA to light rendering — this is the real fix for the gray overlay.
+   ─────────────────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: light !important;
+  --background: #ffffff !important;
+  --foreground: #1a1a1a !important;
+}
+
 html,
 body {
+  color-scheme: light !important;
+}
+
+/* Also neutralise the dark media query in case it still fires */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light !important;
+    --background: #ffffff !important;
+    --foreground: #1a1a1a !important;
+  }
+  html,
+  body,
+  .pdf-document-wrapper,
+  .pdf-document-body,
+  .pdf-container,
+  .base-template,
+  .base-template > div {
+    color-scheme: light !important;
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+  }
+}
+
+html,
+body,
+.pdf-document-wrapper,
+.pdf-document-body,
+.pdf-container {
   background: #ffffff !important;
   color: #1a1a1a !important;
+}
+.base-template {
+  background: #ffffff !important;
+}
+.base-template > div {
+  background: #ffffff !important;
 }
 
 /* ── Page Setup ───────────────────────────────────────────────────────────── */
@@ -39,8 +89,7 @@ body {
 }
 
 /* ── Base Document Styles ─────────────────────────────────────────────────── */
-body,
-body.pdf-document-body {
+body {
   margin: 0;
   padding: 0;
   background: #ffffff !important;
@@ -50,6 +99,14 @@ body.pdf-document-body {
   line-height: 1.55;
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
+}
+
+/* NOTE: .pdf-document-body is a <div>, NOT the <body> element.
+   The old selector  body.pdf-document-body  never matched anything.
+   This is the corrected rule that actually targets the div. */
+.pdf-document-body {
+  background: #ffffff !important;
+  color: #1a1a1a !important;
 }
 
 /* ── Layout Containers ────────────────────────────────────────────────────── */
@@ -161,9 +218,15 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   page-break-inside: auto !important;
 }
 
-/* Remove gradient backgrounds from sections */
-.section-template[class*="bg-gradient"] {
+/* Remove gradient/tinted backgrounds from sections — force white for PDF */
+.section-template,
+.section-template[class*="bg-gradient"],
+.section-template[class*="bg-"],
+.section-template[class*="from-"],
+.section-template[class*="to-"],
+.section-template[class*="via-"] {
   background: #ffffff !important;
+  background-color: #ffffff !important;
 }
 
 /* Section title — keep with content */
