@@ -2391,21 +2391,6 @@ function CodePageContent() {
       
       return newStructure;
     });
-    
-    // Save to database after state update
-    if (documentId && newStructure) {
-      try {
-        await updateDocument(documentId, {
-          extracted_data: newStructure,
-          metadata: {
-            ...sourceMetadata,
-            lastSaved: new Date().toISOString(),
-          },
-        });
-      } catch (error) {
-        console.error('[CodePreview] Failed to save changes:', error);
-      }
-    }
   }, [documentId, pendingSuggestions, sourceMetadata]);
 
   const handleRejectSuggestion = useCallback(async (suggestionId: string) => {
@@ -2423,44 +2408,37 @@ function CodePageContent() {
       };
       return newStructure;
     });
-    
-    // Save to database after state update
-    if (documentId && newStructure) {
-      try {
-        await updateDocument(documentId, {
-          extracted_data: newStructure,
-          metadata: {
-            ...sourceMetadata,
-            lastSaved: new Date().toISOString(),
-          },
-        });
-      } catch (error) {
-        console.error('[CodePreview] Failed to save changes:', error);
-      }
-    }
   }, [documentId, pendingSuggestions, sourceMetadata]);
 
   const handleApproveAllSuggestions = useCallback(async () => {
-    // Create all new elements
-    const newElements: UserElement[] = [];
-    const newLayoutIds: string[] = [];
-    
-    pendingSuggestions.forEach(suggestion => {
-      const elementId = `user_${suggestion.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      newElements.push({
-        id: elementId,
-        type: suggestion.type,
-        data: suggestion.data,
-        created_at: new Date().toISOString()
-      });
-      newLayoutIds.push(elementId);
-    });
-    
     // Build new structure
     let newStructure: SeparatedStructure | null = null;
     
     // Update structure: add all elements and clear suggestions
     setStructure(prev => {
+      const keyFor = (type: string, data: unknown) => `${type}:${JSON.stringify(data)}`;
+      const existingKeys = new Set(prev.user.elements.map(el => keyFor(el.type, el.data)));
+      const newKeys = new Set<string>();
+
+      // Create all new elements (deduped against existing + within suggestions)
+      const newElements: UserElement[] = [];
+      const newLayoutIds: string[] = [];
+
+      pendingSuggestions.forEach(suggestion => {
+        const key = keyFor(suggestion.type, suggestion.data);
+        if (existingKeys.has(key) || newKeys.has(key)) return;
+        newKeys.add(key);
+
+        const elementId = `user_${suggestion.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        newElements.push({
+          id: elementId,
+          type: suggestion.type,
+          data: suggestion.data,
+          created_at: new Date().toISOString()
+        });
+        newLayoutIds.push(elementId);
+      });
+
       newStructure = {
         ...prev,
         user: {
@@ -2471,21 +2449,6 @@ function CodePageContent() {
       };
       return newStructure;
     });
-    
-    // Save to database after state update
-    if (documentId && newStructure) {
-      try {
-        await updateDocument(documentId, {
-          extracted_data: newStructure,
-          metadata: {
-            ...sourceMetadata,
-            lastSaved: new Date().toISOString(),
-          },
-        });
-      } catch (error) {
-        console.error('[CodePreview] Failed to save changes:', error);
-      }
-    }
   }, [documentId, pendingSuggestions, sourceMetadata]);
 
   const handleRejectAllSuggestions = useCallback(async () => {
@@ -2500,21 +2463,6 @@ function CodePageContent() {
       };
       return newStructure;
     });
-    
-    // Save to database after state update
-    if (documentId && newStructure) {
-      try {
-        await updateDocument(documentId, {
-          extracted_data: newStructure,
-          metadata: {
-            ...sourceMetadata,
-            lastSaved: new Date().toISOString(),
-          },
-        });
-      } catch (error) {
-        console.error('[CodePreview] Failed to save changes:', error);
-      }
-    }
   }, [documentId, sourceMetadata]);
 
   const handleCloseSuggestionModal = useCallback(() => {

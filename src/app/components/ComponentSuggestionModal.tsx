@@ -57,19 +57,37 @@ const ComponentSuggestionModal: React.FC<ComponentSuggestionModalProps> = ({
   };
 
   const handleApproveAllClick = () => {
-    suggestions.forEach(suggestion => {
-      if (!rejectedIds.has(suggestion.id)) {
-        handleApprove(suggestion);
-      }
+    // Important: avoid double-applying side-effects.
+    // `onApproveAll` is responsible for committing changes; here we only update local UI state.
+    setApprovedIds(prev => {
+      const next = new Set(prev);
+      suggestions.forEach(s => {
+        if (!rejectedIds.has(s.id)) next.add(s.id);
+      });
+      return next;
+    });
+    setRejectedIds(prev => {
+      const next = new Set(prev);
+      suggestions.forEach(s => next.delete(s.id));
+      return next;
     });
     onApproveAll();
   };
 
   const handleRejectAllClick = () => {
-    suggestions.forEach(suggestion => {
-      if (!approvedIds.has(suggestion.id)) {
-        handleReject(suggestion.id);
-      }
+    // Important: avoid double-applying side-effects.
+    // `onRejectAll` is responsible for committing changes; here we only update local UI state.
+    setRejectedIds(prev => {
+      const next = new Set(prev);
+      suggestions.forEach(s => {
+        if (!approvedIds.has(s.id)) next.add(s.id);
+      });
+      return next;
+    });
+    setApprovedIds(prev => {
+      const next = new Set(prev);
+      suggestions.forEach(s => next.delete(s.id));
+      return next;
     });
     onRejectAll();
   };
