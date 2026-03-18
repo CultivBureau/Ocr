@@ -431,6 +431,27 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   margin-bottom: 10px !important;
 }
 
+/* Fix: overflow-x-auto clips the table in PDF/print mode (no scrollbar available).
+   Remove overflow clipping and drop min-width constraints so all columns (including
+   المسافرين/Travelers and الأمتعة/Luggage) fit within the A4 content width (~714px). */
+[data-airplane-section-id] .overflow-x-auto {
+  overflow: visible !important;
+}
+
+[data-airplane-section-id] table {
+  min-width: unset !important;
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+[data-airplane-section-id] th,
+[data-airplane-section-id] td {
+  min-width: unset !important;
+  padding: 4px 5px !important;
+  font-size: 11px !important;
+  word-break: break-word !important;
+}
+
 /* ── Transport Section Overrides ──────────────────────────────────────────── */
 [class*="transport-section"],
 [data-transport-section-id] {
