@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
-import type { Editor } from "@tiptap/core";
+import { posToDOMRect, type Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyleKit } from "@tiptap/extension-text-style/text-style-kit";
 import TextAlign from "@tiptap/extension-text-align";
@@ -291,7 +291,7 @@ function ColorPickerBtn({
 
       {open && (
         <div
-          className="absolute left-1/2 top-full z-[99999] mt-1 w-44 -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/10"
+          className="absolute left-1/2 top-full z-50 mt-1 w-44 -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/10"
           onMouseDown={(e) => e.stopPropagation()}
         >
           {/* Preset swatches */}
@@ -648,20 +648,42 @@ export default function SectionContentEditor({
               : "border-slate-200/80 hover:border-slate-300"
           } bg-white/80`}
         >
-          {/* Toolbar */}
+          {/* Toolbar: stack above the bubble (floating UI is a sibling inside the editor wrapper). */}
           <div
-            className={`border-b transition-colors duration-200 ${
+            className={`relative z-50 isolate border-b transition-colors duration-200 ${
               isFocused ? "border-blue-100 bg-slate-50/80" : "border-slate-100 bg-slate-50/60"
             }`}
           >
             <Toolbar editor={editor} />
           </div>
 
-          {/* BubbleMenu for quick selection formatting */}
+          {/*
+            Floating menu: (1) anchor to the bottom edge of the selection so tall / "select all"
+            rects do not push the menu to the side (left/right flip overlapped section controls).
+            (2) disable flip so we never move to top (toolbar) or sides.
+          */}
           <BubbleMenu
             editor={editor}
-            options={{ placement: "top", offset: 10, flip: true }}
-            className="flex items-center gap-0.5 rounded-xl border border-slate-200/95 bg-white px-1.5 py-1 shadow-2xl shadow-slate-900/15 backdrop-blur-md"
+            getReferencedVirtualElement={() => {
+              const { view, state } = editor;
+              const { selection } = state;
+              if (selection.empty) return null;
+              const full = posToDOMRect(view, selection.from, selection.to);
+              const stripH = Math.min(20, Math.max(4, full.height * 0.06));
+              const r = new DOMRect(full.left, full.bottom - stripH, full.width, stripH);
+              return {
+                getBoundingClientRect: () => r,
+                getClientRects: () => [r],
+              };
+            }}
+            options={{
+              placement: "bottom",
+              strategy: "absolute",
+              offset: 10,
+              flip: false,
+              shift: { padding: 12 },
+            }}
+            className="pointer-events-auto z-10 flex max-w-[min(100vw-1rem,28rem)] flex-wrap items-center gap-0.5 rounded-xl border border-slate-200/95 bg-white px-1.5 py-1 shadow-2xl shadow-slate-900/15 backdrop-blur-md"
           >
             <BubbleMenuInner editor={editor} />
           </BubbleMenu>
