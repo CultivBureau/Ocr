@@ -32,7 +32,12 @@ import { getCompany } from "../../services/CompanyApi";
 import ProtectedRoute from "../../components/ProtectedRoute";
 import VersionHistoryModal from "../../components/VersionHistoryModal";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { useAuth } from "../../contexts/AuthContext";
 import type { SeparatedStructure, UserElement, Table, Section, ComponentSuggestion } from "../../types/ExtractTypes";
+import {
+  DEFAULT_NEW_SECTION_CONTENT,
+  DEFAULT_NEW_SECTION_TITLE,
+} from "../../utils/blankDocument";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
@@ -88,6 +93,7 @@ const deduplicateStructure = (structure: SeparatedStructure): SeparatedStructure
 
 function CodePageContent() {
   const { t, isRTL, dir } = useLanguage();
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const [structure, setStructure] = useState<SeparatedStructure>(defaultStructure);
   const [sourceMetadata, setSourceMetadata] = useState<{
@@ -1624,6 +1630,51 @@ function CodePageContent() {
     }
   }, [searchParams]);
 
+  // When opening a new template (blank, PDF from session, etc.), no document is loaded yet so
+  // loadDocument* never runs — fetch header/footer from the logged-in user's company.
+  // Skip when ?docId= is present so history loads branding from the document's company_id.
+  useEffect(() => {
+    const docIdFromUrl = searchParams?.get("docId");
+    if (docIdFromUrl) return;
+    const companyId = user?.company_id;
+    if (!isAuthenticated() || !companyId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const company = await getCompany(companyId);
+        if (cancelled) return;
+        if (company.header_image) {
+          const headerUrl = company.header_image.startsWith("http")
+            ? company.header_image
+            : `${API_BASE_URL}${company.header_image}`;
+          setHeaderImage(headerUrl);
+        } else {
+          setHeaderImage(undefined);
+        }
+        if (company.footer_image) {
+          const footerUrl = company.footer_image.startsWith("http")
+            ? company.footer_image
+            : `${API_BASE_URL}${company.footer_image}`;
+          setFooterImage(footerUrl);
+        } else {
+          setFooterImage(undefined);
+        }
+        setTermsAndConditions(company.terms_and_conditions || null);
+      } catch (err) {
+        console.error("Failed to fetch company branding for user company:", err);
+        if (!cancelled) {
+          setHeaderImage(undefined);
+          setFooterImage(undefined);
+          setTermsAndConditions(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, user?.company_id]);
+
   // Compare structures to detect changes
   const compareStructures = useCallback((struct1: SeparatedStructure, struct2: SeparatedStructure): boolean => {
     try {
@@ -2849,8 +2900,8 @@ function CodePageContent() {
                 const newSection: Section = {
                   type: 'section',
                   id: newSectionId,
-                  title: 'New Section',
-                  content: '• Enter section content here...',
+                  title: DEFAULT_NEW_SECTION_TITLE,
+                  content: DEFAULT_NEW_SECTION_CONTENT,
                   order: structure.generated.sections.length,
                   parent_id: null
                 };

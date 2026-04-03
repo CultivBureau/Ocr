@@ -11,7 +11,8 @@ import Loading from "./components/Loading";
 import LanguageToggle from "./components/LanguageToggle";
 import WhatsNewButton from "./components/WhatsNewButton";
 import { getRoleDisplayName, getRoleBadgeColor } from "./utils/rbac";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { createBlankDocumentStructure } from "./utils/blankDocument";
 import { 
   Upload, 
   FileText, 
@@ -27,10 +28,12 @@ import {
   Eye,
   Download,
   Sparkles,
-  LifeBuoy
+  LifeBuoy,
+  FilePlus
 } from "lucide-react";
 
 function HomeContent() {
+  const router = useRouter();
   const {
     user,
     isAdmin,
@@ -97,6 +100,24 @@ function HomeContent() {
     await logout();
   };
 
+  const handleCreateBlankDocument = () => {
+    if (typeof window === "undefined") return;
+    sessionStorage.removeItem("codePreview.filePath");
+    sessionStorage.removeItem("codePreview.originalFilename");
+    sessionStorage.removeItem("codePreview.documentId");
+    const blank = createBlankDocumentStructure();
+    sessionStorage.setItem("codePreview.extractedData", JSON.stringify(blank));
+    sessionStorage.setItem(
+      "codePreview.metadata",
+      JSON.stringify({
+        filename: `${t.home.blankDocumentTitle}.pdf`,
+        uploadedAt: new Date().toISOString(),
+        sectionsCount: 1,
+        tablesCount: 0,
+      }),
+    );
+    router.push("/pages/CodePreview");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50" dir={dir}>
@@ -338,6 +359,36 @@ function HomeContent() {
                 </div>
               </div>
             </Link>
+
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={handleCreateBlankDocument}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleCreateBlankDocument();
+                }
+              }}
+              className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden cursor-pointer"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+              <div className="flex flex-col h-full">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <FilePlus className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900">{t.home.blankDocument}</h2>
+                </div>
+                <p className="text-gray-600 mb-4 grow leading-relaxed">
+                  {t.home.blankDocumentDesc}
+                </p>
+                <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                  <span>{t.home.startBlankDocument}</span>
+                  <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
+                </div>
+              </div>
+            </div>
 
             {user && (
               <Link

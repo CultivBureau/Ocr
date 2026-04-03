@@ -110,6 +110,11 @@ export const translations = {
       uploadFile: "Upload File",
       pdfUpload: "PDF Upload", 
       pdfUploadDesc: "Upload a PDF document and let AI transform it into an editable template with intelligent OCR extraction.",
+      blankDocument: "Blank document",
+      blankDocumentDesc:
+        "Start with an empty page: your company header and footer, one section, and the same editing tools as an uploaded PDF.",
+      blankDocumentTitle: "Blank document",
+      startBlankDocument: "Create blank",
       uploadDocument: "Upload Document",
       viewDocuments: "View Documents",
       allDocumentsDesc: "View and manage all documents across all companies in the platform. Filter by company, search, and organize documents.",
@@ -1054,6 +1059,11 @@ export const translations = {
       uploadFile: "رفع ملف",
       pdfUpload: "رفع PDF",
       pdfUploadDesc: "قم برفع مستند PDF ودع الذكاء الاصطناعي يحوله إلى قالب قابل للتحرير مع استخراج OCR الذكي.",
+      blankDocument: "مستند فارغ",
+      blankDocumentDesc:
+        "ابدأ بصفحة فارغة: ترويسة وتذييل شركتك، وقسم واحد، ونفس أدوات التحرير كما بعد رفع PDF.",
+      blankDocumentTitle: "مستند فارغ",
+      startBlankDocument: "إنشاء مستند فارغ",
       uploadDocument: "رفع مستند",
       viewDocuments: "عرض المستندات",
       allDocumentsDesc: "عرض وإدارة جميع المستندات عبر جميع الشركات في المنصة. صنف حسب الشركة والبحث وتنظيم المستندات.",
