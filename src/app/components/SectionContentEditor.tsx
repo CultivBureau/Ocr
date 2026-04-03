@@ -25,7 +25,19 @@ import {
   Redo2,
   Eraser,
 } from "lucide-react";
+import { undoDepth, redoDepth } from "@tiptap/pm/history";
 import { legacySectionContentToHtml } from "../utils/legacySectionContentToHtml";
+
+/** Keyboard hint for undo (safe on SSR — defaults to Ctrl until client). */
+function getUndoRedoHints(): { undo: string; redo: string } {
+  if (typeof navigator === "undefined") {
+    return { undo: "Ctrl+Z", redo: "Ctrl+Y" };
+  }
+  const mac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform ?? navigator.userAgent);
+  return mac
+    ? { undo: "⌘Z", redo: "⇧⌘Z" }
+    : { undo: "Ctrl+Z", redo: "Ctrl+Y" };
+}
 
 /* ─────────────────────────────────────────
    Constants
@@ -63,6 +75,62 @@ export interface SectionContentEditorProps {
 ───────────────────────────────────────── */
 function Divider() {
   return <span className="mx-1 h-5 w-px shrink-0 bg-slate-200" aria-hidden />;
+}
+
+/**
+ * Undo / Redo with labels, disabled states from editor history stack, and keyboard hints.
+ */
+function HistoryControls({ editor }: { editor: Editor }) {
+  const hints = getUndoRedoHints();
+
+  const { canUndo, canRedo } =
+    useEditorState({
+      editor,
+      selector: (s) => ({
+        canUndo: undoDepth(s.editor.state) > 0,
+        canRedo: redoDepth(s.editor.state) > 0,
+        transactionNumber: s.transactionNumber,
+      }),
+    }) ?? { canUndo: false, canRedo: false, transactionNumber: 0 };
+
+  const baseBtn =
+    "flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold tracking-tight transition-all duration-150";
+  const enabled = "text-slate-700 hover:bg-blue-50 hover:text-blue-800 active:scale-[0.98]";
+  const disabled = "cursor-not-allowed text-slate-300 opacity-60";
+
+  return (
+    <div
+      className="flex items-center gap-0.5 rounded-lg border border-slate-200/90 bg-linear-to-b from-white to-slate-50/95 px-0.5 py-0.5 shadow-sm"
+      role="group"
+      aria-label="Edit history"
+    >
+      <button
+        type="button"
+        disabled={!canUndo}
+        title={`Undo last change (${hints.undo})`}
+        aria-label={`Undo last change, ${hints.undo}`}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => editor.chain().focus().undo().run()}
+        className={`${baseBtn} ${canUndo ? enabled : disabled}`}
+      >
+        <Undo2 className="h-3.5 w-3.5 shrink-0" strokeWidth={2.25} />
+        <span className="hidden min-[380px]:inline">Undo</span>
+      </button>
+      <span className="h-4 w-px shrink-0 bg-slate-200" aria-hidden />
+      <button
+        type="button"
+        disabled={!canRedo}
+        title={`Redo (${hints.redo})`}
+        aria-label={`Redo, ${hints.redo}`}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => editor.chain().focus().redo().run()}
+        className={`${baseBtn} ${canRedo ? enabled : disabled}`}
+      >
+        <Redo2 className="h-3.5 w-3.5 shrink-0" strokeWidth={2.25} />
+        <span className="hidden min-[380px]:inline">Redo</span>
+      </button>
+    </div>
+  );
 }
 
 function ToolBtn({
@@ -318,20 +386,8 @@ function Toolbar({ editor }: { editor: Editor }) {
   if (!state) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5">
-      {/* History */}
-      <ToolBtn
-        title="Undo (Ctrl+Z)"
-        onClick={() => editor.chain().focus().undo().run()}
-      >
-        <Undo2 className="h-3.5 w-3.5" />
-      </ToolBtn>
-      <ToolBtn
-        title="Redo (Ctrl+Y)"
-        onClick={() => editor.chain().focus().redo().run()}
-      >
-        <Redo2 className="h-3.5 w-3.5" />
-      </ToolBtn>
+    <div className="flex flex-wrap items-center gap-1.5 px-2 py-1.5">
+      <HistoryControls editor={editor} />
 
       <Divider />
 
@@ -616,8 +672,9 @@ export default function SectionContentEditor({
           {/* Character hint at bottom when focused */}
           {isFocused && (
             <div className="border-t border-slate-100/80 px-4 py-1.5">
-              <p className="text-[10px] text-slate-400">
-                Select text for quick formatting • All changes save automatically
+              <p className="text-[10px] leading-relaxed text-slate-400">
+                <span className="font-medium text-slate-500">Undo / Redo</span> in the toolbar
+                (or keyboard) · select text for the floating menu · saves automatically
               </p>
             </div>
           )}
