@@ -200,6 +200,13 @@ export interface UserElement {
   data: AirplaneSectionData | HotelsSectionData | TransportSectionData;
   created_at?: string;
   order?: number;
+  /**
+   * Generated section/table layout IDs hidden to avoid duplicating this AI-approved
+   * component content. Original blocks are not deleted; removing this user element clears the hide.
+   */
+  supersedesGeneratedIds?: string[];
+  /** Suggestion id when this element was created from an approved AI suggestion. */
+  sourceSuggestionId?: string;
 }
 
 // Component Suggestion Types

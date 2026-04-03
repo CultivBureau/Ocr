@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import type { Structure, Section, Table, SeparatedStructure, UserElement } from "../types/ExtractTypes";
+import { useLanguage } from "../contexts/LanguageContext";
 import SectionTemplate from "../Templates/sectionTemplate";
 import DynamicTableTemplate from "../Templates/dynamicTableTemplate";
 import BaseTemplate from "../Templates/baseTemplate";
@@ -61,6 +62,8 @@ export default function StructureRenderer({
   termsAndConditions,
   skipBaseTemplate = false,
 }: StructureRendererProps) {
+  const { t } = useLanguage();
+
   // Normalize structure to SeparatedStructure format
   let separatedStructure: SeparatedStructure;
   if (isSeparatedStructure(structure)) {
@@ -91,6 +94,14 @@ export default function StructureRenderer({
   separatedStructure.user.elements.forEach(element => {
     elementMap.set(element.id, { type: 'user', data: element });
   });
+
+  const suppressedGeneratedLayoutIds = useMemo(() => {
+    const s = new Set<string>();
+    separatedStructure.user.elements.forEach((el) => {
+      (el.supersedesGeneratedIds ?? []).forEach((id) => s.add(id));
+    });
+    return s;
+  }, [separatedStructure.user.elements]);
 
   // Sort sections and tables for legacy rendering (when not using layout order)
   const sortedSections = sortSectionsByOrder(separatedStructure.generated.sections);
@@ -246,42 +257,62 @@ export default function StructureRenderer({
             onUserElementEdit(userElement);
           }
         };
-        const handleDelete = () => {
-          if (onUserElementDelete) {
-            onUserElementDelete(userElement.id);
-          }
-        };
+        const showRestoreExtracted =
+          editable &&
+          Boolean(onUserElementDelete) &&
+          (userElement.supersedesGeneratedIds?.length ?? 0) > 0;
+
+        const restoreBar = showRestoreExtracted ? (
+          <div className="mb-3 flex justify-end print:hidden">
+            <button
+              type="button"
+              onClick={() => onUserElementDelete?.(userElement.id)}
+              className="text-xs sm:text-sm text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg px-3 py-1.5 font-medium transition-colors"
+            >
+              {t.modals.restoreOriginalExtracted}
+            </button>
+          </div>
+        ) : null;
 
         if (userElement.type === 'airplane') {
           return (
-            <AirplaneSection
-              key={userElement.id}
-              id={userElement.id}
-              {...userElement.data}
-              editable={editable}
-              onEditSection={handleEdit}
-            />
+            <div className="w-full">
+              {restoreBar}
+              <AirplaneSection
+                key={userElement.id}
+                id={userElement.id}
+                {...userElement.data}
+                editable={editable}
+                onEditSection={handleEdit}
+              />
+            </div>
           );
         } else if (userElement.type === 'hotel') {
           return (
-            <HotelsSection
-              key={userElement.id}
-              id={userElement.id}
-              {...userElement.data}
-              editable={editable}
-              onEditSection={handleEdit}
-            />
+            <div className="w-full">
+              {restoreBar}
+              <HotelsSection
+                key={userElement.id}
+                id={userElement.id}
+                {...userElement.data}
+                editable={editable}
+                onEditSection={handleEdit}
+              />
+            </div>
           );
         } else if (userElement.type === 'transport') {
           return (
-            <TransportSection
-              key={userElement.id}
-              id={userElement.id}
-              tables={userElement.data.tables || []}
-              {...userElement.data}
-              editable={editable}
-              onEditSection={handleEdit}
-            />
+            <div className="w-full">
+              {restoreBar}
+              <TransportSection
+                key={userElement.id}
+                id={userElement.id}
+                tables={userElement.data.tables || []}
+                {...userElement.data}
+                editable={editable}
+                onEditSection={handleEdit}
+              />
+            </div>
           );
         }
         return null;
@@ -301,6 +332,7 @@ export default function StructureRenderer({
       return (
         <>
           {separatedStructure.layout.map((id, index) => {
+            if (suppressedGeneratedLayoutIds.has(id)) return null;
             const element = elementMap.get(id);
             if (!element) return null;
             const isFirst = index === 0;
@@ -376,6 +408,8 @@ export default function StructureRenderer({
 
       // Add sections
       sortedSections.forEach((section) => {
+        if (suppressedGeneratedLayoutIds.has(section.id)) return;
+
         content.push(
           <SectionTemplate
             key={section.id}
@@ -389,6 +423,7 @@ export default function StructureRenderer({
         // Add tables for this section
         if (tablesBySection.has(section.id)) {
           tablesBySection.get(section.id)!.forEach((table) => {
+            if (suppressedGeneratedLayoutIds.has(table.id)) return;
             content.push(
               <DynamicTableTemplate
                 key={table.id}
@@ -405,6 +440,7 @@ export default function StructureRenderer({
       // Add orphan tables (tables without section)
       if (tablesBySection.has(null)) {
         tablesBySection.get(null)!.forEach((table) => {
+          if (suppressedGeneratedLayoutIds.has(table.id)) return;
           content.push(
             <DynamicTableTemplate
               key={table.id}

@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Undo2, Redo2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import StructureRenderer from "../../components/StructureRenderer";
 import CreateTableModal from "../../components/CreateTableModal";
@@ -38,6 +39,11 @@ import {
   DEFAULT_NEW_SECTION_CONTENT,
   DEFAULT_NEW_SECTION_TITLE,
 } from "../../utils/blankDocument";
+import {
+  collectClaimedSupersedesIds,
+  findSupersedesGeneratedIds,
+} from "../../utils/aiSuggestionSupersedes";
+import { useDocumentStructureHistory } from "../../Hooks/useDocumentStructureHistory";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
@@ -95,7 +101,17 @@ function CodePageContent() {
   const { t, isRTL, dir } = useLanguage();
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const [structure, setStructure] = useState<SeparatedStructure>(defaultStructure);
+  const {
+    structure,
+    setStructure,
+    setStructureWithUndo,
+    clearHistory,
+    undo: undoDocument,
+    redo: redoDocument,
+    canUndo,
+    canRedo,
+    historyEpoch,
+  } = useDocumentStructureHistory(defaultStructure);
   const [sourceMetadata, setSourceMetadata] = useState<{
     filename?: string;
     uploadedAt?: string;
@@ -463,7 +479,7 @@ function CodePageContent() {
       }
       
       // Find the user element in JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'airplane');
         if (userElementIndex === -1) {
         alert('Airplane section not found');
@@ -519,7 +535,7 @@ function CodePageContent() {
       };
       
       // Add flight to JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'airplane');
         if (userElementIndex === -1) {
           alert('Airplane section not found');
@@ -573,7 +589,7 @@ function CodePageContent() {
     
     try {
       // Remove from JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         // Remove from user.elements
         const updatedElements = prev.user.elements.filter(el => el.id !== deletePendingId);
         
@@ -600,7 +616,7 @@ function CodePageContent() {
   
   // Handler for moving element up in the layout
   const handleMoveUp = useCallback((id: string) => {
-    setStructure(prev => {
+    setStructureWithUndo(prev => {
       const currentIndex = prev.layout.indexOf(id);
       if (currentIndex <= 0) return prev; // Already at top or not found
       
@@ -617,7 +633,7 @@ function CodePageContent() {
   
   // Handler for moving element down in the layout
   const handleMoveDown = useCallback((id: string) => {
-    setStructure(prev => {
+    setStructureWithUndo(prev => {
       const currentIndex = prev.layout.indexOf(id);
       if (currentIndex === -1 || currentIndex >= prev.layout.length - 1) return prev; // Already at bottom or not found
       
@@ -646,7 +662,7 @@ function CodePageContent() {
       }
       
       // Update flight in JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(
           el => el.id === editingAirplaneId && el.type === 'airplane'
         );
@@ -707,7 +723,7 @@ function CodePageContent() {
       }
       
       // Update section properties in JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(
           el => el.id === editingAirplaneId && el.type === 'airplane'
         );
@@ -820,7 +836,7 @@ function CodePageContent() {
       }
       
       // Remove hotel from JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'hotel');
         if (userElementIndex === -1) {
           console.error('Hotel section not found');
@@ -880,7 +896,7 @@ function CodePageContent() {
       };
       
       // Add hotel to JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'hotel');
         if (userElementIndex === -1) {
           alert('Hotel section not found');
@@ -938,7 +954,7 @@ function CodePageContent() {
       }
       
       // Update hotel in JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(
           el => el.id === editingHotelId && el.type === 'hotel'
         );
@@ -995,7 +1011,7 @@ function CodePageContent() {
       }
       
       // Update section properties in JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(
           el => el.id === editingHotelId && el.type === 'hotel'
         );
@@ -1041,7 +1057,7 @@ function CodePageContent() {
       }
       
       // Remove row from JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
         if (userElementIndex === -1) {
           console.error('Transport section not found');
@@ -1088,7 +1104,7 @@ function CodePageContent() {
       }
       
       // Add row to JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
         if (userElementIndex === -1) {
         alert('Transport section not found');
@@ -1149,7 +1165,7 @@ function CodePageContent() {
       
       // Remove table from JSON structure without confirmation
       // The modal confirmation is handled by the TransportSection component
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
         if (userElementIndex === -1) {
           console.error('Transport section not found');
@@ -1208,7 +1224,7 @@ function CodePageContent() {
       }
       
       // Update row in JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(
           el => el.id === editingTransportId && el.type === 'transport'
         );
@@ -1270,7 +1286,7 @@ function CodePageContent() {
       }
       
       // Update table in JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(
           el => el.id === editingTransportId && el.type === 'transport'
         );
@@ -1333,7 +1349,7 @@ function CodePageContent() {
       }
       
       // Update section properties in JSON structure
-      setStructure(prev => {
+      setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(
           el => el.id === editingTransportId && el.type === 'transport'
         );
@@ -1568,6 +1584,7 @@ function CodePageContent() {
         if (parsed && parsed.generated && parsed.user && parsed.layout) {
           const loadedStructure = parsed as SeparatedStructure;
           setStructure(loadedStructure);
+          clearHistory();
           
           // Check for suggestions and show modal
           if (parsed.suggestions && Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0) {
@@ -1597,6 +1614,7 @@ function CodePageContent() {
             meta: parsed.meta || {}
           };
           setStructure(migratedStructure);
+          clearHistory();
           // Store as initial structure after load
           setTimeout(() => {
             initialStructureRef.current = JSON.parse(JSON.stringify(migratedStructure));
@@ -1617,6 +1635,7 @@ function CodePageContent() {
         if (parsed && parsed.generated && parsed.user && parsed.layout) {
           const loadedStructure = parsed as SeparatedStructure;
           setStructure(loadedStructure);
+          clearHistory();
           // Store as initial structure after load
           setTimeout(() => {
             initialStructureRef.current = JSON.parse(JSON.stringify(loadedStructure));
@@ -1628,7 +1647,7 @@ function CodePageContent() {
       }
       sessionStorage.removeItem("uploadedStructure");
     }
-  }, [searchParams]);
+  }, [searchParams, clearHistory]);
 
   // When opening a new template (blank, PDF from session, etc.), no document is loaded yet so
   // loadDocument* never runs — fetch header/footer from the logged-in user's company.
@@ -1700,6 +1719,38 @@ function CodePageContent() {
     setHasChanges(changed);
   }, [structure, compareStructures]);
 
+  // Document undo/redo shortcuts (skip when typing in inputs or rich text)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el) return;
+      if (el.isContentEditable) return;
+      const tag = el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const key = e.key;
+      if (key === "z" || key === "Z") {
+        if (e.shiftKey) {
+          if (canRedo) {
+            e.preventDefault();
+            redoDocument();
+          }
+        } else if (canUndo) {
+          e.preventDefault();
+          undoDocument();
+        }
+      } else if (key === "y" || key === "Y") {
+        if (canRedo) {
+          e.preventDefault();
+          redoDocument();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [canUndo, canRedo, undoDocument, redoDocument, historyEpoch]);
+
   const loadDocument = async (docId: string) => {
     try {
       const response = await getDocument(docId);
@@ -1719,6 +1770,7 @@ function CodePageContent() {
           // Apply deduplication to clean up any duplicate entries
           const cleanedStructure = deduplicateStructure(loadedStructure);
           setStructure(cleanedStructure);
+          clearHistory();
         } else if (extractedData.sections || extractedData.tables) {
           // Legacy format - migrate to v2
           loadedStructure = {
@@ -1736,6 +1788,7 @@ function CodePageContent() {
             meta: extractedData.meta || {}
           };
           setStructure(loadedStructure);
+          clearHistory();
         }
       }
       
@@ -1869,6 +1922,7 @@ function CodePageContent() {
         if (extractedData.generated && extractedData.user && extractedData.layout) {
           // v2 format
           setStructure(extractedData as SeparatedStructure);
+          clearHistory();
         } else if (extractedData.sections || extractedData.tables) {
           // Legacy format - migrate to v2
           setStructure({
@@ -1885,6 +1939,7 @@ function CodePageContent() {
             ],
             meta: extractedData.meta || {}
           });
+          clearHistory();
         }
       }
       
@@ -1907,32 +1962,32 @@ function CodePageContent() {
     columns: string[];
     rowCount: number;
   }) => {
-    // Add new table to JSON structure
     const tableId = `gen_tbl_${Date.now()}`;
-    const newTable: Table = {
-      type: "table",
-      id: tableId,
-      title: config.title,
-      columns: config.columns,
-      rows: Array(config.rowCount).fill(null).map(() => 
-        config.columns.map(() => '')
-      ),
-      order: structure.generated.tables.length,
-      section_id: null
-    };
-    
-    setStructure(prev => ({
-      ...prev,
-      generated: {
-        ...prev.generated,
-        tables: [...prev.generated.tables, newTable]
-      },
-      layout: [...prev.layout, tableId]
-    }));
-    
+    setStructureWithUndo((prev) => {
+      const newTable: Table = {
+        type: "table",
+        id: tableId,
+        title: config.title,
+        columns: config.columns,
+        rows: Array(config.rowCount)
+          .fill(null)
+          .map(() => config.columns.map(() => "")),
+        order: prev.generated.tables.length,
+        section_id: null,
+      };
+      return {
+        ...prev,
+        generated: {
+          ...prev.generated,
+          tables: [...prev.generated.tables, newTable],
+        },
+        layout: [...prev.layout, tableId],
+      };
+    });
+
     setShowTableCreatedToast(true);
     setTimeout(() => setShowTableCreatedToast(false), 3000);
-  }, [structure]);
+  }, []);
 
   const handleExportCode = useCallback(() => {
     // Export JSON structure
@@ -2290,7 +2345,7 @@ function CodePageContent() {
       }
     };
     
-    setStructure(prev => ({
+    setStructureWithUndo(prev => ({
       ...prev,
       user: {
         elements: [...prev.user.elements, newElement]
@@ -2338,7 +2393,7 @@ function CodePageContent() {
       }
     };
     
-    setStructure(prev => ({
+    setStructureWithUndo(prev => ({
       ...prev,
       user: {
         elements: [...prev.user.elements, newElement]
@@ -2379,7 +2434,7 @@ function CodePageContent() {
       }
     };
     
-    setStructure(prev => {
+    setStructureWithUndo(prev => {
       const newStructure = {
         ...prev,
         user: {
@@ -2415,7 +2470,7 @@ function CodePageContent() {
     let newStructure: SeparatedStructure | null = null;
     
     // Update structure: add element and update suggestions
-    setStructure(prev => {
+    setStructureWithUndo(prev => {
       // Check if element with same data already exists
       const existingElement = prev.user.elements.find(el => 
         el.type === newElement.type && 
@@ -2430,11 +2485,26 @@ function CodePageContent() {
         };
         return newStructure;
       }
+
+      const claimed = collectClaimedSupersedesIds(prev.user.elements);
+      const supersedesGeneratedIds = findSupersedesGeneratedIds(
+        prev,
+        suggestion,
+        claimed
+      );
+
+      const elementWithMeta: UserElement = {
+        ...newElement,
+        ...(supersedesGeneratedIds.length > 0
+          ? { supersedesGeneratedIds }
+          : {}),
+        sourceSuggestionId: suggestion.id,
+      };
       
       newStructure = {
         ...prev,
         user: {
-          elements: [...prev.user.elements, newElement]
+          elements: [...prev.user.elements, elementWithMeta]
         },
         layout: [elementId, ...prev.layout],
         suggestions: remaining.length > 0 ? remaining : undefined
@@ -2452,7 +2522,7 @@ function CodePageContent() {
     let newStructure: SeparatedStructure | null = null;
     
     // Update structure with remaining suggestions
-    setStructure(prev => {
+    setStructureWithUndo(prev => {
       newStructure = {
         ...prev,
         suggestions: remaining.length > 0 ? remaining : undefined
@@ -2466,10 +2536,11 @@ function CodePageContent() {
     let newStructure: SeparatedStructure | null = null;
     
     // Update structure: add all elements and clear suggestions
-    setStructure(prev => {
+    setStructureWithUndo(prev => {
       const keyFor = (type: string, data: unknown) => `${type}:${JSON.stringify(data)}`;
       const existingKeys = new Set(prev.user.elements.map(el => keyFor(el.type, el.data)));
       const newKeys = new Set<string>();
+      const baseClaimed = collectClaimedSupersedesIds(prev.user.elements);
 
       // Create all new elements (deduped against existing + within suggestions)
       const newElements: UserElement[] = [];
@@ -2480,12 +2551,26 @@ function CodePageContent() {
         if (existingKeys.has(key) || newKeys.has(key)) return;
         newKeys.add(key);
 
+        const claimedForSuggestion = new Set([
+          ...baseClaimed,
+          ...newElements.flatMap((e) => e.supersedesGeneratedIds ?? []),
+        ]);
+        const supersedesGeneratedIds = findSupersedesGeneratedIds(
+          prev,
+          suggestion,
+          claimedForSuggestion
+        );
+
         const elementId = `user_${suggestion.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         newElements.push({
           id: elementId,
           type: suggestion.type,
           data: suggestion.data,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          ...(supersedesGeneratedIds.length > 0
+            ? { supersedesGeneratedIds }
+            : {}),
+          sourceSuggestionId: suggestion.id,
         });
         newLayoutIds.push(elementId);
       });
@@ -2507,7 +2592,7 @@ function CodePageContent() {
     let newStructure: SeparatedStructure | null = null;
     
     // Update structure: clear all suggestions
-    setStructure(prev => {
+    setStructureWithUndo(prev => {
       newStructure = {
         ...prev,
         suggestions: undefined
@@ -2567,6 +2652,28 @@ function CodePageContent() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-0.5 bg-gray-50">
+              <button
+                type="button"
+                onClick={undoDocument}
+                disabled={!canUndo}
+                title={t.modals.undoTooltip}
+                className="p-2 rounded-md text-gray-700 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label={t.modals.undo}
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={redoDocument}
+                disabled={!canRedo}
+                title={t.modals.redoTooltip}
+                className="p-2 rounded-md text-gray-700 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label={t.modals.redo}
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+            </div>
             {/* Save Button - only show if authenticated */}
             {isAuthenticated() && (
               <button
@@ -2812,7 +2919,7 @@ function CodePageContent() {
         </div>
       </div>
     </div>
-  ), [handleExportCode, handleExportPDF, handleExportPDFWithPlaywright, handleCopyPublicLink, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown, isExportingPlaywright, hasChanges, isCopyingLink, linkCopied]);
+  ), [handleExportCode, handleExportPDF, handleExportPDFWithPlaywright, handleCopyPublicLink, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown, isExportingPlaywright, hasChanges, isCopyingLink, linkCopied, undoDocument, redoDocument, canUndo, canRedo, historyEpoch, t]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-cyan-50 via-blue-50 to-lime-50 text-gray-900">
@@ -2844,7 +2951,7 @@ function CodePageContent() {
               onMoveDown={handleMoveDown}
               onSectionEdit={(section) => {
                 // Update section in structure
-                setStructure(prev => {
+                setStructureWithUndo(prev => {
                   const updatedSections = prev.generated.sections.map(s => 
                     s.id === section.id ? section : s
                   );
@@ -2859,7 +2966,7 @@ function CodePageContent() {
               }}
               onTableEdit={(table) => {
                 // Update table in structure
-                setStructure(prev => {
+                setStructureWithUndo(prev => {
                   const updatedTables = prev.generated.tables.map(t => 
                     t.id === table.id ? table : t
                   );
@@ -2874,7 +2981,7 @@ function CodePageContent() {
               }}
               onSectionDelete={(id) => {
                 // Remove section from structure
-                setStructure(prev => ({
+                setStructureWithUndo(prev => ({
                   ...prev,
                   generated: {
                     ...prev.generated,
@@ -2885,7 +2992,7 @@ function CodePageContent() {
               }}
               onTableDelete={(id) => {
                 // Remove table from structure
-                setStructure(prev => ({
+                setStructureWithUndo(prev => ({
                   ...prev,
                   generated: {
                     ...prev.generated,
@@ -2895,36 +3002,30 @@ function CodePageContent() {
                 }));
               }}
               onSectionAddAfter={(afterId) => {
-                // Add new section after the specified section
                 const newSectionId = `gen_sec_${Date.now()}`;
-                const newSection: Section = {
-                  type: 'section',
-                  id: newSectionId,
-                  title: DEFAULT_NEW_SECTION_TITLE,
-                  content: DEFAULT_NEW_SECTION_CONTENT,
-                  order: structure.generated.sections.length,
-                  parent_id: null
-                };
-                
-                setStructure(prev => {
-                  // Find the index of the section to add after
-                  const afterIndex = prev.layout.findIndex(id => id === afterId);
-                  
-                  // Create new layout with the new section inserted after
+                setStructureWithUndo((prev) => {
+                  const newSection: Section = {
+                    type: "section",
+                    id: newSectionId,
+                    title: DEFAULT_NEW_SECTION_TITLE,
+                    content: DEFAULT_NEW_SECTION_CONTENT,
+                    order: prev.generated.sections.length,
+                    parent_id: null,
+                  };
+                  const afterIndex = prev.layout.findIndex((id) => id === afterId);
                   const newLayout = [...prev.layout];
                   if (afterIndex !== -1) {
                     newLayout.splice(afterIndex + 1, 0, newSectionId);
                   } else {
                     newLayout.push(newSectionId);
                   }
-                  
                   return {
                     ...prev,
                     generated: {
                       ...prev.generated,
-                      sections: [...prev.generated.sections, newSection]
+                      sections: [...prev.generated.sections, newSection],
                     },
-                    layout: newLayout
+                    layout: newLayout,
                   };
                 });
               }}
@@ -2940,7 +3041,7 @@ function CodePageContent() {
               }}
               onUserElementDelete={(id) => {
                 // Remove element from structure
-                setStructure(prev => ({
+                setStructureWithUndo(prev => ({
                   ...prev,
                   user: {
                     elements: prev.user.elements.filter(el => el.id !== id)
