@@ -190,10 +190,15 @@ export type StartExtractionResponse = {
   status: ExtractionJobStatus;
 };
 
+/** "pending" while AI component suggestions run in background after OCR+GPT; "complete" when ready or skipped. */
+export type SuggestionsStatus = "pending" | "complete";
+
 export type ExtractionJobResponse = {
   status: ExtractionJobStatus;
   result: SeparatedStructure | null;
   error: string | null;
+  /** Present when using async extraction: poll until "complete" to get suggestions in result */
+  suggestions_status?: SuggestionsStatus | null;
 };
 
 /**

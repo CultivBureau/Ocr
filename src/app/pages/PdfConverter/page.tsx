@@ -16,11 +16,12 @@ import {
   FileText,
   Sparkles
 } from "lucide-react";
-import { 
-  uploadFileWithProgress, 
+import {
+  uploadFileWithProgress,
   startExtraction,
   getExtractionJob,
 } from "../../services/PdfApi";
+import type { ExtractionJobResponse } from "../../services/PdfApi";
 import type { SeparatedStructure } from "../../types/ExtractTypes";
 import { isAuthenticated } from "../../services/AuthApi";
 import { saveDocument } from "../../services/HistoryApi";
@@ -138,17 +139,18 @@ const PdfConverterContent: React.FC = () => {
       // Step 2: Start extraction job and poll until completed (avoids long-lived request timeouts)
       setStatus(t.pdfConverter.extractingContent);
       const { job_id } = await startExtraction(uploadResponse.file_path);
-      let extractResponse: SeparatedStructure | null = null;
       const pollIntervalMs = 2500;
-      const pollTimeoutMs = 5 * 60 * 1000; // 5 minutes max for extraction
+      const pollTimeoutMs = 5 * 60 * 1000; // 5 minutes max for main extraction
+      const suggestionWaitMs = 120_000; // wait for background AI component suggestions
       const startedAt = Date.now();
+
+      let job: ExtractionJobResponse;
       while (true) {
         if (Date.now() - startedAt > pollTimeoutMs) {
           throw new Error("Extraction is taking longer than expected. Please try again.");
         }
-        const job = await getExtractionJob(job_id);
+        job = await getExtractionJob(job_id);
         if (job.status === "completed" && job.result) {
-          extractResponse = job.result;
           break;
         }
         if (job.status === "failed") {
@@ -156,6 +158,30 @@ const PdfConverterContent: React.FC = () => {
         }
         await new Promise((r) => setTimeout(r, pollIntervalMs));
       }
+
+      if (!job.result) {
+        throw new Error(t.pdfConverter.extractionFailed);
+      }
+
+      let extractResponse: SeparatedStructure = job.result;
+
+      // Server marks suggestions_status=pending while a second OpenAI call runs; keep polling
+      // so sessionStorage includes suggestions for CodePreview (same job id, patched result).
+      const suggStart = Date.now();
+      while (
+        (job.suggestions_status ?? "complete") === "pending" &&
+        Date.now() - suggStart < suggestionWaitMs
+      ) {
+        await new Promise((r) => setTimeout(r, pollIntervalMs));
+        job = await getExtractionJob(job_id);
+        if (job.result) {
+          extractResponse = job.result;
+        }
+        if (job.status === "failed") {
+          break;
+        }
+      }
+
       if (!extractResponse?.generated || (!extractResponse.generated.sections?.length && !extractResponse.generated.tables?.length)) {
         throw new Error(t.pdfConverter.extractionFailed);
       }
