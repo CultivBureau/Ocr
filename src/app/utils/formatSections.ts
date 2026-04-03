@@ -6,6 +6,7 @@
  */
 
 import type { Section } from "../types/ExtractTypes";
+import { normalizeSectionContentToString } from "./sectionContentNormalize";
 
 /**
  * Format section for display
@@ -13,13 +14,14 @@ import type { Section } from "../types/ExtractTypes";
  * @returns Formatted section with display-ready properties
  */
 export function formatSection(section: Section) {
+  const contentStr = normalizeSectionContentToString(section.content);
   return {
     ...section,
     displayTitle: section.title || "بدون عنوان",
-    displayContent: section.content || "",
-    hasContent: Boolean(section.content && section.content.trim().length > 0),
-    wordCount: section.content ? section.content.split(/\s+/).length : 0,
-    charCount: section.content ? section.content.length : 0,
+    displayContent: contentStr,
+    hasContent: Boolean(contentStr.trim().length > 0),
+    wordCount: contentStr ? contentStr.split(/\s+/).length : 0,
+    charCount: contentStr.length,
   };
 }
 
@@ -112,11 +114,10 @@ export function filterSections(sections: Section[], searchTerm: string): Section
   }
   
   const term = searchTerm.toLowerCase();
-  return sections.filter(
-    (section) =>
-      section.title.toLowerCase().includes(term) ||
-      section.content.toLowerCase().includes(term)
-  );
+  return sections.filter((section) => {
+    const body = normalizeSectionContentToString(section.content).toLowerCase();
+    return section.title.toLowerCase().includes(term) || body.includes(term);
+  });
 }
 
 /**
@@ -125,19 +126,22 @@ export function filterSections(sections: Section[], searchTerm: string): Section
  * @returns Statistics object
  */
 export function getSectionStats(sections: Section[]) {
-  const totalWords = sections.reduce(
-    (sum, section) => sum + (section.content ? section.content.split(/\s+/).length : 0),
-    0
-  );
-  const totalChars = sections.reduce(
-    (sum, section) => sum + (section.content ? section.content.length : 0),
-    0
-  );
-  
+  const totalWords = sections.reduce((sum, section) => {
+    const c = normalizeSectionContentToString(section.content);
+    return sum + (c ? c.split(/\s+/).length : 0);
+  }, 0);
+  const totalChars = sections.reduce((sum, section) => {
+    return sum + normalizeSectionContentToString(section.content).length;
+  }, 0);
+
   return {
     total: sections.length,
-    withContent: sections.filter((s) => s.content && s.content.trim().length > 0).length,
-    withoutContent: sections.filter((s) => !s.content || s.content.trim().length === 0).length,
+    withContent: sections.filter(
+      (s) => normalizeSectionContentToString(s.content).trim().length > 0
+    ).length,
+    withoutContent: sections.filter(
+      (s) => normalizeSectionContentToString(s.content).trim().length === 0
+    ).length,
     totalWords,
     totalChars,
     averageWords: sections.length > 0 ? Math.round(totalWords / sections.length) : 0,

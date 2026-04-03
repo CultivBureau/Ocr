@@ -11,6 +11,7 @@ import {
   legacySectionContentToHtml,
   sectionContentLooksLikeHtml,
 } from "../utils/legacySectionContentToHtml";
+import { normalizeSectionContentProp } from "../utils/sectionContentNormalize";
 
 /**
  * Customizable Section Template Component
@@ -114,6 +115,9 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   const [showColorPaletteModal, setShowColorPaletteModal] = useState(false);
 
   const currentPalette = colorPalette || PREDEFINED_PALETTES.default;
+
+  /** API/data may store ProseMirror JSON (`{ type, text }`) instead of HTML; coerce before render. */
+  const resolvedContent = normalizeSectionContentProp(content);
 
   const HeadingTag = `h${titleLevel}` as
     | "h1"
@@ -281,12 +285,12 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   };
 
   const renderStringContent = () => {
-    if (typeof content !== "string") return null;
+    if (typeof resolvedContent !== "string") return null;
 
     if (editable && onContentChange) {
       return (
         <SectionContentEditor
-          value={content}
+          value={resolvedContent}
           onChange={onContentChange}
           editable
           className={contentClasses}
@@ -294,9 +298,9 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       );
     }
 
-    const html = sectionContentLooksLikeHtml(content)
-      ? content
-      : legacySectionContentToHtml(content);
+    const html = sectionContentLooksLikeHtml(resolvedContent)
+      ? resolvedContent
+      : legacySectionContentToHtml(resolvedContent);
 
     return (
       <div
@@ -308,7 +312,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   };
 
   const renderReactNodeContent = () => {
-    if (typeof content === "string") return null;
+    if (typeof resolvedContent === "string") return null;
     return (
       <div className={`content ${contentClasses}`}>
         {editable && onContentChange ? (
@@ -319,10 +323,10 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
               onContentChange(e.currentTarget.innerHTML || "");
             }}
           >
-            {content}
+            {resolvedContent}
           </div>
         ) : (
-          content
+          resolvedContent
         )}
       </div>
     );
@@ -472,7 +476,9 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       )}
 
       <div className="relative">
-        {typeof content === "string" ? renderStringContent() : renderReactNodeContent()}
+        {typeof resolvedContent === "string"
+          ? renderStringContent()
+          : renderReactNodeContent()}
       </div>
 
       {showDivider && dividerPosition === "bottom" && (

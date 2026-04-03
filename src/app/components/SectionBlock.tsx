@@ -33,9 +33,9 @@ export default function SectionBlock({
   onEdit,
 }: SectionBlockProps) {
   const formatted = formatSection(section);
-  
+
   // Detect Arabic content for RTL support
-  const isArabic = hasArabic(section.title + section.content);
+  const isArabic = hasArabic(section.title + formatted.displayContent);
   const textDirection = isArabic ? 'rtl' : 'ltr';
   
   // Determine heading level based on hierarchy level
