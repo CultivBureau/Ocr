@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
-import { posToDOMRect, type Editor } from "@tiptap/core";
+import { mergeAttributes, posToDOMRect, type Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import Paragraph from "@tiptap/extension-paragraph";
+import { BulletList, ListItem, OrderedList } from "@tiptap/extension-list";
 import { TextStyleKit } from "@tiptap/extension-text-style/text-style-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import { BubbleMenu } from "@tiptap/react/menus";
@@ -27,6 +29,142 @@ import {
 } from "lucide-react";
 import { undoDepth, redoDepth } from "@tiptap/pm/history";
 import { legacySectionContentToHtml } from "../utils/legacySectionContentToHtml";
+
+/* ─────────────────────────────────────────
+   Bidi / language (dominant doc hint + block-level dir="auto")
+───────────────────────────────────────── */
+
+const DIR_AUTO = { dir: "auto" as const };
+
+/** Strip HTML for analysis — SSR-safe fallback avoids document. */
+function plainTextFromHtml(html: string): string {
+  if (typeof document === "undefined") {
+    return html
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  const el = document.createElement("div");
+  el.innerHTML = html;
+  return (el.textContent ?? "").replace(/\u00a0/g, " ");
+}
+
+function isStrongRtlCodePoint(cp: number): boolean {
+  if (cp >= 0x0590 && cp <= 0x08ff) return true;
+  if (cp >= 0xfb1d && cp <= 0xfdff) return true;
+  if (cp >= 0xfe70 && cp <= 0xfeff) return true;
+  return false;
+}
+
+function isStrongLtrLetter(cp: number): boolean {
+  if (cp >= 0x0041 && cp <= 0x005a) return true;
+  if (cp >= 0x0061 && cp <= 0x007a) return true;
+  if (cp >= 0x00c0 && cp <= 0x024f) return true;
+  if (cp >= 0x0400 && cp <= 0x052f) return true;
+  return false;
+}
+
+/**
+ * Scores plain text for dominant direction and a best-effort `lang` for the editor root
+ * (accessibility). Per-block `dir="auto"` on paragraphs/lists handles mixed RTL/LTR inside the doc.
+ */
+function analyzeEditorPlainText(text: string): {
+  dir: "rtl" | "ltr";
+  lang: string;
+} {
+  let rtl = 0;
+  let ltr = 0;
+  let hebrew = 0;
+  let arabicScript = 0;
+
+  for (const ch of text) {
+    const cp = ch.codePointAt(0);
+    if (cp === undefined) continue;
+    if (isStrongRtlCodePoint(cp)) {
+      rtl++;
+      if (cp >= 0x0590 && cp <= 0x05ff) hebrew++;
+      if (
+        (cp >= 0x0600 && cp <= 0x06ff) ||
+        (cp >= 0x0750 && cp <= 0x077f) ||
+        (cp >= 0x08a0 && cp <= 0x08ff)
+      ) {
+        arabicScript++;
+      }
+    } else if (isStrongLtrLetter(cp)) {
+      ltr++;
+    }
+  }
+
+  const dir: "rtl" | "ltr" = rtl > ltr ? "rtl" : "ltr";
+  let lang = "";
+  if (!text.trim()) {
+    lang = "";
+  } else if (dir === "rtl") {
+    lang = hebrew > arabicScript ? "he" : "ar";
+  } else {
+    lang = "en";
+  }
+
+  return { dir, lang };
+}
+
+function syncProseMirrorRootBidi(dom: HTMLElement, plain: string): void {
+  const { dir, lang } = analyzeEditorPlainText(plain);
+  dom.setAttribute("dir", dir);
+  if (lang) dom.setAttribute("lang", lang);
+  else dom.removeAttribute("lang");
+}
+
+const BidiParagraph = Paragraph.extend({
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "p",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, DIR_AUTO),
+      0,
+    ];
+  },
+});
+
+const BidiListItem = ListItem.extend({
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "li",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, DIR_AUTO),
+      0,
+    ];
+  },
+});
+
+const BidiBulletList = BulletList.extend({
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "ul",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, DIR_AUTO),
+      0,
+    ];
+  },
+});
+
+const BidiOrderedList = OrderedList.extend({
+  renderHTML({ HTMLAttributes }) {
+    const { start, ...attributesWithoutStart } = HTMLAttributes;
+    return start === 1
+      ? [
+          "ol",
+          mergeAttributes(
+            this.options.HTMLAttributes,
+            attributesWithoutStart,
+            DIR_AUTO,
+          ),
+          0,
+        ]
+      : [
+          "ol",
+          mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, DIR_AUTO),
+          0,
+        ];
+  },
+});
 
 /** Keyboard hint for undo (safe on SSR — defaults to Ctrl until client). */
 function getUndoRedoHints(): { undo: string; redo: string } {
@@ -561,17 +699,33 @@ export default function SectionContentEditor({
   className = "",
 }: SectionContentEditorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const initialHtmlRef = useRef<string | null>(null);
+  if (initialHtmlRef.current === null) {
+    initialHtmlRef.current = normalizeIncomingHtml(value ?? "");
+  }
   const [isFocused, setIsFocused] = useState(false);
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
+  const initialBidi = useMemo(
+    () => analyzeEditorPlainText(plainTextFromHtml(initialHtmlRef.current ?? "")),
+    [],
+  );
+
+  const extensions = useMemo(
+    () => [
       StarterKit.configure({
         heading: false,
         codeBlock: false,
         blockquote: false,
         horizontalRule: false,
+        paragraph: false,
+        bulletList: false,
+        orderedList: false,
+        listItem: false,
       }),
+      BidiListItem,
+      BidiBulletList,
+      BidiOrderedList,
+      BidiParagraph,
       TextStyleKit.configure({
         color: { types: ["textStyle"] },
         backgroundColor: { types: ["textStyle"] },
@@ -584,16 +738,24 @@ export default function SectionContentEditor({
         types: ["paragraph", "listItem"],
       }),
     ],
-    content: normalizeIncomingHtml(value ?? ""),
+    [],
+  );
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions,
+    content: initialHtmlRef.current ?? "",
     editable,
     editorProps: {
       attributes: {
+        dir: initialBidi.dir,
+        ...(initialBidi.lang ? { lang: initialBidi.lang } : {}),
         class: [
           "tiptap-section-editor",
           "max-w-none min-h-28 px-4 py-3 text-[15px] leading-relaxed text-gray-700",
           "focus:outline-none",
-          "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
-          "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
+          "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:ps-5",
+          "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:ps-5",
           "[&_li]:my-1",
           "[&_p]:my-1.5 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
           "[&_strong]:font-semibold",
@@ -617,7 +779,23 @@ export default function SectionContentEditor({
     const incoming = normalizeIncomingHtml(value ?? "");
     if (incoming === editor.getHTML()) return;
     editor.commands.setContent(incoming, { emitUpdate: false });
+    const dom = editor.view.dom as HTMLElement;
+    syncProseMirrorRootBidi(dom, editor.getText({ blockSeparator: "\n" }));
   }, [value, editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom as HTMLElement;
+    const run = () => {
+      const plain = editor.getText({ blockSeparator: "\n" });
+      syncProseMirrorRootBidi(dom, plain);
+    };
+    run();
+    editor.on("update", run);
+    return () => {
+      editor.off("update", run);
+    };
+  }, [editor]);
 
   if (!editor) {
     return (
@@ -650,6 +828,7 @@ export default function SectionContentEditor({
         >
           {/* Toolbar: stack above the bubble (floating UI is a sibling inside the editor wrapper). */}
           <div
+            dir="ltr"
             className={`relative z-50 isolate border-b transition-colors duration-200 ${
               isFocused ? "border-blue-100 bg-slate-50/80" : "border-slate-100 bg-slate-50/60"
             }`}
@@ -663,6 +842,7 @@ export default function SectionContentEditor({
             (2) disable flip so we never move to top (toolbar) or sides.
           */}
           <BubbleMenu
+            dir="ltr"
             editor={editor}
             getReferencedVirtualElement={() => {
               const { view, state } = editor;
