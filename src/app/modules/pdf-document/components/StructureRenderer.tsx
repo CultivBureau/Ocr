@@ -1,0 +1,528 @@
+"use client";
+
+import React, { useMemo } from "react";
+import type { Structure, Section, Table, SeparatedStructure, UserElement } from "../types/ExtractTypes";
+import { useLanguage } from "@/app/modules/shared/contexts/LanguageContext";
+import SectionTemplate from "../templates/sectionTemplate";
+import DynamicTableTemplate from "../templates/dynamicTableTemplate";
+import BaseTemplate from "../templates/baseTemplate";
+import AirplaneSection from "../templates/airplaneSection";
+import HotelsSection from "../templates/HotelsSection";
+import TransportSection from "../templates/TransportSection";
+import { sortSectionsByOrder, getSectionHierarchy } from "../utils/formatSections";
+import { sortTablesByOrder, groupTablesBySection } from "../utils/formatTables";
+import { isSeparatedStructure, isLegacyStructure, migrateToSeparatedStructure } from "../utils/structureMigration";
+import { isGeneratedId } from "../utils/contentGuards";
+
+interface StructureRendererProps {
+  structure: Structure | SeparatedStructure;
+  showStats?: boolean;
+  editable?: boolean;
+  onSectionEdit?: (section: Section) => void;
+  onTableEdit?: (table: Table) => void;
+  onSectionDelete?: (id: string) => void;
+  onTableDelete?: (id: string) => void;
+  onSectionAddAfter?: (sectionId: string) => void;
+  onUserElementEdit?: (element: UserElement) => void;
+  onUserElementDelete?: (id: string) => void;
+  onMoveUp?: (id: string) => void;
+  onMoveDown?: (id: string) => void;
+  className?: string;
+  // Branding props - if provided, will use company branding instead of defaults
+  headerImage?: string;
+  footerImage?: string;
+  termsAndConditions?: string | null;
+  // If true, won't render BaseTemplate wrapper (useful when already wrapped)
+  skipBaseTemplate?: boolean;
+}
+
+/**
+ * Structure Renderer Component
+ * Phase 3: Receiving Extracted Data
+ * 
+ * Renders complete structure with sections and tables
+ * Supports both legacy (Structure) and new (SeparatedStructure) formats
+ */
+export default function StructureRenderer({
+  structure,
+  showStats = false,
+  editable = false,
+  onSectionEdit,
+  onTableEdit,
+  onSectionDelete,
+  onTableDelete,
+  onSectionAddAfter,
+  onUserElementEdit,
+  onUserElementDelete,
+  onMoveUp,
+  onMoveDown,
+  className = "",
+  headerImage,
+  footerImage,
+  termsAndConditions,
+  skipBaseTemplate = false,
+}: StructureRendererProps) {
+  const { t } = useLanguage();
+
+  // Normalize structure to SeparatedStructure format
+  let separatedStructure: SeparatedStructure;
+  if (isSeparatedStructure(structure)) {
+    separatedStructure = structure;
+  } else if (isLegacyStructure(structure)) {
+    separatedStructure = migrateToSeparatedStructure(structure);
+  } else {
+    // Fallback: empty structure
+    separatedStructure = {
+      generated: { sections: [], tables: [] },
+      user: { elements: [] },
+      layout: [],
+      meta: {}
+    };
+  }
+
+  // Build element map for quick lookup by ID
+  const elementMap = new Map<string, { type: 'section' | 'table' | 'user'; data: any }>();
+  
+  separatedStructure.generated.sections.forEach(section => {
+    elementMap.set(section.id, { type: 'section', data: section });
+  });
+  
+  separatedStructure.generated.tables.forEach(table => {
+    elementMap.set(table.id, { type: 'table', data: table });
+  });
+  
+  separatedStructure.user.elements.forEach(element => {
+    elementMap.set(element.id, { type: 'user', data: element });
+  });
+
+  const suppressedGeneratedLayoutIds = useMemo(() => {
+    const s = new Set<string>();
+    separatedStructure.user.elements.forEach((el) => {
+      (el.supersedesGeneratedIds ?? []).forEach((id) => s.add(id));
+    });
+    return s;
+  }, [separatedStructure.user.elements]);
+
+  // Sort sections and tables for legacy rendering (when not using layout order)
+  const sortedSections = sortSectionsByOrder(separatedStructure.generated.sections);
+  const sortedTables = sortTablesByOrder(separatedStructure.generated.tables);
+  
+  // Group tables by section for better organization
+  const tablesBySection = groupTablesBySection(sortedTables);
+  
+  // Get section hierarchy
+  const sectionHierarchy = getSectionHierarchy(sortedSections);
+
+  // Render element by ID
+  const renderElement = (id: string) => {
+    const element = elementMap.get(id);
+    if (!element) return null;
+
+    switch (element.type) {
+      case 'section': {
+        const section = element.data as Section;
+        return (
+          <SectionTemplate
+            key={section.id}
+            title={section.title}
+            content={section.content}
+            type={section.type || 'section'}
+            editable={editable}
+            colorPalette={(section as any).colorPalette}
+            onTitleChange={onSectionEdit ? (newTitle: string) => {
+              onSectionEdit({ ...section, title: newTitle });
+            } : undefined}
+            onContentChange={onSectionEdit ? (newContent: string) => {
+              onSectionEdit({ ...section, content: newContent });
+            } : undefined}
+            onColorPaletteChange={onSectionEdit ? (palette: any) => {
+              onSectionEdit({ ...section, colorPalette: palette });
+            } : undefined}
+            onDelete={onSectionDelete ? () => {
+              onSectionDelete(section.id);
+            } : undefined}
+            onAddAfter={onSectionAddAfter ? () => {
+              onSectionAddAfter(section.id);
+            } : undefined}
+          />
+        );
+      }
+      case 'table': {
+        const table = element.data as Table;
+        return (
+          <DynamicTableTemplate
+            key={table.id}
+            title={table.title}
+            columns={table.columns}
+            rows={table.rows}
+            editable={editable}
+            tableBackgroundColor={table.backgroundColor as any}
+            onBackgroundColorChange={onTableEdit ? (color: 'dark-blue' | 'dark-red' | 'pink' | 'green') => {
+              onTableEdit({ ...table, backgroundColor: color });
+            } : undefined}
+            onTitleChange={onTableEdit ? (newTitle: string) => {
+              onTableEdit({ ...table, title: newTitle });
+            } : undefined}
+            onHeaderChange={onTableEdit ? (headerIndex: number, newValue: string) => {
+              const updatedColumns = Array.isArray(table.columns) 
+                ? table.columns.map((col: any, idx: number) => {
+                    if (idx === headerIndex) {
+                      if (typeof col === 'string') {
+                        return newValue;
+                      } else if (col && typeof col === 'object') {
+                        return { ...col, label: newValue };
+                      } else {
+                        return newValue;
+                      }
+                    }
+                    return col;
+                  })
+                : [];
+              onTableEdit({ ...table, columns: updatedColumns });
+            } : undefined}
+            onCellChange={onTableEdit ? (rowIndex: number, cellIndex: number, newValue: string) => {
+              const updatedRows = table.rows.map((row: any, rIdx: number) => {
+                if (rIdx === rowIndex) {
+                  if (Array.isArray(row)) {
+                    const newRow = [...row];
+                    newRow[cellIndex] = newValue;
+                    return newRow;
+                  } else if (typeof row === 'object') {
+                    const col = table.columns[cellIndex];
+                    const key = col || `col_${cellIndex}`;
+                    return { ...row, [key]: newValue };
+                  }
+                }
+                return row;
+              });
+              onTableEdit({ ...table, rows: updatedRows });
+            } : undefined}
+            onDelete={onTableDelete ? () => {
+              onTableDelete(table.id);
+            } : undefined}
+            onAddColumn={onTableEdit ? () => {
+              const newColumns = Array.isArray(table.columns) ? [...table.columns] : [];
+              newColumns.push(`Column ${newColumns.length + 1}`);
+              
+              const updatedRows = table.rows.map((row: any) => {
+                if (Array.isArray(row)) {
+                  return [...row, ''];
+                } else if (typeof row === 'object') {
+                  return { ...row, [`col_${newColumns.length - 1}`]: '' };
+                }
+                return row;
+              });
+              
+              onTableEdit({ ...table, columns: newColumns, rows: updatedRows });
+            } : undefined}
+            onRemoveColumn={onTableEdit ? (columnIndex: number) => {
+              if (!Array.isArray(table.columns) || table.columns.length <= 1) return;
+              
+              const newColumns = table.columns.filter((_: any, idx: number) => idx !== columnIndex);
+              
+              const updatedRows = table.rows.map((row: any) => {
+                if (Array.isArray(row)) {
+                  return row.filter((_: any, idx: number) => idx !== columnIndex);
+                } else if (typeof row === 'object') {
+                  const col = table.columns[columnIndex] as string | { key?: string; label?: string };
+                  const key = typeof col === 'string' ? col : ((col as { key?: string; label?: string })?.key || (col as { key?: string; label?: string })?.label || `col_${columnIndex}`);
+                  const newRow = { ...row };
+                  delete newRow[key];
+                  return newRow;
+                }
+                return row;
+              });
+              
+              onTableEdit({ ...table, columns: newColumns, rows: updatedRows });
+            } : undefined}
+            onAddRow={onTableEdit ? () => {
+              const newRow = Array(table.columns.length).fill('') as string[];
+              
+              const updatedRows = [...table.rows, newRow] as string[][];
+              onTableEdit({ ...table, rows: updatedRows });
+            } : undefined}
+            onRemoveRow={onTableEdit ? (rowIndex: number) => {
+              if (table.rows.length === 0) return;
+              
+              const updatedRows = table.rows.filter((_: any, idx: number) => idx !== rowIndex);
+              onTableEdit({ ...table, rows: updatedRows });
+            } : undefined}
+          />
+        );
+      }
+      case 'user': {
+        const userElement = element.data as UserElement;
+        const handleEdit = () => {
+          if (onUserElementEdit) {
+            onUserElementEdit(userElement);
+          }
+        };
+        const showRestoreExtracted =
+          editable &&
+          Boolean(onUserElementDelete) &&
+          (userElement.supersedesGeneratedIds?.length ?? 0) > 0;
+
+        const restoreBar = showRestoreExtracted ? (
+          <div className="mb-3 flex justify-end print:hidden">
+            <button
+              type="button"
+              onClick={() => onUserElementDelete?.(userElement.id)}
+              className="text-xs sm:text-sm text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg px-3 py-1.5 font-medium transition-colors"
+            >
+              {t.modals.restoreOriginalExtracted}
+            </button>
+          </div>
+        ) : null;
+
+        if (userElement.type === 'airplane') {
+          return (
+            <div className="w-full">
+              {restoreBar}
+              <AirplaneSection
+                key={userElement.id}
+                id={userElement.id}
+                {...userElement.data}
+                editable={editable}
+                onEditSection={handleEdit}
+              />
+            </div>
+          );
+        } else if (userElement.type === 'hotel') {
+          return (
+            <div className="w-full">
+              {restoreBar}
+              <HotelsSection
+                key={userElement.id}
+                id={userElement.id}
+                {...userElement.data}
+                editable={editable}
+                onEditSection={handleEdit}
+              />
+            </div>
+          );
+        } else if (userElement.type === 'transport') {
+          return (
+            <div className="w-full">
+              {restoreBar}
+              <TransportSection
+                key={userElement.id}
+                id={userElement.id}
+                tables={userElement.data.tables || []}
+                {...userElement.data}
+                editable={editable}
+                onEditSection={handleEdit}
+              />
+            </div>
+          );
+        }
+        return null;
+      }
+      default:
+        return null;
+    }
+  };
+
+  // Use layout order if available, otherwise fall back to legacy rendering
+  const useLayoutOrder = separatedStructure.layout && separatedStructure.layout.length > 0;
+
+  // Render content
+  const renderContent = () => {
+    if (useLayoutOrder) {
+      // New layout order rendering
+      return (
+        <>
+          {separatedStructure.layout.map((id, index) => {
+            if (suppressedGeneratedLayoutIds.has(id)) return null;
+            const element = elementMap.get(id);
+            if (!element) return null;
+            const isFirst = index === 0;
+            const isLast = index === separatedStructure.layout.length - 1;
+            const uniqueKey = `${id}-${index}`; // Create unique key combining ID and index
+
+            // For sections, render with hierarchy if they have children
+            if (element.type === 'section') {
+              const section = element.data as Section;
+              // Check if this section has children
+              const children = separatedStructure.generated.sections.filter(s => s.parent_id === section.id);
+              if (children.length > 0) {
+                return (
+                  <React.Fragment key={uniqueKey}>
+                    <SectionTemplate
+                      title={section.title}
+                      content={section.content}
+                      type={section.type || 'section'}
+                      editable={false}
+                    />
+                    {children.map((child, childIndex) => (
+                      <SectionTemplate
+                        key={`${child.id}-${childIndex}`}
+                        title={child.title}
+                        content={child.content}
+                        type={child.type || 'section'}
+                        editable={false}
+                      />
+                    ))}
+                  </React.Fragment>
+                );
+              }
+            }
+            
+            return (
+              <div key={uniqueKey} className="relative group mb-6">
+                {/* Reorder Controls */}
+                {(onMoveUp || onMoveDown) && (
+                  <div className="absolute -left-12 top-4 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity ">
+                    {!isFirst && onMoveUp && (
+                      <button
+                        onClick={() => onMoveUp(id)}
+                        className="p-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded shadow-lg transition-colors"
+                        title="Move up"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      </button>
+                    )}
+                    {!isLast && onMoveDown && (
+                      <button
+                        onClick={() => onMoveDown(id)}
+                        className="p-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded shadow-lg transition-colors"
+                        title="Move down"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                )}
+                {renderElement(id)}
+              </div>
+            );
+          })}
+        </>
+      );
+    } else {
+      // Legacy rendering (sections + tables)
+      const content: React.ReactNode[] = [];
+
+      // Add sections
+      sortedSections.forEach((section) => {
+        if (suppressedGeneratedLayoutIds.has(section.id)) return;
+
+        content.push(
+          <SectionTemplate
+            key={section.id}
+            title={section.title}
+            content={section.content}
+            type={section.type || 'section'}
+            editable={false}
+          />
+        );
+
+        // Add tables for this section
+        if (tablesBySection.has(section.id)) {
+          tablesBySection.get(section.id)!.forEach((table) => {
+            if (suppressedGeneratedLayoutIds.has(table.id)) return;
+            content.push(
+              <DynamicTableTemplate
+                key={table.id}
+                title={table.title}
+                columns={table.columns}
+                rows={table.rows}
+                editable={false}
+              />
+            );
+          });
+        }
+      });
+
+      // Add orphan tables (tables without section)
+      if (tablesBySection.has(null)) {
+        tablesBySection.get(null)!.forEach((table) => {
+          if (suppressedGeneratedLayoutIds.has(table.id)) return;
+          content.push(
+            <DynamicTableTemplate
+              key={table.id}
+              title={table.title}
+              columns={table.columns}
+              rows={table.rows}
+              editable={false}
+            />
+          );
+        });
+      }
+
+      // Add user elements
+      separatedStructure.user.elements.forEach((element) => {
+        content.push(renderElement(element.id));
+      });
+
+      return <>{content}</>;
+    }
+  };
+
+  const content = (
+    <>
+      {separatedStructure.layout.length === 0 && 
+       separatedStructure.generated.sections.length === 0 && 
+       separatedStructure.generated.tables.length === 0 &&
+       separatedStructure.user.elements.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          <p className="text-lg">لا توجد أقسام أو جداول للعرض</p>
+        </div>
+      ) : (
+        renderContent()
+      )}
+
+      {/* Statistics Summary */}
+      {showStats && separatedStructure.meta && (
+        <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h3 className="font-semibold text-gray-900 mb-2">إحصائيات</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span className="text-gray-600">الأقسام:</span>
+              <span className="font-bold ml-2">{separatedStructure.generated.sections.length}</span>
+            </div>
+            <div>
+              <span className="text-gray-600">الجداول:</span>
+              <span className="font-bold ml-2">{separatedStructure.generated.tables.length}</span>
+            </div>
+            <div>
+              <span className="text-gray-600">عناصر المستخدم:</span>
+              <span className="font-bold ml-2">{separatedStructure.user.elements.length}</span>
+            </div>
+            <div>
+              <span className="text-gray-600">تاريخ الإنشاء:</span>
+              <span className="font-bold ml-2">
+                {separatedStructure.meta.generated_at
+                  ? new Date(separatedStructure.meta.generated_at).toLocaleDateString("ar")
+                  : "غير محدد"}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  // If skipBaseTemplate is true, return content without BaseTemplate wrapper
+  if (skipBaseTemplate) {
+    return <div className={className}>{content}</div>;
+  }
+
+  // Otherwise, wrap in BaseTemplate with dynamic or default branding
+  return (
+    <BaseTemplate
+      headerImage={headerImage}
+      footerImage={footerImage}
+      showHeader={!!headerImage}
+      showFooter={!!footerImage}
+      termsAndConditions={termsAndConditions}
+      className={className}
+    >
+      {content}
+    </BaseTemplate>
+  );
+}
+

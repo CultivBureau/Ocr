@@ -1,0 +1,410 @@
+// Company Settings API client
+import { getToken } from "@/app/modules/auth/services/AuthApi";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+// Make authenticated request
+async function authRequest(path: string, init: RequestInit = {}) {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init.headers as Record<string, string> || {}),
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  try {
+    const url = `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
+      ...init,
+      mode: init.mode ?? "cors",
+      headers,
+    });
+
+    const contentType = response.headers.get("content-type");
+    const isJson = contentType && contentType.includes("application/json");
+    const payload = isJson ? await response.json() : await response.text();
+
+    if (!response.ok) {
+      const errorMessage =
+        isJson && payload?.message
+          ? payload.message
+          : isJson && payload?.detail
+          ? typeof payload.detail === "string"
+            ? payload.detail
+            : JSON.stringify(payload.detail)
+          : payload || response.statusText;
+      throw new Error(errorMessage || "Request failed");
+    }
+
+    return payload;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`[CompanySettingsApi] Network request failed for ${path}: ${message}`);
+  }
+}
+
+// Company Settings types
+export interface CompanySettings {
+  company_id: string;
+  name: string;
+  header_image: string | null;
+  footer_image: string | null;
+  plan_id: string | null;
+  is_active: boolean;
+  plan_started_at: string | null;
+  plan_expires_at: string | null;
+  airline_companies: string[];
+  includes_all_options: string[];
+  terms_and_conditions: string | null;
+}
+
+export interface UsageSummary {
+  total_uploads: number;
+  total_ocr_pages: number;
+  total_pdf_exports: number;
+  total_cost: number;
+  period_start: string;
+  period_end: string;
+}
+
+export interface UsageRecord {
+  id: string;
+  action: string;
+  pages: number;
+  cost: number;
+  created_at: string;
+  is_current_period: boolean;
+}
+
+export interface UsageHistoryResponse {
+  records: UsageRecord[];
+  total: number;
+  skip: number;
+  limit: number;
+  plan_started_at: string | null;
+  current_period_summary: {
+    total_uploads: number;
+    total_ocr_pages: number;
+    total_pdf_exports: number;
+    total_cost: number;
+  };
+  all_time_summary: {
+    total_uploads: number;
+    total_ocr_pages: number;
+    total_pdf_exports: number;
+    total_cost: number;
+  };
+}
+
+export interface CompanyPlan {
+  plan: {
+    id: string;
+    name: string;
+    price_monthly: number;
+    is_trial: boolean;
+    duration_days: number | null;
+    is_active: boolean;
+    limits: {
+      uploads_per_month: number;
+      users_limit: number;
+      pages_per_month: number;
+      pdf_exports: number;
+    };
+  } | null;
+  plan_started_at: string | null;
+  plan_expires_at: string | null;
+}
+
+/**
+ * Get airline companies list (All users in company)
+ */
+export async function getAirlineCompanies(): Promise<{ airline_companies: string[] }> {
+  return authRequest("/company/settings/airline-companies", {
+    method: "GET",
+  });
+}
+
+/**
+ * Get includes-all options list (All users in company)
+ */
+export async function getIncludesAllOptions(): Promise<{ includes_all_options: string[] }> {
+  return authRequest("/company/settings/includes-all-options", {
+    method: "GET",
+  });
+}
+
+/**
+ * Get company settings (Company Admin only)
+ */
+export async function getCompanySettings(): Promise<CompanySettings> {
+  return authRequest("/company/settings", {
+    method: "GET",
+  });
+}
+
+/**
+ * Update company settings (Company Admin only)
+ */
+export async function updateCompanySettings(
+  name?: string
+): Promise<CompanySettings & { message?: string }> {
+  const params = new URLSearchParams();
+  if (name) {
+    params.append("name", name);
+  }
+
+  return authRequest(`/company/settings?${params.toString()}`, {
+    method: "PUT",
+  });
+}
+
+/**
+ * Get company usage statistics (Company Admin only)
+ * 
+ * @param month - Month (1-12)
+ * @param year - Year
+ * @param currentPeriodOnly - If true, only show usage since plan started
+ */
+export async function getCompanyUsage(
+  month?: number,
+  year?: number,
+  currentPeriodOnly: boolean = true
+): Promise<UsageSummary> {
+  const params = new URLSearchParams();
+  if (month !== undefined) {
+    params.append("month", month.toString());
+  }
+  if (year !== undefined) {
+    params.append("year", year.toString());
+  }
+  params.append("current_period_only", currentPeriodOnly.toString());
+
+  return authRequest(`/company/usage?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Get company usage history (Company Admin only)
+ * Returns all usage records including historical data from previous plan periods.
+ * 
+ * @param skip - Number of records to skip
+ * @param limit - Maximum number of records to return
+ * @param startDate - Filter records from this date (ISO string)
+ * @param endDate - Filter records until this date (ISO string)
+ */
+export async function getCompanyUsageHistory(
+  skip: number = 0,
+  limit: number = 100,
+  startDate?: string,
+  endDate?: string
+): Promise<UsageHistoryResponse> {
+  const params = new URLSearchParams();
+  params.append("skip", skip.toString());
+  params.append("limit", limit.toString());
+  if (startDate) {
+    params.append("start_date", startDate);
+  }
+  if (endDate) {
+    params.append("end_date", endDate);
+  }
+
+  return authRequest(`/company/usage/history?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Get company users (Company Admin only)
+ */
+export async function getCompanyUsers(
+  skip: number = 0,
+  limit: number = 100
+): Promise<{ users: any[]; total: number; message?: string }> {
+  const params = new URLSearchParams();
+  params.append("skip", skip.toString());
+  params.append("limit", limit.toString());
+
+  return authRequest(`/company/users?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Get company plan (all users in company)
+ */
+export async function getCompanyPlan(): Promise<CompanyPlan> {
+  return authRequest("/company/plan", {
+    method: "GET",
+  });
+}
+
+/**
+ * Upload header image for company (Company Admin only)
+ */
+export async function uploadCompanyHeaderImage(file: File): Promise<CompanySettings & { message?: string }> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/company/settings/branding/header`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType && contentType.includes("application/json");
+  const payload = isJson ? await response.json() : await response.text();
+
+  if (!response.ok) {
+    const errorMessage =
+      isJson && payload?.message
+        ? payload.message
+        : isJson && payload?.detail
+        ? typeof payload.detail === "string"
+          ? payload.detail
+          : JSON.stringify(payload.detail)
+        : payload || response.statusText;
+    throw new Error(errorMessage || "Request failed");
+  }
+
+  return payload;
+}
+
+/**
+ * Upload footer image for company (Company Admin only)
+ */
+export async function uploadCompanyFooterImage(file: File): Promise<CompanySettings & { message?: string }> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/company/settings/branding/footer`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType && contentType.includes("application/json");
+  const payload = isJson ? await response.json() : await response.text();
+
+  if (!response.ok) {
+    const errorMessage =
+      isJson && payload?.message
+        ? payload.message
+        : isJson && payload?.detail
+        ? typeof payload.detail === "string"
+          ? payload.detail
+          : JSON.stringify(payload.detail)
+        : payload || response.statusText;
+    throw new Error(errorMessage || "Request failed");
+  }
+
+  return payload;
+}
+
+/**
+ * Delete header image for company (Company Admin only)
+ */
+export async function deleteCompanyHeaderImage(): Promise<CompanySettings & { message?: string }> {
+  return authRequest("/company/settings/branding/header", {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Delete footer image for company (Company Admin only)
+ */
+export async function deleteCompanyFooterImage(): Promise<CompanySettings & { message?: string }> {
+  return authRequest("/company/settings/branding/footer", {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Add airline company to company settings (Company Admin only)
+ */
+export async function addAirlineCompany(name: string): Promise<{ message: string; airline_companies: string[] }> {
+  return authRequest("/company/settings/airline-companies", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+/**
+ * Remove airline company from company settings by index (Company Admin only)
+ */
+export async function removeAirlineCompany(index: number): Promise<{ message: string; airline_companies: string[] }> {
+  return authRequest(`/company/settings/airline-companies/${index}`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Add includes all option to company settings (Company Admin only)
+ */
+export async function addIncludesAllOption(option: string): Promise<{ message: string; includes_all_options: string[] }> {
+  return authRequest("/company/settings/includes-all-options", {
+    method: "POST",
+    body: JSON.stringify({ option }),
+  });
+}
+
+/**
+ * Remove includes all option from company settings by index (Company Admin only)
+ */
+export async function removeIncludesAllOption(index: number): Promise<{ message: string; includes_all_options: string[] }> {
+  return authRequest(`/company/settings/includes-all-options/${index}`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Add airline company to company settings (Users and Company Admins from dropdown)
+ */
+export async function addAirlineCompanyUser(name: string): Promise<{ message: string; airline_companies: string[] }> {
+  return authRequest("/company/settings/airline-companies/user", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+/**
+ * Add includes-all option (Users and Company Admins from dropdown)
+ */
+export async function addIncludesAllOptionUser(option: string): Promise<{ message: string; includes_all_options: string[] }> {
+  return authRequest("/company/settings/includes-all-options/user", {
+    method: "POST",
+    body: JSON.stringify({ option }),
+  });
+}
+
+/**
+ * Update terms and conditions for company (Company Admin only)
+ */
+export async function updateTermsAndConditions(
+  terms_and_conditions: string
+): Promise<{ message: string; terms_and_conditions: string | null }> {
+  return authRequest("/company/settings/terms", {
+    method: "PUT",
+    body: JSON.stringify({ terms_and_conditions }),
+  });
+}
+

@@ -3,16 +3,16 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useAuth } from "./contexts/AuthContext";
-import { useHistory } from "./contexts/HistoryContext";
-import { useLanguage } from "./contexts/LanguageContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Loading from "./components/Loading";
-import LanguageToggle from "./components/LanguageToggle";
-import WhatsNewButton from "./components/WhatsNewButton";
-import { getRoleDisplayName, getRoleBadgeColor } from "./utils/rbac";
+import { useAuth } from "@/app/modules/auth/contexts/AuthContext";
+import { useHistory } from "@/app/modules/history/contexts/HistoryContext";
+import { useLanguage } from "@/app/modules/shared/contexts/LanguageContext";
+import ProtectedRoute from "@/app/modules/auth/components/ProtectedRoute";
+import Loading from "@/app/modules/shared/components/Loading";
+import LanguageToggle from "@/app/modules/shared/components/LanguageToggle";
+import WhatsNewButton from "@/app/modules/announcements/components/WhatsNewButton";
+import { getRoleDisplayName, getRoleBadgeColor } from "@/app/modules/shared/utils/rbac";
 import { useSearchParams, useRouter } from "next/navigation";
-import { createBlankDocumentStructure } from "./utils/blankDocument";
+import { createBlankDocumentStructure } from "@/app/modules/pdf-document/utils/blankDocument";
 import { 
   Upload, 
   FileText, 

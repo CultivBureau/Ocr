@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "@/app/modules/shared/styles/pdf-export.css";
 import { Providers } from "./providers";
-import HistorySidebarWrapper from "./components/HistorySidebarWrapper";
-import IframeDetector from "./components/IframeDetector";
+import HistorySidebarWrapper from "@/app/modules/history/components/HistorySidebarWrapper";
+import IframeDetector from "@/app/modules/shared/components/IframeDetector";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

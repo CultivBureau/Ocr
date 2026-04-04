@@ -1,0 +1,385 @@
+// History/Document API client
+import { getToken } from "@/app/modules/auth/services/AuthApi";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+// Handle response
+async function handleResponse(response: Response) {
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType && contentType.includes("application/json");
+  const payload = isJson ? await response.json() : await response.text();
+
+  if (!response.ok) {
+    const errorMessage =
+      isJson && payload?.message
+        ? payload.message
+        : isJson && payload?.detail
+        ? typeof payload.detail === "string"
+          ? payload.detail
+          : JSON.stringify(payload.detail)
+        : payload || response.statusText;
+    throw new Error(errorMessage || "Request failed");
+  }
+
+  return payload;
+}
+
+// Make authenticated request
+async function historyRequest(path: string, init: RequestInit = {}) {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init.headers as Record<string, string> || {}),
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  try {
+    const url = `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
+      ...init,
+      mode: init.mode ?? "cors",
+      headers,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `[HistoryApi] Network request failed for ${path}: ${message}`
+    );
+  }
+}
+
+// Document types - v2 structure
+export interface Document {
+  id: string;
+  user_id: string;
+  company_id: string | null;
+  title: string;
+  original_filename: string;
+  file_path: string;
+  extracted_data: {
+    generated: {
+      sections: any[];
+      tables: any[];
+    };
+    user: {
+      elements: any[];
+    };
+    layout: string[];
+    meta: Record<string, any>;
+  };
+  metadata: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  shared_with: string[];
+  is_public: boolean;
+  current_version?: number;
+  original_version_id?: string | null;
+  total_versions?: number;
+  creator_name?: string | null;
+  creator_email?: string | null;
+}
+
+export interface DocumentListResponse {
+  documents: Document[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface DocumentResponse {
+  document: Document;
+  message?: string;
+}
+
+export interface CreateDocumentRequest {
+  title: string;
+  original_filename: string;
+  file_path: string;
+  extracted_data: {
+    generated: {
+      sections: any[];
+      tables: any[];
+    };
+    user: {
+      elements: any[];
+    };
+    layout: string[];
+    meta: Record<string, any>;
+  };
+  metadata?: Record<string, any>;
+}
+
+export interface UpdateDocumentRequest {
+  title?: string;
+  extracted_data?: {
+    generated: {
+      sections: any[];
+      tables: any[];
+    };
+    user: {
+      elements: any[];
+    };
+    layout: string[];
+    meta: Record<string, any>;
+  };
+  metadata?: Record<string, any>;
+}
+
+export interface ShareDocumentRequest {
+  emails?: string[];
+  is_public?: boolean;
+}
+
+export interface ShareDocumentResponse {
+  message: string;
+  shared_with: string[];
+  is_public: boolean;
+  public_link?: string;
+}
+
+// Version-related types - v2 structure
+export interface DocumentVersion {
+  id: string;
+  document_id: string;
+  version_number: number;
+  is_original: boolean;
+  extracted_data: {
+    generated: {
+      sections: any[];
+      tables: any[];
+    };
+    user: {
+      elements: any[];
+    };
+    layout: string[];
+    meta: Record<string, any>;
+  };
+  metadata: Record<string, any>;
+  created_at: string;
+  created_by: string;
+  change_summary?: string | null;
+  version_name?: string | null;
+}
+
+export interface DocumentVersionListResponse {
+  versions: DocumentVersion[];
+  total: number;
+  document_id: string;
+}
+
+export interface DocumentVersionResponse {
+  version: DocumentVersion;
+  message?: string;
+}
+
+export interface RestoreVersionRequest {
+  change_summary?: string;
+  version_name?: string;
+}
+
+/**
+ * Get user's document history
+ * @param page - Page number (1-indexed)
+ * @param pageSize - Number of items per page
+ * @param search - Optional search query
+ * @param companyId - Optional company ID filter (Super Admin only)
+ */
+export async function getHistory(
+  page: number = 1,
+  pageSize: number = 20,
+  search?: string,
+  companyId?: string
+): Promise<DocumentListResponse> {
+  let url = `/history/?page=${page}&page_size=${pageSize}`;
+  if (search) {
+    url += `&search=${encodeURIComponent(search)}`;
+  }
+  if (companyId) {
+    url += `&company_id=${encodeURIComponent(companyId)}`;
+  }
+
+  return historyRequest(url, { method: "GET" });
+}
+
+/**
+ * Create/save a new document
+ */
+export async function saveDocument(
+  data: CreateDocumentRequest
+): Promise<DocumentResponse> {
+  return historyRequest("/history/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Get a specific document (client-side version)
+ * For server-side usage, use getDocumentServer from HistoryApiServer.ts
+ */
+export async function getDocument(docId: string): Promise<DocumentResponse> {
+  return historyRequest(`/history/${docId}`, { method: "GET" });
+}
+
+/**
+ * Update a document
+ */
+export async function updateDocument(
+  docId: string,
+  data: UpdateDocumentRequest
+): Promise<DocumentResponse> {
+  return historyRequest(`/history/${docId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Delete a document
+ */
+export async function deleteDocument(docId: string): Promise<{ message: string }> {
+  return historyRequest(`/history/${docId}`, { method: "DELETE" });
+}
+
+/**
+ * Share a document
+ */
+export async function shareDocument(
+  docId: string,
+  data: ShareDocumentRequest
+): Promise<ShareDocumentResponse> {
+  return historyRequest(`/history/${docId}/share`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Export a document
+ */
+export async function exportDocument(
+  docId: string,
+  format: "json" | "pdf" = "json"
+): Promise<any> {
+  const token = getToken();
+  const headers: HeadersInit = {};
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const url = `${API_BASE_URL}/history/${docId}/export?format=${format}`;
+  const response = await fetch(url, {
+    method: "GET",
+    mode: "cors",
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || "Export failed");
+  }
+
+  if (format === "json") {
+    return response.json();
+  } else {
+    // For PDF, return blob
+    return response.blob();
+  }
+}
+
+/**
+ * Get all versions of a document
+ */
+export async function getDocumentVersions(
+  docId: string
+): Promise<DocumentVersionListResponse> {
+  return historyRequest(`/history/${docId}/versions`, { method: "GET" });
+}
+
+/**
+ * Get a specific version of a document
+ */
+export async function getDocumentVersion(
+  docId: string,
+  versionNumber: number
+): Promise<DocumentVersionResponse> {
+  return historyRequest(`/history/${docId}/versions/${versionNumber}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * Restore document to a specific version
+ */
+export async function restoreDocumentVersion(
+  docId: string,
+  versionNumber: number,
+  changeSummary?: string,
+  versionName?: string
+): Promise<DocumentResponse> {
+  const body: Record<string, string> = {};
+  if (changeSummary && changeSummary.trim()) {
+    body.change_summary = changeSummary.trim();
+  }
+  if (versionName && versionName.trim()) {
+    body.version_name = versionName.trim();
+  }
+  
+  return historyRequest(`/history/${docId}/versions/${versionNumber}/restore`, {
+    method: "POST",
+    body: Object.keys(body).length > 0 ? JSON.stringify(body) : JSON.stringify({}),
+  });
+}
+
+/**
+ * Reset document to original version
+ */
+export async function resetToOriginal(
+  docId: string,
+  changeSummary?: string,
+  versionName?: string
+): Promise<DocumentResponse> {
+  const body: Record<string, string> = {};
+  if (changeSummary && changeSummary.trim()) {
+    body.change_summary = changeSummary.trim();
+  }
+  if (versionName && versionName.trim()) {
+    body.version_name = versionName.trim();
+  }
+  
+  return historyRequest(`/history/${docId}/versions/original/restore`, {
+    method: "POST",
+    body: Object.keys(body).length > 0 ? JSON.stringify(body) : JSON.stringify({}),
+  });
+}
+
+/**
+ * Generate or regenerate a public link for a document
+ */
+export async function generatePublicLink(
+  docId: string
+): Promise<{ message: string; public_token: string; public_link: string }> {
+  return historyRequest(`/history/${docId}/public-link`, {
+    method: "POST",
+  });
+}
+
+/**
+ * Get the current public link for a document
+ */
+export async function getPublicLink(
+  docId: string
+): Promise<{ message: string; public_token: string | null; public_link: string | null }> {
+  return historyRequest(`/history/${docId}/public-link`, {
+    method: "GET",
+  });
+}
+

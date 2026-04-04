@@ -1,0 +1,3271 @@
+"use client";
+
+import React, {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Undo2, Redo2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import StructureRenderer from "../components/StructureRenderer";
+import CreateTableModal from "../components/CreateTableModal";
+import AddAirplaneModal, { FlightData } from "../components/AddAirplaneModal";
+import EditFlightModal from "../components/EditFlightModal";
+import EditAirplaneSectionModal from "../components/EditAirplaneSectionModal";;
+import AddHotelModal from "../components/AddHotelModal";
+import EditHotelModal from "../components/EditHotelModal";
+import EditHotelSectionModal from "../components/EditHotelSectionModal";
+import AddTransportModal from "../components/AddTransportModal";
+import EditTransportRowModal from "../components/EditTransportRowModal";
+import EditTransportTableModal from "../components/EditTransportTableModal";
+import EditTransportSectionModal from "../components/EditTransportSectionModal";
+import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
+import ComponentSuggestionModal from "../components/ComponentSuggestionModal";
+import { Hotel } from "../templates/HotelsSection";
+import { isAuthenticated } from "@/app/modules/auth/services/AuthApi";
+import { saveDocument, updateDocument, getDocument, generatePublicLink, getPublicLink } from "@/app/modules/history/services/HistoryApi";
+import { generatePDFWithPlaywright, downloadPDFBlob } from "../services/PdfApi";
+import { getCompany } from "@/app/modules/companies/services/CompanyApi";
+import ProtectedRoute from "@/app/modules/auth/components/ProtectedRoute";
+import VersionHistoryModal from "@/app/modules/history/components/VersionHistoryModal";
+import { useLanguage } from "@/app/modules/shared/contexts/LanguageContext";
+import { useAuth } from "@/app/modules/auth/contexts/AuthContext";
+import type { SeparatedStructure, UserElement, Table, Section, ComponentSuggestion } from "../types/ExtractTypes";
+import {
+  DEFAULT_NEW_SECTION_CONTENT,
+  DEFAULT_NEW_SECTION_TITLE,
+} from "../utils/blankDocument";
+import {
+  collectClaimedSupersedesIds,
+  findSupersedesGeneratedIds,
+} from "../utils/aiSuggestionSupersedes";
+import { useDocumentStructureHistory } from "../hooks/useDocumentStructureHistory";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+// Default empty structure
+const defaultStructure: SeparatedStructure = {
+  generated: {
+    sections: [],
+    tables: []
+  },
+  user: {
+    elements: []
+  },
+  layout: [],
+  meta: {}
+};
+
+// Utility function to remove duplicates from structure
+const deduplicateStructure = (structure: SeparatedStructure): SeparatedStructure => {
+  // Deduplicate user elements by ID
+  const seenIds = new Set<string>();
+  const uniqueElements = structure.user.elements.filter(el => {
+    if (seenIds.has(el.id)) {
+      console.log('[Deduplication] Removing duplicate element:', el.id);
+      return false;
+    }
+    seenIds.add(el.id);
+    return true;
+  });
+  
+  // Deduplicate layout array
+  const uniqueLayout = Array.from(new Set(structure.layout));
+  
+  // Remove IDs from layout that don't exist in elements
+  const allElementIds = new Set([
+    ...uniqueElements.map(el => el.id),
+    ...structure.generated.sections.map(s => s.id),
+    ...structure.generated.tables.map(t => t.id)
+  ]);
+  
+  const validLayout = uniqueLayout.filter(id => allElementIds.has(id));
+  
+  return {
+    ...structure,
+    user: {
+      elements: uniqueElements
+    },
+    layout: validLayout,
+    suggestions: structure.suggestions // Explicitly preserve suggestions
+  };
+};
+
+function CodePageContent() {
+  const { t, isRTL, dir } = useLanguage();
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const {
+    structure,
+    setStructure,
+    setStructureWithUndo,
+    clearHistory,
+    undo: undoDocument,
+    redo: redoDocument,
+    canUndo,
+    canRedo,
+    historyEpoch,
+  } = useDocumentStructureHistory(defaultStructure);
+  const [sourceMetadata, setSourceMetadata] = useState<{
+    filename?: string;
+    uploadedAt?: string;
+  } | null>(null);
+  const [isCreateTableModalOpen, setIsCreateTableModalOpen] = useState(false);
+  const [showTableCreatedToast, setShowTableCreatedToast] = useState(false);
+  const [documentId, setDocumentId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
+  const [currentVersion, setCurrentVersion] = useState<number>(1);
+  const [totalVersions, setTotalVersions] = useState<number>(1);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showMenuDropdown, setShowMenuDropdown] = useState(false);
+  const [showAddAirplaneModal, setShowAddAirplaneModal] = useState(false);
+  const [editingAirplaneId, setEditingAirplaneId] = useState<string | null>(null);
+  const [editingFlightIndex, setEditingFlightIndex] = useState<number | null>(null);
+  const [showEditFlightModal, setShowEditFlightModal] = useState(false);
+  const [showEditSectionModal, setShowEditSectionModal] = useState(false);
+  const [showAddHotelModal, setShowAddHotelModal] = useState(false);
+  const [editingHotelId, setEditingHotelId] = useState<string | null>(null);
+  const [editingHotelIndex, setEditingHotelIndex] = useState<number | null>(null);
+  const [showEditHotelModal, setShowEditHotelModal] = useState(false);
+  const [showEditHotelSectionModal, setShowEditHotelSectionModal] = useState(false);
+  const [showAddTransportModal, setShowAddTransportModal] = useState(false);
+  const [editingTransportId, setEditingTransportId] = useState<string | null>(null);
+  const [editingTransportTableIndex, setEditingTransportTableIndex] = useState<number | null>(null);
+  const [editingTransportRowIndex, setEditingTransportRowIndex] = useState<number | null>(null);
+  const [showEditTransportRowModal, setShowEditTransportRowModal] = useState(false);
+  const [showEditTransportTableModal, setShowEditTransportTableModal] = useState(false);
+  const [showEditTransportSectionModal, setShowEditTransportSectionModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
+  const [isExportingPlaywright, setIsExportingPlaywright] = useState(false);
+  const [isCopyingLink, setIsCopyingLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Component suggestions state
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false);
+  const [pendingSuggestions, setPendingSuggestions] = useState<ComponentSuggestion[]>([]);
+  
+  // Track changes for Save button
+  const [hasChanges, setHasChanges] = useState(false);
+  const initialStructureRef = useRef<SeparatedStructure | null>(null);
+  
+  // Company branding state
+  const [headerImage, setHeaderImage] = useState<string | undefined>(undefined);
+  const [footerImage, setFooterImage] = useState<string | undefined>(undefined);
+  const [termsAndConditions, setTermsAndConditions] = useState<string | null>(null);
+  
+  // Load saved suggestions when document ID changes
+  // Load suggestions from document structure
+  useEffect(() => {
+    if (structure.suggestions && structure.suggestions.length > 0) {
+      setPendingSuggestions(structure.suggestions);
+      // Show the suggestion modal if there are pending suggestions
+      setShowSuggestionModal(true);
+    } else {
+      setPendingSuggestions([]);
+    }
+  }, [structure.suggestions]);
+  
+  // Event delegation for airplane section actions
+  useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+    
+    const handleAirplaneSectionClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // Find the button that was clicked (or its parent button)
+      const button = target.closest('button[data-action]') as HTMLButtonElement;
+      if (!button) return;
+      
+      const action = button.getAttribute('data-action');
+      const sectionId = button.getAttribute('data-airplane-section-id');
+      const flightIndexStr = button.getAttribute('data-flight-index');
+      
+      // Verify we have required attributes
+      if (!action || !sectionId) return;
+      
+      // CRITICAL: Verify ID starts with user_airplane_ to prevent modifying generated content
+      if (!sectionId.startsWith('user_airplane_')) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`Attempted to ${action} on non-user airplane section: ${sectionId}`);
+        }
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+      
+      // Prevent default and stop propagation
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Route to appropriate handler
+      switch (action) {
+        case 'edit-flight': {
+          const flightIndex = flightIndexStr ? parseInt(flightIndexStr, 10) : null;
+          if (flightIndex === null || isNaN(flightIndex)) {
+            console.error('Invalid flight index for edit-flight action');
+            return;
+          }
+          setEditingAirplaneId(sectionId);
+          setEditingFlightIndex(flightIndex);
+          setShowEditFlightModal(true);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Opening edit flight modal for section ${sectionId}, flight ${flightIndex}`);
+          }
+          break;
+        }
+        case 'remove-flight': {
+          const flightIndex = flightIndexStr ? parseInt(flightIndexStr, 10) : null;
+          if (flightIndex === null || isNaN(flightIndex)) {
+            console.error('Invalid flight index for remove-flight action');
+            return;
+          }
+          handleRemoveFlight(sectionId, flightIndex);
+          break;
+        }
+        case 'add-flight': {
+          handleAddFlight(sectionId);
+          break;
+        }
+        case 'edit-section': {
+          setEditingAirplaneId(sectionId);
+          setEditingFlightIndex(null);
+          setShowEditSectionModal(true);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Opening edit section modal for section ${sectionId}`);
+          }
+          break;
+        }
+        case 'delete-section': {
+          handleDeleteSection(sectionId);
+          break;
+        }
+        default:
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`Unknown airplane section action: ${action}`);
+          }
+      }
+    };
+    
+    const handleHotelSectionClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // Find the button that was clicked (or its parent button)
+      const button = target.closest('button[data-action]') as HTMLButtonElement;
+      if (!button) return;
+      
+      const action = button.getAttribute('data-action');
+      const sectionId = button.getAttribute('data-hotels-section-id');
+      const hotelIndexStr = button.getAttribute('data-hotel-index');
+      
+      // Verify we have required attributes
+      if (!action || !sectionId) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[HOTEL CLICK] Missing action or sectionId', { action, sectionId });
+        }
+        return;
+      }
+      
+      // CRITICAL: Verify ID starts with user_hotel_ to prevent modifying generated content
+      if (!sectionId.startsWith('user_hotel_')) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`Attempted to ${action} on non-user hotel section: ${sectionId}`);
+        }
+        alert('Cannot modify generated content. Only user-created hotel sections can be edited.');
+        return;
+      }
+      
+      // Prevent default and stop propagation
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[HOTEL CLICK] Action: ${action}, Section: ${sectionId}, Hotel Index: ${hotelIndexStr}`);
+      }
+      
+      // Route to appropriate handler
+      switch (action) {
+        case 'edit-hotel': {
+          const hotelIndex = hotelIndexStr ? parseInt(hotelIndexStr, 10) : null;
+          if (hotelIndex === null || isNaN(hotelIndex)) {
+            console.error('Invalid hotel index for edit-hotel action');
+            return;
+          }
+          setEditingHotelId(sectionId);
+          setEditingHotelIndex(hotelIndex);
+          setShowEditHotelModal(true);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Opening edit hotel modal for section ${sectionId}, hotel ${hotelIndex}`);
+          }
+          break;
+        }
+        case 'remove-hotel': {
+          const hotelIndex = hotelIndexStr ? parseInt(hotelIndexStr, 10) : null;
+          if (hotelIndex === null || isNaN(hotelIndex)) {
+            console.error('Invalid hotel index for remove-hotel action');
+            return;
+          }
+          handleRemoveHotel(sectionId, hotelIndex);
+          break;
+        }
+        case 'add-hotel': {
+          handleAddHotel(sectionId);
+          break;
+        }
+        case 'edit-section': {
+          setEditingHotelId(sectionId);
+          setEditingHotelIndex(null);
+          setShowEditHotelSectionModal(true);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Opening edit section modal for section ${sectionId}`);
+          }
+          break;
+        }
+        case 'delete-section': {
+          handleDeleteHotelSection(sectionId);
+          break;
+        }
+        default:
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`Unknown hotel section action: ${action}`);
+          }
+      }
+    };
+    
+    const handleTransportSectionClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // Find the button that was clicked (or its parent button)
+      const button = target.closest('button[data-action]') as HTMLButtonElement;
+      if (!button) return;
+      
+      const action = button.getAttribute('data-action');
+      const sectionId = button.getAttribute('data-transport-section-id');
+      const tableIndexStr = button.getAttribute('data-table-index');
+      const rowIndexStr = button.getAttribute('data-row-index');
+      
+      // Verify we have required attributes
+      if (!action || !sectionId) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[TRANSPORT CLICK] Missing action or sectionId', { action, sectionId });
+        }
+        return;
+      }
+      
+      // Type check: ensure sectionId is a string (getAttribute returns string | null)
+      if (typeof sectionId !== 'string') {
+        console.error('[TRANSPORT CLICK] Invalid sectionId type:', typeof sectionId, sectionId);
+        return;
+      }
+      
+      // Explicitly convert to string to ensure type safety
+      const sectionIdString = String(sectionId);
+      
+      // CRITICAL: Verify ID starts with user_transport_ to prevent modifying generated content
+      if (!sectionIdString.startsWith('user_transport_')) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`Attempted to ${action} on non-user transport section: ${sectionIdString}`);
+        }
+        alert('Cannot modify generated content. Only user-created transport sections can be edited.');
+        return;
+      }
+      
+      // Prevent default and stop propagation
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[TRANSPORT CLICK] Action: ${action}, Section: ${sectionIdString}, Table: ${tableIndexStr}, Row: ${rowIndexStr}`);
+      }
+      
+      // Route to appropriate handler
+      switch (action) {
+        case 'edit-row': {
+          const tableIndex = tableIndexStr ? parseInt(tableIndexStr, 10) : null;
+          const rowIndex = rowIndexStr ? parseInt(rowIndexStr, 10) : null;
+          if (tableIndex === null || isNaN(tableIndex) || rowIndex === null || isNaN(rowIndex)) {
+            console.error('Invalid table/row index for edit-row action');
+            return;
+          }
+          setEditingTransportId(sectionIdString);
+          setEditingTransportTableIndex(tableIndex);
+          setEditingTransportRowIndex(rowIndex);
+          setShowEditTransportRowModal(true);
+          break;
+        }
+        case 'remove-row': {
+          const tableIndex = tableIndexStr ? parseInt(tableIndexStr, 10) : null;
+          const rowIndex = rowIndexStr ? parseInt(rowIndexStr, 10) : null;
+          if (tableIndex === null || isNaN(tableIndex) || rowIndex === null || isNaN(rowIndex)) {
+            console.error('Invalid table/row index for remove-row action');
+            return;
+          }
+          handleRemoveTransportRow(sectionIdString, tableIndex, rowIndex);
+          break;
+        }
+        case 'add-row': {
+          const tableIndex = tableIndexStr ? parseInt(tableIndexStr, 10) : null;
+          if (tableIndex === null || isNaN(tableIndex)) {
+            console.error('Invalid table index for add-row action');
+            return;
+          }
+          handleAddTransportRow(sectionIdString, tableIndex);
+          break;
+        }
+        case 'edit-table': {
+          const tableIndex = tableIndexStr ? parseInt(tableIndexStr, 10) : null;
+          if (tableIndex === null || isNaN(tableIndex)) {
+            console.error('Invalid table index for edit-table action');
+            return;
+          }
+          setEditingTransportId(sectionIdString);
+          setEditingTransportTableIndex(tableIndex);
+          setShowEditTransportTableModal(true);
+          break;
+        }
+        case 'delete-table': {
+          const tableIndex = tableIndexStr ? parseInt(tableIndexStr, 10) : null;
+          if (tableIndex === null || isNaN(tableIndex)) {
+            console.error('Invalid table index for delete-table action');
+            return;
+          }
+          handleRemoveTransportTable(sectionIdString, tableIndex);
+          break;
+        }
+        case 'edit-section': {
+          setEditingTransportId(sectionIdString);
+          setEditingTransportTableIndex(null);
+          setEditingTransportRowIndex(null);
+          setShowEditTransportSectionModal(true);
+          break;
+        }
+        case 'delete-section': {
+          handleDeleteTransportSection(sectionIdString);
+          break;
+        }
+        default:
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`Unknown transport section action: ${action}`);
+          }
+      }
+    };
+    
+    container.addEventListener('click', handleAirplaneSectionClick);
+    container.addEventListener('click', handleHotelSectionClick);
+    container.addEventListener('click', handleTransportSectionClick);
+    
+    return () => {
+      container.removeEventListener('click', handleAirplaneSectionClick);
+      container.removeEventListener('click', handleHotelSectionClick);
+      container.removeEventListener('click', handleTransportSectionClick);
+    };
+  }, []);
+  
+  // Handler functions for airplane section actions - Updated to work with JSON structure
+  const handleRemoveFlight = useCallback((id: string, flightIndex: number) => {
+    try {
+      // Verify ID prefix
+      if (!id.startsWith('user_airplane_')) {
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+      
+      // Find the user element in JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'airplane');
+        if (userElementIndex === -1) {
+        alert('Airplane section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const flights = [...(element.data.flights || [])];
+        flights.splice(flightIndex, 1);
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            flights
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Error removing flight:', error);
+        alert(error instanceof Error ? error.message : 'Failed to remove flight');
+    }
+  }, []);
+  
+  const handleAddFlight = useCallback((id: string) => {
+    try {
+      // CRITICAL: Verify ID prefix
+      if (!id.startsWith('user_airplane_')) {
+        const errorMsg = `SECURITY: Attempted to add flight to non-user airplane section: ${id}`;
+        console.error(errorMsg);
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[AIRPLANE CRUD] Adding flight to airplane section ${id}`);
+      }
+      
+      const newFlight: FlightData = {
+        date: new Date().toISOString().split('T')[0],
+        fromAirport: "",
+        toAirport: "",
+        travelers: { adults: 1, children: 0, infants: 0 },
+        luggage: "20 كيلو"
+      };
+      
+      // Add flight to JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'airplane');
+        if (userElementIndex === -1) {
+          alert('Airplane section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const flights = [...(element.data.flights || []), newFlight];
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            flights
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+    } catch (error) {
+      console.error('[AIRPLANE CRUD ERROR] Error adding flight:', error);
+      if (error instanceof Error && error.message.includes('generated content')) {
+        alert('Cannot modify generated content. This operation is blocked for security.');
+      } else {
+        alert(error instanceof Error ? error.message : 'Failed to add flight');
+      }
+    }
+  }, []);
+  
+  const handleDeleteSection = useCallback((id: string) => {
+    // Verify ID prefix - only user-created elements can be deleted
+    if (!id.startsWith('user_')) {
+      alert('Cannot delete generated content. Only user-created sections can be deleted.');
+      return;
+    }
+    
+    // Show modal instead of window.confirm
+    setDeletePendingId(id);
+    setShowDeleteModal(true);
+  }, []);
+  
+  // Confirm deletion after modal confirmation
+  const confirmDeleteSection = useCallback(() => {
+    if (!deletePendingId) return;
+    
+    try {
+      // Remove from JSON structure
+      setStructureWithUndo(prev => {
+        // Remove from user.elements
+        const updatedElements = prev.user.elements.filter(el => el.id !== deletePendingId);
+        
+        // Remove from layout
+        const updatedLayout = prev.layout.filter(layoutId => layoutId !== deletePendingId);
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          },
+          layout: updatedLayout
+        };
+      });
+      
+      // Clear pending state
+      setDeletePendingId(null);
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error('Error deleting section:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete section');
+    }
+  }, [deletePendingId]);
+  
+  // Handler for moving element up in the layout
+  const handleMoveUp = useCallback((id: string) => {
+    setStructureWithUndo(prev => {
+      const currentIndex = prev.layout.indexOf(id);
+      if (currentIndex <= 0) return prev; // Already at top or not found
+      
+      const newLayout = [...prev.layout];
+      // Swap with previous element
+      [newLayout[currentIndex - 1], newLayout[currentIndex]] = [newLayout[currentIndex], newLayout[currentIndex - 1]];
+      
+      return {
+        ...prev,
+        layout: newLayout
+      };
+    });
+  }, []);
+  
+  // Handler for moving element down in the layout
+  const handleMoveDown = useCallback((id: string) => {
+    setStructureWithUndo(prev => {
+      const currentIndex = prev.layout.indexOf(id);
+      if (currentIndex === -1 || currentIndex >= prev.layout.length - 1) return prev; // Already at bottom or not found
+      
+      const newLayout = [...prev.layout];
+      // Swap with next element
+      [newLayout[currentIndex], newLayout[currentIndex + 1]] = [newLayout[currentIndex + 1], newLayout[currentIndex]];
+      
+      return {
+        ...prev,
+        layout: newLayout
+      };
+    });
+  }, []);
+  
+  // Handler for editing a flight
+  const handleEditFlightSubmit = useCallback((updatedFlight: FlightData) => {
+    if (!editingAirplaneId || editingFlightIndex === null) {
+      return;
+    }
+    
+    try {
+      // Verify ID prefix
+      if (!editingAirplaneId.startsWith('user_airplane_')) {
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+      
+      // Update flight in JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingAirplaneId && el.type === 'airplane'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Airplane section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const flights = [...(element.data.flights || [])];
+        flights[editingFlightIndex] = updatedFlight;
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            flights
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+      
+      setShowEditFlightModal(false);
+      setEditingAirplaneId(null);
+      setEditingFlightIndex(null);
+    } catch (error) {
+      console.error('Error updating flight:', error);
+        alert(error instanceof Error ? error.message : 'Failed to update flight');
+    }
+  }, [editingAirplaneId, editingFlightIndex]);
+  
+  // Handler for editing section properties
+  const handleEditSectionSubmit = useCallback((props: {
+    title?: string;
+    showTitle?: boolean;
+    noticeMessage?: string;
+    showNotice?: boolean;
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+  }) => {
+    if (!editingAirplaneId) {
+      return;
+    }
+    
+    try {
+      // Verify ID prefix
+      if (!editingAirplaneId.startsWith('user_airplane_')) {
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+      
+      // Update section properties in JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingAirplaneId && el.type === 'airplane'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Airplane section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            ...props
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+      
+      setShowEditSectionModal(false);
+      setEditingAirplaneId(null);
+    } catch (error) {
+      console.error('Error updating section:', error);
+        alert(error instanceof Error ? error.message : 'Failed to update section');
+    }
+  }, [editingAirplaneId]);
+  
+  // Get initial flight data for edit modal - Updated to read from JSON structure
+  const getInitialFlightData = useCallback((): FlightData | null => {
+    if (!editingAirplaneId || editingFlightIndex === null) {
+      return null;
+    }
+    
+    try {
+      const element = structure.user.elements.find(
+        el => el.id === editingAirplaneId && el.type === 'airplane'
+      );
+      
+      if (!element || !element.data.flights) {
+        return null;
+      }
+      
+      const flights = element.data.flights;
+      if (editingFlightIndex >= 0 && editingFlightIndex < flights.length) {
+        return flights[editingFlightIndex];
+      }
+    } catch (error) {
+      console.error('Error extracting flight data:', error);
+    }
+    
+    return null;
+  }, [editingAirplaneId, editingFlightIndex, structure]);
+  
+  // Get initial section data for edit modal - Updated to read from JSON structure
+  const getInitialSectionData = useCallback((): {
+    title?: string;
+    showTitle?: boolean;
+    noticeMessage?: string;
+    showNotice?: boolean;
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+    flights?: FlightData[]; // Add flights data
+  } | null => {
+    if (!editingAirplaneId) {
+      return null;
+    }
+    
+    try {
+      const element = structure.user.elements.find(
+        el => el.id === editingAirplaneId && el.type === 'airplane'
+      );
+      
+      if (!element) {
+        return null;
+      }
+      
+      // Read directly from JSON structure
+      return {
+        title: element.data.title,
+        showTitle: element.data.showTitle,
+        noticeMessage: element.data.noticeMessage,
+        showNotice: element.data.showNotice,
+        direction: element.data.direction,
+        language: element.data.language,
+        flights: element.data.flights // Include flights data for template saving
+      };
+    } catch (error) {
+      console.error('Error extracting section data:', error);
+    }
+    
+    return null;
+  }, [editingAirplaneId, structure]);
+
+  // Handler functions for hotel section actions - Updated to work with JSON structure
+  const handleRemoveHotel = useCallback((id: string, hotelIndex: number) => {
+    try {
+      // Verify ID prefix
+      if (!id.startsWith('user_hotel_')) {
+        alert('Cannot modify generated content. Only user-created hotel sections can be edited.');
+        return;
+      }
+      
+      // Remove hotel from JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'hotel');
+        if (userElementIndex === -1) {
+          console.error('Hotel section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const hotels = [...(element.data.hotels || [])];
+        hotels.splice(hotelIndex, 1);
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            hotels
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Error removing hotel:', error);
+      alert(error instanceof Error ? error.message : 'Failed to remove hotel');
+    }
+  }, []);
+  
+  const handleAddHotel = useCallback((id: string) => {
+    try {
+      // Verify ID prefix
+      if (!id.startsWith('user_hotel_')) {
+        alert('Cannot modify generated content. Only user-created hotel sections can be edited.');
+        return;
+      }
+      
+      const newHotel: Hotel = {
+        city: "",
+        nights: 1,
+        hotelName: "",
+        hasDetailsLink: false,
+        roomDescription: {
+          includesAll: "شامل الافطار",
+          bedType: "سرير اضافي/ عدد: 2",
+          roomType: ""
+        },
+        checkInDate: new Date().toISOString().split('T')[0],
+        checkOutDate: new Date().toISOString().split('T')[0],
+        dayInfo: {
+          checkInDay: "اليوم الاول",
+          checkOutDay: "اليوم الثاني"
+        }
+      };
+      
+      // Add hotel to JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'hotel');
+        if (userElementIndex === -1) {
+          alert('Hotel section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const hotels = [...(element.data.hotels || []), newHotel];
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            hotels
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Error adding hotel:', error);
+        alert(error instanceof Error ? error.message : 'Failed to add hotel');
+    }
+  }, []);
+  
+  const handleDeleteHotelSection = useCallback((id: string) => {
+    // Verify ID prefix - only user-created elements can be deleted
+    if (!id.startsWith('user_hotel_')) {
+      alert('Cannot delete generated content. Only user-created sections can be deleted.');
+      return;
+    }
+    
+    // Show modal instead of window.confirm
+    setDeletePendingId(id);
+    setShowDeleteModal(true);
+  }, []);
+  
+  // Handler for editing a hotel
+  const handleEditHotelSubmit = useCallback((updatedHotel: Hotel) => {
+    if (!editingHotelId || editingHotelIndex === null) {
+      return;
+    }
+    
+    try {
+      // Verify ID prefix
+      if (!editingHotelId.startsWith('user_hotel_')) {
+        alert('Cannot modify generated content. Only user-created hotel sections can be edited.');
+        return;
+      }
+      
+      // Update hotel in JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingHotelId && el.type === 'hotel'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Hotel section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const hotels = [...(element.data.hotels || [])];
+        hotels[editingHotelIndex] = updatedHotel;
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            hotels
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+      
+      setShowEditHotelModal(false);
+      setEditingHotelId(null);
+      setEditingHotelIndex(null);
+    } catch (error) {
+      console.error('Error updating hotel:', error);
+        alert(error instanceof Error ? error.message : 'Failed to update hotel');
+    }
+  }, [editingHotelId, editingHotelIndex]);
+  
+  // Handler for editing section properties
+  const handleEditHotelSectionSubmit = useCallback((props: {
+    title?: string;
+    showTitle?: boolean;
+  }) => {
+    if (!editingHotelId) {
+      return;
+    }
+    
+    try {
+      // Verify ID prefix
+      if (!editingHotelId.startsWith('user_hotel_')) {
+        alert('Cannot modify generated content. Only user-created hotel sections can be edited.');
+        return;
+      }
+      
+      // Update section properties in JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingHotelId && el.type === 'hotel'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Hotel section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            ...props
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+      
+      setShowEditHotelSectionModal(false);
+      setEditingHotelId(null);
+    } catch (error) {
+      console.error('Error updating hotel section:', error);
+        alert(error instanceof Error ? error.message : 'Failed to update section');
+    }
+  }, [editingHotelId]);
+
+  // Handler functions for transport section actions - Updated to work with JSON structure
+  const handleRemoveTransportRow = useCallback((id: string, tableIndex: number, rowIndex: number) => {
+    try {
+      if (!id.startsWith('user_transport_')) {
+        alert('Cannot modify generated content. Only user-created transport sections can be edited.');
+        return;
+      }
+      
+      // Remove row from JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
+        if (userElementIndex === -1) {
+          console.error('Transport section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+        
+        if (tableIndex >= 0 && tableIndex < tables.length) {
+          const table = tables[tableIndex];
+          const rows = [...(table.rows || [])];
+          rows.splice(rowIndex, 1);
+          tables[tableIndex] = { ...table, rows };
+        }
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Error removing transport row:', error);
+      alert(error instanceof Error ? error.message : 'Failed to remove row');
+    }
+  }, []);
+
+  const handleAddTransportRow = useCallback((id: string, tableIndex: number) => {
+    try {
+      if (!id.startsWith('user_transport_')) {
+        alert('Cannot modify generated content. Only user-created transport sections can be edited.');
+        return;
+      }
+      
+      // Add row to JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
+        if (userElementIndex === -1) {
+        alert('Transport section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+        
+        if (tableIndex >= 0 && tableIndex < tables.length) {
+      const table = tables[tableIndex];
+      const newRow: any = {
+        day: "",
+        date: new Date().toISOString().split('T')[0],
+        description: "",
+        carType: "",
+      };
+      
+      // Initialize all column values
+          (table.columns || []).forEach((col: any) => {
+        if (!newRow[col.key]) {
+          newRow[col.key] = "";
+        }
+      });
+      
+          const rows = [...(table.rows || []), newRow];
+          tables[tableIndex] = { ...table, rows };
+        }
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Error adding transport row:', error);
+      alert(error instanceof Error ? error.message : 'Failed to add row');
+    }
+  }, []);
+
+  const handleRemoveTransportTable = useCallback((id: string, tableIndex: number) => {
+    try {
+      if (!id.startsWith('user_transport_')) {
+        alert('Cannot modify generated content. Only user-created transport sections can be edited.');
+        return;
+      }
+      
+      // Remove table from JSON structure without confirmation
+      // The modal confirmation is handled by the TransportSection component
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
+        if (userElementIndex === -1) {
+          console.error('Transport section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+        tables.splice(tableIndex, 1);
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Error removing transport table:', error);
+      alert(error instanceof Error ? error.message : 'Failed to remove table');
+    }
+  }, []);
+
+  const handleDeleteTransportSection = useCallback((id: string) => {
+    if (!id.startsWith('user_transport_')) {
+      alert('Cannot delete generated content. Only user-created sections can be deleted.');
+      return;
+    }
+    
+    // Show modal instead of window.confirm
+    setDeletePendingId(id);
+    setShowDeleteModal(true);
+  }, []);
+
+  // Handler for editing a transport row
+  const handleEditTransportRowSubmit = useCallback((updatedRow: any) => {
+    if (!editingTransportId || editingTransportTableIndex === null || editingTransportRowIndex === null) {
+      return;
+    }
+    
+    try {
+      if (!editingTransportId.startsWith('user_transport_')) {
+        const errorMsg = `SECURITY: Attempted to edit row in non-user transport section: ${editingTransportId}`;
+        console.error(errorMsg);
+        alert('Cannot modify generated content. Only user-created transport sections can be edited.');
+        return;
+      }
+      
+      // Update row in JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingTransportId && el.type === 'transport'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Transport section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+        
+        if (editingTransportTableIndex >= 0 && editingTransportTableIndex < tables.length) {
+          const table = tables[editingTransportTableIndex];
+          const rows = [...(table.rows || [])];
+          if (editingTransportRowIndex >= 0 && editingTransportRowIndex < rows.length) {
+            rows[editingTransportRowIndex] = updatedRow;
+            tables[editingTransportTableIndex] = { ...table, rows };
+          }
+        }
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+      
+      setShowEditTransportRowModal(false);
+      setEditingTransportId(null);
+      setEditingTransportTableIndex(null);
+      setEditingTransportRowIndex(null);
+    } catch (error) {
+      console.error('Error updating transport row:', error);
+      alert(error instanceof Error ? error.message : 'Failed to update row');
+    }
+  }, [editingTransportId, editingTransportTableIndex, editingTransportRowIndex]);
+
+  // Handler for editing a transport table
+  const handleEditTransportTableSubmit = useCallback((updatedTable: any) => {
+    if (!editingTransportId || editingTransportTableIndex === null) {
+      return;
+    }
+    
+    try {
+      if (!editingTransportId.startsWith('user_transport_')) {
+        alert('Cannot modify generated content. Only user-created transport sections can be edited.');
+        return;
+      }
+      
+      // Update table in JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingTransportId && el.type === 'transport'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Transport section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+        
+        if (editingTransportTableIndex >= 0 && editingTransportTableIndex < tables.length) {
+          tables[editingTransportTableIndex] = updatedTable;
+        }
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+      
+      setShowEditTransportTableModal(false);
+      setEditingTransportId(null);
+      setEditingTransportTableIndex(null);
+    } catch (error) {
+      console.error('Error updating transport table:', error);
+      alert(error instanceof Error ? error.message : 'Failed to update table');
+    }
+  }, [editingTransportId, editingTransportTableIndex]);
+
+  // Handler for editing section properties
+  const handleEditTransportSectionSubmit = useCallback((props: {
+    title?: string;
+    showTitle?: boolean;
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+  }) => {
+    if (!editingTransportId) {
+      return;
+    }
+    
+    try {
+      if (!editingTransportId.startsWith('user_transport_')) {
+        const errorMsg = `SECURITY: Attempted to edit non-user transport section: ${editingTransportId}`;
+        console.error(errorMsg);
+        alert('Cannot modify generated content. Only user-created transport sections can be edited.');
+        return;
+      }
+      
+      // Update section properties in JSON structure
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(
+          el => el.id === editingTransportId && el.type === 'transport'
+        );
+        
+        if (userElementIndex === -1) {
+          alert('Transport section not found');
+          return prev;
+        }
+        
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            ...props
+          }
+        };
+        
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+      
+      setShowEditTransportSectionModal(false);
+      setEditingTransportId(null);
+    } catch (error) {
+      console.error('Error updating transport section:', error);
+        alert(error instanceof Error ? error.message : 'Failed to update section');
+    }
+  }, [editingTransportId]);
+
+  // Get initial transport row data for edit modal
+  const getInitialTransportRowData = useCallback((): any | null => {
+    if (!editingTransportId || editingTransportTableIndex === null || editingTransportRowIndex === null) {
+      return null;
+    }
+    
+    try {
+      const element = structure.user.elements.find(
+        el => el.id === editingTransportId && el.type === 'transport'
+      );
+      
+      if (!element || !element.data.tables) {
+        return null;
+      }
+      
+      const tables = element.data.tables;
+      if (editingTransportTableIndex >= 0 && editingTransportTableIndex < tables.length) {
+        const table = tables[editingTransportTableIndex];
+        if (editingTransportRowIndex >= 0 && editingTransportRowIndex < (table.rows || []).length) {
+          return table.rows[editingTransportRowIndex];
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting initial transport row data:', error);
+      return null;
+    }
+  }, [editingTransportId, editingTransportTableIndex, editingTransportRowIndex, structure]);
+
+  // Get initial transport table data for edit modal - Updated to read from JSON structure
+  const getInitialTransportTableData = useCallback((): any | null => {
+    if (!editingTransportId || editingTransportTableIndex === null) {
+      return null;
+    }
+    
+    try {
+      const element = structure.user.elements.find(
+        el => el.id === editingTransportId && el.type === 'transport'
+      );
+      
+      if (!element || !element.data.tables) {
+        return null;
+      }
+      
+      const tables = element.data.tables;
+      if (editingTransportTableIndex >= 0 && editingTransportTableIndex < tables.length) {
+        return tables[editingTransportTableIndex];
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting initial transport table data:', error);
+      return null;
+    }
+  }, [editingTransportId, editingTransportTableIndex, structure]);
+
+  // Get initial transport section data for edit modal - Updated to read from JSON structure
+  const getInitialTransportSectionData = useCallback((): {
+    title?: string;
+    showTitle?: boolean;
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+    tables?: any[];
+  } | null => {
+    if (!editingTransportId) {
+      return null;
+    }
+    
+    try {
+      const element = structure.user.elements.find(
+        el => el.id === editingTransportId && el.type === 'transport'
+      );
+      
+      if (!element) {
+        return null;
+      }
+      
+      return {
+        title: element.data.title,
+        showTitle: element.data.showTitle,
+        direction: element.data.direction,
+        language: element.data.language,
+        tables: element.data.tables || []
+      };
+    } catch (error) {
+      console.error('Error getting initial transport section data:', error);
+      return null;
+    }
+  }, [editingTransportId, structure]);
+  
+  // Get initial hotel data for edit modal - Updated to read from JSON structure
+  const getInitialHotelData = useCallback((): Hotel | null => {
+    if (!editingHotelId || editingHotelIndex === null) {
+      return null;
+    }
+    
+    try {
+      const element = structure.user.elements.find(
+        el => el.id === editingHotelId && el.type === 'hotel'
+      );
+      
+      if (!element || !element.data.hotels) {
+        return null;
+      }
+      
+      const hotels = element.data.hotels;
+      if (editingHotelIndex >= 0 && editingHotelIndex < hotels.length) {
+        return hotels[editingHotelIndex];
+      }
+    } catch (error) {
+      console.error('Error extracting hotel data:', error);
+    }
+    
+    return null;
+  }, [editingHotelId, editingHotelIndex, structure]);
+  
+  // Get initial section data for edit modal - Updated to read from JSON structure
+  const getInitialHotelSectionData = useCallback((): {
+    title?: string;
+    showTitle?: boolean;
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+    hotels?: any[];
+  } | null => {
+    if (!editingHotelId) {
+      return null;
+    }
+    
+    try {
+      const element = structure.user.elements.find(
+        el => el.id === editingHotelId && el.type === 'hotel'
+      );
+      
+      if (!element) {
+        return null;
+      }
+      
+      return {
+        title: element.data.title,
+        showTitle: element.data.showTitle,
+        direction: element.data.direction,
+        language: element.data.language,
+        hotels: element.data.hotels || []
+      };
+    } catch (error) {
+      console.error('Error extracting hotel section data:', error);
+    }
+    
+    return null;
+  }, [editingHotelId, structure]);
+  
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // First, check if we have fresh data from sessionStorage (from upload flow)
+    // This takes priority over loading from database
+    const storedExtractedData = sessionStorage.getItem("codePreview.extractedData");
+    const hasSessionStorageData = !!storedExtractedData;
+    
+    // Check if we're loading a specific document from URL (e.g., from history)
+    const docIdParam = searchParams?.get("docId");
+    
+    // Load from sessionStorage (from upload flow) - FIRST
+    const storedDocId = sessionStorage.getItem("codePreview.documentId");
+    if (storedDocId) {
+      setDocumentId(storedDocId);
+      sessionStorage.removeItem("codePreview.documentId");
+      // Only load metadata/branding from document, not structure (since we have sessionStorage data)
+      if (!hasSessionStorageData) {
+        loadDocument(storedDocId);
+      } else {
+        // Load only company branding without overwriting structure
+        loadDocumentMetadataOnly(storedDocId);
+      }
+    } else if (docIdParam && isAuthenticated() && !hasSessionStorageData) {
+      // Loading from history (no sessionStorage data) - load full document from database
+      loadDocument(docIdParam);
+    }
+
+    const storedMetadata = sessionStorage.getItem("codePreview.metadata");
+    if (storedMetadata) {
+      try {
+        const parsed = JSON.parse(storedMetadata);
+        setSourceMetadata(parsed);
+      } catch {
+        // ignore parse errors
+      }
+      sessionStorage.removeItem("codePreview.metadata");
+    }
+
+    // Load structured data from sessionStorage (v2 format) - has priority over database
+    if (storedExtractedData) {
+      try {
+        const parsed = JSON.parse(storedExtractedData);
+        // Ensure it's v2 format
+        if (parsed && parsed.generated && parsed.user && parsed.layout) {
+          const loadedStructure = parsed as SeparatedStructure;
+          setStructure(loadedStructure);
+          clearHistory();
+          
+          // Check for suggestions and show modal
+          if (parsed.suggestions && Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0) {
+            setPendingSuggestions(parsed.suggestions);
+            setShowSuggestionModal(true);
+          }
+          
+          // Store as initial structure after load
+          setTimeout(() => {
+            initialStructureRef.current = JSON.parse(JSON.stringify(loadedStructure));
+            setHasChanges(false);
+          }, 0);
+        } else if (parsed && (parsed.sections || parsed.tables)) {
+          // Legacy format - migrate to v2
+          const migratedStructure = {
+            generated: {
+              sections: parsed.sections || [],
+              tables: parsed.tables || []
+            },
+            user: {
+              elements: []
+            },
+            layout: [
+              ...(parsed.sections || []).map((s: any) => s.id),
+              ...(parsed.tables || []).map((t: any) => t.id)
+            ],
+            meta: parsed.meta || {}
+          };
+          setStructure(migratedStructure);
+          clearHistory();
+          // Store as initial structure after load
+          setTimeout(() => {
+            initialStructureRef.current = JSON.parse(JSON.stringify(migratedStructure));
+            setHasChanges(false);
+          }, 0);
+        }
+      } catch {
+        // ignore parse errors
+      }
+      sessionStorage.removeItem("codePreview.extractedData");
+    }
+
+    // Load uploaded JSON from home page
+    const uploadedStructure = sessionStorage.getItem("uploadedStructure");
+    if (uploadedStructure) {
+      try {
+        const parsed = JSON.parse(uploadedStructure);
+        if (parsed && parsed.generated && parsed.user && parsed.layout) {
+          const loadedStructure = parsed as SeparatedStructure;
+          setStructure(loadedStructure);
+          clearHistory();
+          // Store as initial structure after load
+          setTimeout(() => {
+            initialStructureRef.current = JSON.parse(JSON.stringify(loadedStructure));
+            setHasChanges(false);
+          }, 0);
+        }
+      } catch {
+        // ignore parse errors
+      }
+      sessionStorage.removeItem("uploadedStructure");
+    }
+  }, [searchParams, clearHistory]);
+
+  // When opening a new template (blank, PDF from session, etc.), no document is loaded yet so
+  // loadDocument* never runs — fetch header/footer from the logged-in user's company.
+  // Skip when ?docId= is present so history loads branding from the document's company_id.
+  useEffect(() => {
+    const docIdFromUrl = searchParams?.get("docId");
+    if (docIdFromUrl) return;
+    const companyId = user?.company_id;
+    if (!isAuthenticated() || !companyId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const company = await getCompany(companyId);
+        if (cancelled) return;
+        if (company.header_image) {
+          const headerUrl = company.header_image.startsWith("http")
+            ? company.header_image
+            : `${API_BASE_URL}${company.header_image}`;
+          setHeaderImage(headerUrl);
+        } else {
+          setHeaderImage(undefined);
+        }
+        if (company.footer_image) {
+          const footerUrl = company.footer_image.startsWith("http")
+            ? company.footer_image
+            : `${API_BASE_URL}${company.footer_image}`;
+          setFooterImage(footerUrl);
+        } else {
+          setFooterImage(undefined);
+        }
+        setTermsAndConditions(company.terms_and_conditions || null);
+      } catch (err) {
+        console.error("Failed to fetch company branding for user company:", err);
+        if (!cancelled) {
+          setHeaderImage(undefined);
+          setFooterImage(undefined);
+          setTermsAndConditions(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, user?.company_id]);
+
+  // Compare structures to detect changes
+  const compareStructures = useCallback((struct1: SeparatedStructure, struct2: SeparatedStructure): boolean => {
+    try {
+      // Deep comparison using JSON.stringify
+      return JSON.stringify(struct1) !== JSON.stringify(struct2);
+    } catch (error) {
+      console.error('Error comparing structures:', error);
+      return false;
+    }
+  }, []);
+
+  // Track changes whenever structure updates - immediate detection
+  useEffect(() => {
+    if (initialStructureRef.current === null) {
+      // First load - store initial structure
+      initialStructureRef.current = JSON.parse(JSON.stringify(structure));
+      setHasChanges(false);
+      return;
+    }
+    
+    // Compare with initial structure immediately (synchronous for immediate feedback)
+    const changed = compareStructures(structure, initialStructureRef.current);
+    setHasChanges(changed);
+  }, [structure, compareStructures]);
+
+  // Document undo/redo shortcuts (skip when typing in inputs or rich text)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el) return;
+      if (el.isContentEditable) return;
+      const tag = el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const key = e.key;
+      if (key === "z" || key === "Z") {
+        if (e.shiftKey) {
+          if (canRedo) {
+            e.preventDefault();
+            redoDocument();
+          }
+        } else if (canUndo) {
+          e.preventDefault();
+          undoDocument();
+        }
+      } else if (key === "y" || key === "Y") {
+        if (canRedo) {
+          e.preventDefault();
+          redoDocument();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [canUndo, canRedo, undoDocument, redoDocument, historyEpoch]);
+
+  const loadDocument = async (docId: string) => {
+    try {
+      const response = await getDocument(docId);
+      const doc = response.document;
+      
+      setDocumentId(doc.id);
+      setCurrentVersion(doc.current_version || 1);
+      setTotalVersions(doc.total_versions || 1);
+      
+      // Load v2 structure from extracted_data
+      let loadedStructure: SeparatedStructure | null = null;
+      if (doc.extracted_data) {
+        const extractedData = doc.extracted_data as any;
+        // Ensure it's v2 format
+        if (extractedData.generated && extractedData.user && extractedData.layout) {
+          loadedStructure = extractedData as SeparatedStructure;
+          // Apply deduplication to clean up any duplicate entries
+          const cleanedStructure = deduplicateStructure(loadedStructure);
+          setStructure(cleanedStructure);
+          clearHistory();
+        } else if (extractedData.sections || extractedData.tables) {
+          // Legacy format - migrate to v2
+          loadedStructure = {
+            generated: {
+              sections: extractedData.sections || [],
+              tables: extractedData.tables || []
+            },
+            user: {
+              elements: []
+            },
+            layout: [
+              ...(extractedData.sections || []).map((s: any) => s.id),
+              ...(extractedData.tables || []).map((t: any) => t.id)
+            ],
+            meta: extractedData.meta || {}
+          };
+          setStructure(loadedStructure);
+          clearHistory();
+        }
+      }
+      
+      // Store as initial structure after load
+      if (loadedStructure) {
+        setTimeout(() => {
+          initialStructureRef.current = JSON.parse(JSON.stringify(loadedStructure));
+          setHasChanges(false);
+        }, 100);
+      }
+      
+      if (doc.metadata) {
+        setSourceMetadata({
+          filename: doc.metadata.filename || doc.original_filename,
+          uploadedAt: doc.created_at,
+        });
+      }
+      
+      // Fetch company branding if document has company_id
+      if (doc.company_id) {
+        try {
+          const company = await getCompany(doc.company_id);
+          // Construct full URLs for images
+          if (company.header_image) {
+            const headerUrl = company.header_image.startsWith("http")
+              ? company.header_image
+              : `${API_BASE_URL}${company.header_image}`;
+            setHeaderImage(headerUrl);
+          } else {
+            setHeaderImage(undefined);
+          }
+          
+          if (company.footer_image) {
+            const footerUrl = company.footer_image.startsWith("http")
+              ? company.footer_image
+              : `${API_BASE_URL}${company.footer_image}`;
+            setFooterImage(footerUrl);
+          } else {
+            setFooterImage(undefined);
+          }
+
+          setTermsAndConditions(company.terms_and_conditions || null);
+        } catch (err) {
+          console.error("Failed to fetch company branding:", err);
+          // Don't set images if fetch fails
+          setHeaderImage(undefined);
+          setFooterImage(undefined);
+          setTermsAndConditions(null);
+        }
+      } else {
+        // No company_id, clear branding
+        setHeaderImage(undefined);
+        setFooterImage(undefined);
+        setTermsAndConditions(null);
+      }
+    } catch (err) {
+      console.error("Failed to load document:", err);
+      alert("Failed to load document");
+    }
+  };
+
+  // Load only metadata and branding without overwriting structure
+  // Used when we have fresh data from sessionStorage and don't want to overwrite it
+  const loadDocumentMetadataOnly = async (docId: string) => {
+    try {
+      const response = await getDocument(docId);
+      const doc = response.document;
+      
+      setDocumentId(doc.id);
+      setCurrentVersion(doc.current_version || 1);
+      setTotalVersions(doc.total_versions || 1);
+      
+      if (doc.metadata) {
+        setSourceMetadata({
+          filename: doc.metadata.filename || doc.original_filename,
+          uploadedAt: doc.created_at,
+        });
+      }
+      
+      // Fetch company branding if document has company_id
+      if (doc.company_id) {
+        try {
+          const company = await getCompany(doc.company_id);
+          if (company.header_image) {
+            const headerUrl = company.header_image.startsWith("http")
+              ? company.header_image
+              : `${API_BASE_URL}${company.header_image}`;
+            setHeaderImage(headerUrl);
+          } else {
+            setHeaderImage(undefined);
+          }
+          
+          if (company.footer_image) {
+            const footerUrl = company.footer_image.startsWith("http")
+              ? company.footer_image
+              : `${API_BASE_URL}${company.footer_image}`;
+            setFooterImage(footerUrl);
+          } else {
+            setFooterImage(undefined);
+          }
+
+          setTermsAndConditions(company.terms_and_conditions || null);
+        } catch (err) {
+          console.error("Failed to fetch company branding:", err);
+          setHeaderImage(undefined);
+          setFooterImage(undefined);
+          setTermsAndConditions(null);
+        }
+      } else {
+        setHeaderImage(undefined);
+        setFooterImage(undefined);
+        setTermsAndConditions(null);
+      }
+    } catch (err) {
+      console.error("Failed to load document metadata:", err);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!documentId) return;
+    try {
+      const response = await getDocument(documentId);
+      const doc = response.document;
+      
+      setCurrentVersion(doc.current_version || 1);
+      setTotalVersions(doc.total_versions || 1);
+      
+      // Reload structure - handle both v2 and legacy formats
+      if (doc.extracted_data) {
+        const extractedData = doc.extracted_data as any;
+        if (extractedData.generated && extractedData.user && extractedData.layout) {
+          // v2 format
+          setStructure(extractedData as SeparatedStructure);
+          clearHistory();
+        } else if (extractedData.sections || extractedData.tables) {
+          // Legacy format - migrate to v2
+          setStructure({
+            generated: {
+              sections: extractedData.sections || [],
+              tables: extractedData.tables || []
+            },
+            user: {
+              elements: []
+            },
+            layout: [
+              ...(extractedData.sections || []).map((s: any) => s.id),
+              ...(extractedData.tables || []).map((t: any) => t.id)
+            ],
+            meta: extractedData.meta || {}
+          });
+          clearHistory();
+        }
+      }
+      
+      if (doc.metadata) {
+        setSourceMetadata({
+          filename: doc.metadata.filename || doc.original_filename,
+          uploadedAt: doc.created_at,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to refresh document after restore:", err);
+    }
+  };
+
+  // Old JSX code manipulation hooks removed - now using JSON structure
+  // Removed useEffect hooks that referenced mode, code, values, codeRef, parsed, setCode, etc.
+
+  const handleCreateTable = useCallback((config: {
+    title: string;
+    columns: string[];
+    rowCount: number;
+  }) => {
+    const tableId = `gen_tbl_${Date.now()}`;
+    setStructureWithUndo((prev) => {
+      const newTable: Table = {
+        type: "table",
+        id: tableId,
+        title: config.title,
+        columns: config.columns,
+        rows: Array(config.rowCount)
+          .fill(null)
+          .map(() => config.columns.map(() => "")),
+        order: prev.generated.tables.length,
+        section_id: null,
+      };
+      return {
+        ...prev,
+        generated: {
+          ...prev.generated,
+          tables: [...prev.generated.tables, newTable],
+        },
+        layout: [...prev.layout, tableId],
+      };
+    });
+
+    setShowTableCreatedToast(true);
+    setTimeout(() => setShowTableCreatedToast(false), 3000);
+  }, []);
+
+  const handleExportCode = useCallback(() => {
+    // Export JSON structure
+    const jsonStr = JSON.stringify(structure, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `document-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [structure]);
+
+  const handleExportPDF = useCallback(async () => {
+    // Use html2pdf.js for programmatic download (NO browser print dialog)
+    const previewElement = document.querySelector('.preview-content') as HTMLElement;
+    
+    if (!previewElement) {
+      alert('Preview content not found');
+      return;
+    }
+
+    try {
+      // Import the export function
+      const { exportToPDF } = await import('@/app/modules/pdf-document/utils/pdfExport');
+      
+      await exportToPDF(previewElement, 'document', {
+        format: 'a4',
+        orientation: 'portrait',
+        margin: 10,
+        image: {
+          type: 'png',
+          quality: 0.98,
+        },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+        },
+      });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to export PDF');
+    }
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!isAuthenticated()) {
+      alert("Please login to save documents");
+      return;
+    }
+    
+    // Allow save even if no changes detected (user might want to force save)
+    // The button will be disabled if no changes, but if somehow clicked, allow it
+
+    setIsSaving(true);
+    setSaveStatus("idle");
+
+    try {
+      const filePath = sessionStorage.getItem("codePreview.filePath");
+      const originalFilename = sessionStorage.getItem("codePreview.originalFilename");
+
+      if (documentId) {
+        // Update existing document with current structure
+        const updateResponse = await updateDocument(documentId, {
+          extracted_data: structure, // Save full v2 structure
+          metadata: {
+            ...sourceMetadata,
+            lastSaved: new Date().toISOString(),
+          },
+        });
+        
+        // Update version info after save
+        if (updateResponse.document) {
+          setCurrentVersion(updateResponse.document.current_version || 1);
+          setTotalVersions(updateResponse.document.total_versions || 1);
+        }
+      } else {
+        // Create new document
+        const title = sourceMetadata?.filename?.replace(/\.pdf$/i, "") || "Untitled Document";
+        const response = await saveDocument({
+          title,
+          original_filename: originalFilename || "document.pdf",
+          file_path: filePath || "",
+          extracted_data: structure, // Save full v2 structure
+          metadata: {
+            ...sourceMetadata,
+            savedAt: new Date().toISOString(),
+          },
+        });
+        
+        if (response.document?.id) {
+          setDocumentId(response.document.id);
+          setCurrentVersion(response.document.current_version || 1);
+          setTotalVersions(response.document.total_versions || 1);
+        }
+      }
+
+      setSaveStatus("success");
+      
+      // Update initial structure reference after successful save
+      initialStructureRef.current = JSON.parse(JSON.stringify(structure));
+      setHasChanges(false);
+      
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    } catch (err) {
+      console.error("Save failed:", err);
+      setSaveStatus("error");
+      alert(`Failed to save document: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [structure, documentId, sourceMetadata, hasChanges]);
+
+  const handleExportPDFWithPlaywright = useCallback(async () => {
+    // Ensure document is saved first
+    let currentDocId = documentId;
+    
+    if (!currentDocId) {
+      const shouldSave = confirm('Document must be saved before generating PDF. Save now?');
+      if (!shouldSave) {
+        return;
+      }
+
+      // Save document inline
+      if (!isAuthenticated()) {
+        alert("Please login to save documents");
+        return;
+      }
+
+      setIsSaving(true);
+      setSaveStatus("idle");
+
+      try {
+        const filePath = sessionStorage.getItem("codePreview.filePath");
+        const originalFilename = sessionStorage.getItem("codePreview.originalFilename");
+        const title = sourceMetadata?.filename?.replace(/\.pdf$/i, "") || "Untitled Document";
+        
+        console.log('Saving document before PDF export...');
+        const response = await saveDocument({
+          title,
+          original_filename: originalFilename || "document.pdf",
+          file_path: filePath || "",
+          extracted_data: structure,
+          metadata: {
+            ...sourceMetadata,
+            savedAt: new Date().toISOString(),
+          },
+        });
+        
+        console.log('Save response:', response);
+        
+        if (response.document?.id) {
+          currentDocId = response.document.id;
+          setDocumentId(response.document.id);
+          setCurrentVersion(response.document.current_version || 1);
+          setTotalVersions(response.document.total_versions || 1);
+          console.log('Document saved with ID:', currentDocId);
+        } else {
+          console.error('No document ID in response:', response);
+          alert('Failed to save document: No ID returned. Please try again.');
+          setSaveStatus("error");
+          setTimeout(() => setSaveStatus("idle"), 3000);
+          return;
+        }
+
+        setSaveStatus("success");
+        
+        // Update initial structure reference after successful save
+        initialStructureRef.current = JSON.parse(JSON.stringify(structure));
+        setHasChanges(false);
+        
+        setTimeout(() => setSaveStatus("idle"), 3000);
+      } catch (err) {
+        console.error("Save failed:", err);
+        setSaveStatus("error");
+        setTimeout(() => setSaveStatus("idle"), 3000);
+        alert("Failed to save document. Please try again.");
+        return;
+      } finally {
+        setIsSaving(false);
+      }
+
+      // Wait longer for database to commit
+      console.log('Waiting for database commit...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      if (!currentDocId) {
+        alert('Failed to get document ID after saving. Please try again.');
+        return;
+      }
+    }
+
+    console.log('Starting PDF generation with document ID:', currentDocId);
+    setIsExportingPlaywright(true);
+    try {
+      const pdfBlob = await generatePDFWithPlaywright(currentDocId, 'A4');
+      const filename = sourceMetadata?.filename?.replace(/\.pdf$/i, '') || 'document';
+      downloadPDFBlob(pdfBlob, filename);
+      console.log('PDF export successful');
+    } catch (error) {
+      console.error('Playwright PDF export error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to export PDF with Playwright');
+    } finally {
+      setIsExportingPlaywright(false);
+    }
+  }, [documentId, sourceMetadata, structure]);
+
+  // Fallback copy method for mobile and older browsers
+  const copyToClipboardFallback = (text: string): boolean => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.width = '2em';
+      textArea.style.height = '2em';
+      textArea.style.padding = '0';
+      textArea.style.border = 'none';
+      textArea.style.outline = 'none';
+      textArea.style.boxShadow = 'none';
+      textArea.style.background = 'transparent';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      return successful;
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+      return false;
+    }
+  };
+
+  const handleCopyPublicLink = useCallback(async () => {
+    if (!documentId) {
+      alert(isRTL ? 'الرجاء حفظ المستند أولاً' : 'Please save the document first');
+      return;
+    }
+
+    setIsCopyingLink(true);
+    setLinkCopied(false);
+    
+    try {
+      // Generate or get public link first
+      let publicLink: string | null = null;
+      
+      // First, try to generate a new link (this will create or regenerate)
+      try {
+        const result = await generatePublicLink(documentId);
+        publicLink = result.public_link;
+      } catch (generateErr) {
+        console.error('Failed to generate public link:', generateErr);
+        // If generation fails, try to get existing link
+        try {
+          const result = await getPublicLink(documentId);
+          publicLink = result.public_link;
+        } catch (getErr) {
+          console.error('Failed to get public link:', getErr);
+          throw new Error(isRTL ? 'تعذر إنشاء أو استرجاع الرابط العام. يرجى المحاولة مرة أخرى.' : 'Unable to create or retrieve public link. Please try again.');
+        }
+      }
+      
+      // Copy to clipboard (for mobile, we must use fallback method in user gesture context)
+      if (publicLink) {
+        let copied = false;
+        
+        // Detect mobile devices
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        // On mobile, always use fallback method as it works better with user gesture
+        // On desktop, try modern Clipboard API first
+        if (isMobile) {
+          // Use fallback method for mobile (works with user gesture even after async)
+          copied = copyToClipboardFallback(publicLink);
+        } else if (navigator.clipboard?.writeText) {
+          // Try modern Clipboard API for desktop (works on HTTPS)
+          try {
+            await navigator.clipboard.writeText(publicLink);
+            copied = true;
+          } catch (clipboardErr: any) {
+            console.warn('Clipboard API failed, trying fallback:', clipboardErr);
+            // If clipboard API fails, use fallback
+            copied = copyToClipboardFallback(publicLink);
+          }
+        } else {
+          // No clipboard API available, use fallback
+          copied = copyToClipboardFallback(publicLink);
+        }
+        
+        if (copied) {
+          setLinkCopied(true);
+          setTimeout(() => setLinkCopied(false), 2000);
+          setShowMenuDropdown(false);
+        } else {
+          // If copy failed, show link in a way user can copy manually
+          // Use prompt which allows user to select and copy on mobile
+          const userConfirmed = window.prompt(
+            isRTL ? 'تعذر النسخ تلقائياً. يرجى نسخ هذا الرابط:' : 'Unable to copy automatically. Please copy this link:',
+            publicLink
+          );
+          // If user interacted with prompt, consider it a success
+          if (userConfirmed !== null) {
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+            setShowMenuDropdown(false);
+          }
+        }
+      } else {
+        throw new Error(isRTL ? 'لا يوجد رابط عام متاح' : 'No public link available');
+      }
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      const errorMessage = err instanceof Error ? err.message : (isRTL ? 'فشل نسخ الرابط. يرجى المحاولة مرة أخرى.' : 'Failed to copy link. Please try again.');
+      alert(errorMessage);
+    } finally {
+      setIsCopyingLink(false);
+    }
+  }, [documentId, isRTL]);
+
+  const handleAddAirplaneClick = useCallback(() => {
+    setShowAddAirplaneModal(true);
+    setShowMenuDropdown(false);
+  }, []);
+
+  const handleAddAirplaneSubmit = useCallback((data: {
+    title?: string;
+    showTitle?: boolean;
+    noticeMessage?: string;
+    showNotice?: boolean;
+    flights: FlightData[];
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+  }) => {
+    // Generate unique ID for user element
+    const elementId = `user_airplane_${Date.now()}`;
+    
+    // Add to JSON structure
+    const newElement: UserElement = {
+      id: elementId,
+      type: "airplane",
+      data: {
+        flights: data.flights,
+        title: data.title,
+        showTitle: data.showTitle,
+        noticeMessage: data.noticeMessage,
+        showNotice: data.showNotice,
+        direction: data.direction || "rtl",
+        language: data.language || "ar"
+      }
+    };
+    
+    setStructureWithUndo(prev => ({
+      ...prev,
+      user: {
+        elements: [...prev.user.elements, newElement]
+      },
+      layout: [elementId, ...prev.layout]
+    }));
+    
+    setShowAddAirplaneModal(false);
+  }, []);
+
+  const handleAddHotelClick = useCallback(() => {
+    setShowAddHotelModal(true);
+    setShowMenuDropdown(false);
+  }, []);
+
+  const handleAddHotelSubmit = useCallback((data: {
+    title?: string;
+    showTitle?: boolean;
+    hotels: Hotel[];
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+    labels?: {
+      nights: string;
+      includes: string;
+      checkIn: string;
+      checkOut: string;
+      details: string;
+      count: string;
+    };
+  }) => {
+    // Generate unique ID for user element
+    const elementId = `user_hotel_${Date.now()}`;
+    
+    // Add to JSON structure
+    const newElement: UserElement = {
+      id: elementId,
+      type: "hotel",
+      data: {
+        hotels: data.hotels,
+        title: data.title,
+        showTitle: data.showTitle,
+        direction: data.direction || "rtl",
+        language: data.language || "ar",
+        labels: data.labels
+      }
+    };
+    
+    setStructureWithUndo(prev => ({
+      ...prev,
+      user: {
+        elements: [...prev.user.elements, newElement]
+      },
+      layout: [elementId, ...prev.layout]
+    }));
+    
+    setShowAddHotelModal(false);
+    
+    /* OLD JSX CODE REMOVED - Now works with JSON structure */
+  }, []);
+
+  const handleAddTransportClick = useCallback(() => {
+    setShowAddTransportModal(true);
+    setShowMenuDropdown(false);
+  }, []);
+
+  const handleAddTransportSubmit = useCallback((data: {
+    title?: string;
+    showTitle?: boolean;
+    tables: any[];
+    direction?: "rtl" | "ltr";
+    language?: "ar" | "en";
+  }) => {
+    // Generate unique ID for user element
+    const elementId = `user_transport_${Date.now()}`;
+    
+    // Add to JSON structure
+    const newElement: UserElement = {
+      id: elementId,
+      type: "transport",
+      data: {
+        title: data.title,
+        showTitle: data.showTitle,
+        tables: data.tables,
+        direction: data.direction || "rtl",
+        language: data.language || "ar"
+      }
+    };
+    
+    setStructureWithUndo(prev => {
+      const newStructure = {
+        ...prev,
+        user: {
+          elements: [...prev.user.elements, newElement]
+        },
+        layout: [elementId, ...prev.layout]
+      };
+      return newStructure;
+    });
+    
+    setShowAddTransportModal(false);
+    
+    /* OLD JSX CODE REMOVED - Now works with JSON structure */
+  }, []);
+
+  // Component suggestion handlers
+  const handleApproveSuggestion = useCallback(async (suggestion: ComponentSuggestion) => {
+    // Generate unique ID for user element
+    const elementId = `user_${suggestion.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Create UserElement from suggestion
+    const newElement: UserElement = {
+      id: elementId,
+      type: suggestion.type,
+      data: suggestion.data,
+      created_at: new Date().toISOString()
+    };
+    
+    // Remove from suggestions
+    const remaining = pendingSuggestions.filter(s => s.id !== suggestion.id);
+    
+    // Build new structure outside of setState
+    let newStructure: SeparatedStructure | null = null;
+    
+    // Update structure: add element and update suggestions
+    setStructureWithUndo(prev => {
+      // Check if element with same data already exists
+      const existingElement = prev.user.elements.find(el => 
+        el.type === newElement.type && 
+        JSON.stringify(el.data) === JSON.stringify(newElement.data)
+      );
+      
+      if (existingElement) {
+        // Still update suggestions
+        newStructure = {
+          ...prev,
+          suggestions: remaining.length > 0 ? remaining : undefined
+        };
+        return newStructure;
+      }
+
+      const claimed = collectClaimedSupersedesIds(prev.user.elements);
+      const supersedesGeneratedIds = findSupersedesGeneratedIds(
+        prev,
+        suggestion,
+        claimed
+      );
+
+      const elementWithMeta: UserElement = {
+        ...newElement,
+        ...(supersedesGeneratedIds.length > 0
+          ? { supersedesGeneratedIds }
+          : {}),
+        sourceSuggestionId: suggestion.id,
+      };
+      
+      newStructure = {
+        ...prev,
+        user: {
+          elements: [...prev.user.elements, elementWithMeta]
+        },
+        layout: [elementId, ...prev.layout],
+        suggestions: remaining.length > 0 ? remaining : undefined
+      };
+      
+      return newStructure;
+    });
+  }, [documentId, pendingSuggestions, sourceMetadata]);
+
+  const handleRejectSuggestion = useCallback(async (suggestionId: string) => {
+    // Remove from pending suggestions
+    const remaining = pendingSuggestions.filter(s => s.id !== suggestionId);
+    
+    // Build new structure
+    let newStructure: SeparatedStructure | null = null;
+    
+    // Update structure with remaining suggestions
+    setStructureWithUndo(prev => {
+      newStructure = {
+        ...prev,
+        suggestions: remaining.length > 0 ? remaining : undefined
+      };
+      return newStructure;
+    });
+  }, [documentId, pendingSuggestions, sourceMetadata]);
+
+  const handleApproveAllSuggestions = useCallback(async () => {
+    // Build new structure
+    let newStructure: SeparatedStructure | null = null;
+    
+    // Update structure: add all elements and clear suggestions
+    setStructureWithUndo(prev => {
+      const keyFor = (type: string, data: unknown) => `${type}:${JSON.stringify(data)}`;
+      const existingKeys = new Set(prev.user.elements.map(el => keyFor(el.type, el.data)));
+      const newKeys = new Set<string>();
+      const baseClaimed = collectClaimedSupersedesIds(prev.user.elements);
+
+      // Create all new elements (deduped against existing + within suggestions)
+      const newElements: UserElement[] = [];
+      const newLayoutIds: string[] = [];
+
+      pendingSuggestions.forEach(suggestion => {
+        const key = keyFor(suggestion.type, suggestion.data);
+        if (existingKeys.has(key) || newKeys.has(key)) return;
+        newKeys.add(key);
+
+        const claimedForSuggestion = new Set([
+          ...baseClaimed,
+          ...newElements.flatMap((e) => e.supersedesGeneratedIds ?? []),
+        ]);
+        const supersedesGeneratedIds = findSupersedesGeneratedIds(
+          prev,
+          suggestion,
+          claimedForSuggestion
+        );
+
+        const elementId = `user_${suggestion.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        newElements.push({
+          id: elementId,
+          type: suggestion.type,
+          data: suggestion.data,
+          created_at: new Date().toISOString(),
+          ...(supersedesGeneratedIds.length > 0
+            ? { supersedesGeneratedIds }
+            : {}),
+          sourceSuggestionId: suggestion.id,
+        });
+        newLayoutIds.push(elementId);
+      });
+
+      newStructure = {
+        ...prev,
+        user: {
+          elements: [...prev.user.elements, ...newElements]
+        },
+        layout: [...newLayoutIds, ...prev.layout],
+        suggestions: undefined
+      };
+      return newStructure;
+    });
+  }, [documentId, pendingSuggestions, sourceMetadata]);
+
+  const handleRejectAllSuggestions = useCallback(async () => {
+    // Build new structure
+    let newStructure: SeparatedStructure | null = null;
+    
+    // Update structure: clear all suggestions
+    setStructureWithUndo(prev => {
+      newStructure = {
+        ...prev,
+        suggestions: undefined
+      };
+      return newStructure;
+    });
+  }, [documentId, sourceMetadata]);
+
+  const handleCloseSuggestionModal = useCallback(() => {
+    setShowSuggestionModal(false);
+    // Clear suggestions after a delay to allow animations
+    setTimeout(() => {
+      if (pendingSuggestions.length === 0) {
+        setPendingSuggestions([]);
+      }
+    }, 300);
+  }, [pendingSuggestions.length]);
+
+  const header = useMemo(() => (
+    <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-md">
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="flex items-center justify-between">
+          {/* Logo and Title */}
+          <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+            <Image
+              src="/logo.png"
+              alt="Buearau logo"
+              width={140}
+              height={50}
+              className="object-contain"
+              priority
+            />
+          </Link>
+          
+          <div className="flex items-center gap-2">
+            <div className="text-center px-4">
+              <h1 className="text-lg font-bold text-gray-900">Template Editor</h1>
+              <p className="text-xs text-gray-600">Design & Export Professional Documents</p>
+              {sourceMetadata?.filename && (
+                <p className="text-xs text-gray-500 mt-1">
+                  <span className="font-medium">{sourceMetadata.filename}</span>
+                  {sourceMetadata.uploadedAt && (
+                    <span className="text-gray-400">
+                      {" • "}
+                      {new Date(sourceMetadata.uploadedAt).toLocaleString()}
+                    </span>
+                  )}
+                  {totalVersions > 1 && (
+                    <span className="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded font-semibold text-xs">
+                      v{currentVersion}/{totalVersions}
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-0.5 bg-gray-50">
+              <button
+                type="button"
+                onClick={undoDocument}
+                disabled={!canUndo}
+                title={t.modals.undoTooltip}
+                className="p-2 rounded-md text-gray-700 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label={t.modals.undo}
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={redoDocument}
+                disabled={!canRedo}
+                title={t.modals.redoTooltip}
+                className="p-2 rounded-md text-gray-700 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label={t.modals.redo}
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+            </div>
+            {/* Save Button - only show if authenticated */}
+            {isAuthenticated() && (
+              <button
+                onClick={handleSave}
+                disabled={isSaving || !hasChanges}
+                className={`px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm ${
+                  !hasChanges
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : saveStatus === "success"
+                    ? "bg-green-500 text-white hover:bg-green-600"
+                    : saveStatus === "error"
+                    ? "bg-red-500 text-white hover:bg-red-600"
+                    : "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {isSaving ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Saving...</span>
+                  </>
+                ) : saveStatus === "success" ? (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Saved!</span>
+                  </>
+                ) : saveStatus === "error" ? (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>Failed</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    <span>Save</span>
+                  </>
+                )}
+              </button>
+            )}
+            
+            {/* Menu Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowMenuDropdown(!showMenuDropdown)}
+                className={`px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-lg font-medium hover:from-gray-800 hover:to-gray-900 transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm ${isRTL ? 'flex-row-reverse' : ''}`}
+                title={t.modals.menu}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                {t.modals.menu}
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {showMenuDropdown && (
+                <>
+                  {/* Backdrop to close dropdown */}
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowMenuDropdown(false)}
+                  />
+                  {/* Dropdown Menu */}
+                  <div className={`absolute ${isRTL ? 'left-0' : 'right-0'} mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50`} dir={dir}>
+                    {/* Add Airplane */}
+                    <button
+                      onClick={handleAddAirplaneClick}
+                      className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                      </svg>
+                      <span>{t.modals.addAirplaneSection}</span>
+                    </button>
+                    
+                    {/* Add Hotel */}
+                    <button
+                      onClick={handleAddHotelClick}
+                      className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.006 3.705a.75.75 0 00-.512-1.41L6 6.838V3a.75.75 0 00-.75-.75h-1.5A.75.75 0 003 3v4.93l-1.006.365a.75.75 0 00.512 1.41l16.5-6z" />
+                        <path fillRule="evenodd" d="M3.019 11.115L18 5.667V9.09l4.006 1.456a.75.75 0 11-.512 1.41l-.494-.18v8.475h.75a.75.75 0 010 1.5H2.25a.75.75 0 010-1.5H3v-9.129l.019-.007zM18 20.25v-9.565l1.5.545v9.02H18zm-9-6a.75.75 0 00-.75.75v4.5c0 .414.336.75.75.75h3a.75.75 0 00.75-.75V15a.75.75 0 00-.75-.75H9z" clipRule="evenodd" />
+                      </svg>
+                      <span>{t.modals.addHotelSection}</span>
+                    </button>
+                    
+                    {/* Add Transport */}
+                    <button
+                      onClick={handleAddTransportClick}
+                      className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                      </svg>
+                      <span>{t.modals.addTransportSection}</span>
+                    </button>
+                    
+                    {/* New Table */}
+                    <button
+                      onClick={() => {
+                        setIsCreateTableModalOpen(true);
+                        setShowMenuDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
+                    >
+                      <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span>{t.modals.createNewTable}</span>
+                    </button>
+                    
+                    <div className="border-t border-gray-200 my-1"></div>
+                    
+                    {/* Export JSON */}
+                    <button
+                      onClick={() => {
+                        handleExportCode();
+                        setShowMenuDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
+                    >
+                      <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                      </svg>
+                      <span>{t.modals.exportJson}</span>
+                    </button>
+                    
+                    {/* Export to PDF (Server-side - 100% accurate) */}
+                    {isAuthenticated() && (
+                      <button
+                        onClick={() => {
+                          handleExportPDFWithPlaywright();
+                          setShowMenuDropdown(false);
+                        }}
+                        disabled={isExportingPlaywright}
+                        className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
+                        title={t.modals.exportToPDF}
+                      >
+                        {isExportingPlaywright ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4 text-[#A4C639]" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>{t.modals.generatingPDF}</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span>{t.modals.exportToPDF}</span>
+                            <span className={`${isRTL ? 'mr-auto' : 'ml-auto'} text-xs text-green-600 font-semibold`}>100%</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                    
+                    <div className="border-t border-gray-200 my-1"></div>
+                    
+                    {/* Copy Public Link */}
+                    <button
+                      onClick={handleCopyPublicLink}
+                      disabled={!documentId || isCopyingLink}
+                      className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
+                      title={linkCopied ? (isRTL ? 'تم نسخ الرابط!' : 'Link copied!') : (isRTL ? 'نسخ الرابط العام' : 'Copy public link')}
+                    >
+                      {isCopyingLink ? (
+                        <svg className="animate-spin h-4 w-4 text-[#A4C639]" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : linkCopied ? (
+                        <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                      )}
+                      <span>
+                        {isCopyingLink ? (isRTL ? 'جاري النسخ...' : 'Copying...') : linkCopied ? (isRTL ? 'تم النسخ!' : 'Copied!') : (isRTL ? 'نسخ الرابط العام' : 'Copy Public Link')}
+                      </span>
+                    </button>
+                    
+                    {/* Versions - only show if authenticated and has versions */}
+                    {isAuthenticated() && documentId && totalVersions > 1 && (
+                      <>
+                        <div className="border-t border-gray-200 my-1"></div>
+                        <button
+                          onClick={() => {
+                            setShowVersionHistory(true);
+                            setShowMenuDropdown(false);
+                          }}
+                          className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
+                        >
+                          <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>{t.modals.versions}</span>
+                          <span className={`${isRTL ? 'mr-auto' : 'ml-auto'} px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-semibold`}>
+                            v{currentVersion}/{totalVersions}
+                          </span>
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* AI Suggestions */}
+                    <button
+                      onClick={() => {
+                        setShowSuggestionModal(true);
+                        setShowMenuDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
+                    >
+                      <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      <span>{t.modals.aiSuggestions}</span>
+                      {pendingSuggestions.length > 0 && (
+                        <span className={`${isRTL ? 'mr-auto' : 'ml-auto'} px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-semibold`}>
+                          {pendingSuggestions.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+  ), [handleExportCode, handleExportPDF, handleExportPDFWithPlaywright, handleCopyPublicLink, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown, isExportingPlaywright, hasChanges, isCopyingLink, linkCopied, undoDocument, redoDocument, canUndo, canRedo, historyEpoch, t]);
+
+  return (
+    <div className="min-h-screen bg-linear-to-br from-cyan-50 via-blue-50 to-lime-50 text-gray-900">
+      {header}
+      <div className="mx-auto w-full max-w-7xl px-6 py-8">
+          <div className="min-h-[70vh] bg-white rounded-xl shadow-lg p-8 max-w-full overflow-hidden relative">
+            {/* Success Toast */}
+            {showTableCreatedToast && (
+              <div className="fixed top-24 right-6 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Table created successfully!
+              </div>
+            )}
+
+            <div 
+              ref={previewContainerRef}
+              className="preview-content max-w-full"
+            >
+                <StructureRenderer 
+              structure={structure}
+                  showStats={false}
+              editable={true}
+              headerImage={headerImage}
+              footerImage={footerImage}
+              termsAndConditions={termsAndConditions}
+              onMoveUp={handleMoveUp}
+              onMoveDown={handleMoveDown}
+              onSectionEdit={(section) => {
+                // Update section in structure
+                setStructureWithUndo(prev => {
+                  const updatedSections = prev.generated.sections.map(s => 
+                    s.id === section.id ? section : s
+                  );
+                  return {
+                    ...prev,
+                    generated: {
+                      ...prev.generated,
+                      sections: updatedSections
+                    }
+                  };
+                });
+              }}
+              onTableEdit={(table) => {
+                // Update table in structure
+                setStructureWithUndo(prev => {
+                  const updatedTables = prev.generated.tables.map(t => 
+                    t.id === table.id ? table : t
+                  );
+                  return {
+                    ...prev,
+                    generated: {
+                      ...prev.generated,
+                      tables: updatedTables
+                    }
+                  };
+                });
+              }}
+              onSectionDelete={(id) => {
+                // Remove section from structure
+                setStructureWithUndo(prev => ({
+                  ...prev,
+                  generated: {
+                    ...prev.generated,
+                    sections: prev.generated.sections.filter(s => s.id !== id)
+                  },
+                  layout: prev.layout.filter(lid => lid !== id)
+                }));
+              }}
+              onTableDelete={(id) => {
+                // Remove table from structure
+                setStructureWithUndo(prev => ({
+                  ...prev,
+                  generated: {
+                    ...prev.generated,
+                    tables: prev.generated.tables.filter(t => t.id !== id)
+                  },
+                  layout: prev.layout.filter(lid => lid !== id)
+                }));
+              }}
+              onSectionAddAfter={(afterId) => {
+                const newSectionId = `gen_sec_${Date.now()}`;
+                setStructureWithUndo((prev) => {
+                  const newSection: Section = {
+                    type: "section",
+                    id: newSectionId,
+                    title: DEFAULT_NEW_SECTION_TITLE,
+                    content: DEFAULT_NEW_SECTION_CONTENT,
+                    order: prev.generated.sections.length,
+                    parent_id: null,
+                  };
+                  const afterIndex = prev.layout.findIndex((id) => id === afterId);
+                  const newLayout = [...prev.layout];
+                  if (afterIndex !== -1) {
+                    newLayout.splice(afterIndex + 1, 0, newSectionId);
+                  } else {
+                    newLayout.push(newSectionId);
+                  }
+                  return {
+                    ...prev,
+                    generated: {
+                      ...prev.generated,
+                      sections: [...prev.generated.sections, newSection],
+                    },
+                    layout: newLayout,
+                  };
+                });
+              }}
+              onUserElementEdit={(element) => {
+                // Handle user element edit
+                if (element.type === 'airplane') {
+                  setEditingAirplaneId(element.id);
+                  setShowEditSectionModal(true);
+                } else if (element.type === 'hotel') {
+                  setEditingHotelId(element.id);
+                  setShowEditHotelSectionModal(true);
+                }
+              }}
+              onUserElementDelete={(id) => {
+                // Remove element from structure
+                setStructureWithUndo(prev => ({
+                  ...prev,
+                  user: {
+                    elements: prev.user.elements.filter(el => el.id !== id)
+                  },
+                  layout: prev.layout.filter(lid => lid !== id)
+                }));
+              }}
+            />
+            </div>
+          </div>
+      </div>
+
+      {/* Create Table Modal */}
+      <CreateTableModal
+        isOpen={isCreateTableModalOpen}
+        onClose={() => setIsCreateTableModalOpen(false)}
+        onCreateTable={handleCreateTable}
+      />
+
+      {/* Version History Modal */}
+      {documentId && (
+        <VersionHistoryModal
+          isOpen={showVersionHistory}
+          docId={documentId}
+          currentVersion={currentVersion}
+          totalVersions={totalVersions}
+          onClose={() => setShowVersionHistory(false)}
+          onRestore={handleRestore}
+        />
+      )}
+
+      {/* Add Airplane Modal */}
+      <AddAirplaneModal
+        isOpen={showAddAirplaneModal}
+        onClose={() => setShowAddAirplaneModal(false)}
+        onSubmit={handleAddAirplaneSubmit}
+      />
+      
+      {/* Edit Flight Modal */}
+      <EditFlightModal
+        isOpen={showEditFlightModal}
+        onClose={() => {
+          setShowEditFlightModal(false);
+          setEditingAirplaneId(null);
+          setEditingFlightIndex(null);
+        }}
+        onSubmit={handleEditFlightSubmit}
+        initialFlight={getInitialFlightData()}
+      />
+      
+      {/* Edit Airplane Section Modal */}
+      <EditAirplaneSectionModal
+        isOpen={showEditSectionModal}
+        onClose={() => {
+          setShowEditSectionModal(false);
+          setEditingAirplaneId(null);
+        }}
+        onSubmit={handleEditSectionSubmit}
+        initialData={getInitialSectionData()}
+      />
+
+      {/* Add Hotel Modal */}
+      <AddHotelModal
+        isOpen={showAddHotelModal}
+        onClose={() => setShowAddHotelModal(false)}
+        onSubmit={handleAddHotelSubmit}
+      />
+      
+      {/* Add Transport Modal */}
+      <AddTransportModal
+        isOpen={showAddTransportModal}
+        onClose={() => setShowAddTransportModal(false)}
+        onSubmit={handleAddTransportSubmit}
+      />
+      
+      {/* Edit Hotel Modal */}
+      <EditHotelModal
+        isOpen={showEditHotelModal}
+        onClose={() => {
+          setShowEditHotelModal(false);
+          setEditingHotelId(null);
+          setEditingHotelIndex(null);
+        }}
+        onSubmit={handleEditHotelSubmit}
+        initialHotel={getInitialHotelData()}
+      />
+      
+      {/* Edit Hotel Section Modal */}
+      <EditHotelSectionModal
+        isOpen={showEditHotelSectionModal}
+        onClose={() => {
+          setShowEditHotelSectionModal(false);
+          setEditingHotelId(null);
+        }}
+        onSubmit={handleEditHotelSectionSubmit}
+        initialData={getInitialHotelSectionData()}
+      />
+
+      {/* Edit Transport Row Modal */}
+      <EditTransportRowModal
+        isOpen={showEditTransportRowModal}
+        onClose={() => {
+          setShowEditTransportRowModal(false);
+          setEditingTransportId(null);
+          setEditingTransportTableIndex(null);
+          setEditingTransportRowIndex(null);
+        }}
+        onSubmit={handleEditTransportRowSubmit}
+        initialRow={getInitialTransportRowData()}
+        columns={(() => {
+          if (!editingTransportId || editingTransportTableIndex === null) return [];
+          try {
+            const element = structure.user.elements.find(
+              el => el.id === editingTransportId && el.type === 'transport'
+            );
+            if (!element || !element.data.tables) return [];
+            const tables = element.data.tables;
+            if (editingTransportTableIndex >= 0 && editingTransportTableIndex < tables.length) {
+              return tables[editingTransportTableIndex].columns || [];
+            }
+          } catch (error) {
+            console.error('Error getting columns:', error);
+          }
+          return [];
+        })()}
+        language={(() => {
+          if (!editingTransportId) return 'ar';
+          try {
+            const element = structure.user.elements.find(
+              el => el.id === editingTransportId && el.type === 'transport'
+            );
+            return element?.data?.language || 'ar';
+          } catch {
+            return 'ar';
+          }
+        })()}
+      />
+
+      {/* Edit Transport Table Modal */}
+      <EditTransportTableModal
+        isOpen={showEditTransportTableModal}
+        onClose={() => {
+          setShowEditTransportTableModal(false);
+          setEditingTransportId(null);
+          setEditingTransportTableIndex(null);
+        }}
+        onSubmit={handleEditTransportTableSubmit}
+        initialTable={getInitialTransportTableData()}
+        language={(() => {
+          if (!editingTransportId) return 'ar';
+          try {
+            const element = structure.user.elements.find(
+              el => el.id === editingTransportId && el.type === 'transport'
+            );
+            return element?.data?.language || 'ar';
+          } catch {
+            return 'ar';
+          }
+        })()}
+      />
+
+      {/* Edit Transport Section Modal */}
+      <EditTransportSectionModal
+        isOpen={showEditTransportSectionModal}
+        onClose={() => {
+          setShowEditTransportSectionModal(false);
+          setEditingTransportId(null);
+        }}
+        onSubmit={handleEditTransportSectionSubmit}
+        onDelete={() => {
+          if (editingTransportId) {
+            handleDeleteTransportSection(editingTransportId);
+          }
+        }}
+        initialData={getInitialTransportSectionData()}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeletePendingId(null);
+        }}
+        onConfirm={confirmDeleteSection}
+        title="Delete Section"
+        message="Are you sure you want to delete this section? This action cannot be undone."
+      />
+
+      {/* Component Suggestion Modal */}
+      <ComponentSuggestionModal
+        isOpen={showSuggestionModal}
+        onClose={handleCloseSuggestionModal}
+        suggestions={pendingSuggestions}
+        onApprove={handleApproveSuggestion}
+        onReject={handleRejectSuggestion}
+        onApproveAll={handleApproveAllSuggestions}
+        onRejectAll={handleRejectAllSuggestions}
+      />
+
+      <style jsx>{`
+        @keyframes slide-in {
+          from {
+            opacity: 0;
+            transform: translateX(100px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default function CodePage() {
+  return (
+    <ProtectedRoute>
+      <CodePageContent />
+    </ProtectedRoute>
+  );
+}
+
