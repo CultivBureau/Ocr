@@ -24,6 +24,7 @@ import HistoryFilters from "@/app/modules/history/components/HistoryFilters";
 import HistorySort from "@/app/modules/history/components/HistorySort";
 import ProtectedRoute from "@/app/modules/auth/components/ProtectedRoute";
 import Loading from "@/app/modules/shared/components/Loading";
+import Pagination from "@/app/modules/shared/components/Pagination";
 import { getDocument } from "@/app/modules/history/services/HistoryApi";
 
 function HistoryPageContent() {
@@ -53,6 +54,11 @@ function HistoryPageContent() {
     setCompanyFilter,
     getFilteredDocuments,
     refreshDocuments,
+    total,
+    page,
+    setPage,
+    totalPages,
+    pageSize,
   } = useHistory();
   
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -107,11 +113,6 @@ function HistoryPageContent() {
     }
   }, [isSuperAdmin]);
 
-  // Refresh documents when needed
-  useEffect(() => {
-    refreshDocuments();
-  }, [refreshDocuments]);
-  
   // Get filtered documents
   const filteredDocuments = getFilteredDocuments();
 
@@ -407,7 +408,7 @@ function HistoryPageContent() {
         )}
 
         {/* Documents Count */}
-        {filteredDocuments.length > 0 && (
+        {total > 0 && filteredDocuments.length > 0 && (
           <div className={`mb-6 flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/5 rounded-2xl border border-[#C4B454]/30 shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
             <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -415,11 +416,15 @@ function HistoryPageContent() {
               </svg>
             </div>
             <div className="text-sm font-semibold text-slate-700">
-              {isRTL ? (
-                <>عرض <span className="text-lg font-black text-[#B8A040]">{filteredDocuments.length}</span> من <span className="font-bold text-slate-900">{documents.length}</span> مستندات</>
-              ) : (
-                <>Showing <span className="text-lg font-black text-[#B8A040]">{filteredDocuments.length}</span> of <span className="font-bold text-slate-900">{documents.length}</span> documents</>
-              )}
+              {(() => {
+                const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+                const end = Math.min(page * pageSize, total);
+                return isRTL ? (
+                  <>عرض <span className="text-lg font-black text-[#B8A040]">{start}–{end}</span> من <span className="font-bold text-slate-900">{total}</span> مستندات</>
+                ) : (
+                  <>Showing <span className="text-lg font-black text-[#B8A040]">{start}–{end}</span> of <span className="font-bold text-slate-900">{total}</span> documents</>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -484,6 +489,25 @@ function HistoryPageContent() {
                 {t.pdfConverter.uploadPdf}
               </Link>
             )}
+          </div>
+        )}
+
+        {total > 0 && filteredDocuments.length > 0 && (
+          <div className="mt-8">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalItems={total}
+              pageSize={pageSize}
+              isRTL={isRTL}
+              labels={{
+                previous: t.common.previous,
+                next: t.common.next,
+                pageOf: t.common.pageOf,
+                showingRange: t.common.showingRange,
+              }}
+            />
           </div>
         )}
       </div>

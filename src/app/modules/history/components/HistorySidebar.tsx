@@ -15,6 +15,7 @@ export default function HistorySidebar() {
     isSidebarOpen,
     toggleSidebar,
     documents,
+    total,
     recentDocuments,
     favorites,
     isLoading,
@@ -89,9 +90,9 @@ export default function HistorySidebar() {
                 </svg>
               </div>
               <h2 className="font-bold text-gray-900">History</h2>
-              {documents.length > 0 && (
+              {total > 0 && (
                 <span className="ml-auto px-2 py-0.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-bold rounded-full">
-                  {documents.length}
+                  {total > 999 ? "999+" : total}
                 </span>
               )}
             </div>

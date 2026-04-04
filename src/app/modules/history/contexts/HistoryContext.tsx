@@ -4,35 +4,66 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useAuth } from "@/app/modules/auth/contexts/AuthContext";
 import { getHistory, type Document, type DocumentListResponse } from "../services/HistoryApi";
 
+export const HISTORY_PAGE_SIZE = 20;
+const CLIENT_FILTER_BATCH = 500;
+
+function sortDocuments(
+  docs: Document[],
+  sortBy: "date" | "name" | "size" | "modified",
+  sortOrder: "asc" | "desc"
+): Document[] {
+  const arr = [...docs];
+  arr.sort((a, b) => {
+    let comparison = 0;
+
+    switch (sortBy) {
+      case "date":
+        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        break;
+      case "modified":
+        comparison = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        break;
+      case "name":
+        comparison = a.title.localeCompare(b.title);
+        break;
+      case "size":
+        comparison = (a.metadata?.fileSize || 0) - (b.metadata?.fileSize || 0);
+        break;
+    }
+
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
+  return arr;
+}
+
 interface HistoryContextType {
-  // State
   documents: Document[];
   recentDocuments: Document[];
   favorites: Set<string>;
   isLoading: boolean;
   error: string | null;
   total: number;
-  
-  // Sidebar state
+  page: number;
+  setPage: (page: number) => void;
+  totalPages: number;
+  pageSize: number;
+
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
-  
-  // Filters
+
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  companyFilter: string | null; // Company ID filter (Super Admin only)
+  companyFilter: string | null;
   setCompanyFilter: (companyId: string | null) => void;
   filterType: "all" | "recent" | "favorites" | "shared";
   setFilterType: (type: "all" | "recent" | "favorites" | "shared") => void;
-  
-  // Sorting
+
   sortBy: "date" | "name" | "size" | "modified";
   sortOrder: "asc" | "desc";
   setSortBy: (by: "date" | "name" | "size" | "modified") => void;
   setSortOrder: (order: "asc" | "desc") => void;
-  
-  // Actions
+
   refreshDocuments: () => Promise<void>;
   toggleFavorite: (docId: string) => void;
   getFilteredDocuments: () => Document[];
@@ -48,20 +79,18 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
-  
-  // Sidebar state
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
-  // Filters
+
   const [searchQuery, setSearchQuery] = useState("");
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<"all" | "recent" | "favorites" | "shared">("all");
-  
-  // Sorting
+
   const [sortBy, setSortBy] = useState<"date" | "name" | "size" | "modified">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  
-  // Load favorites from localStorage
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedFavorites = localStorage.getItem("history_favorites");
@@ -75,57 +104,102 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, []);
-  
-  // Save favorites to localStorage
+
   useEffect(() => {
     if (typeof window !== "undefined" && favorites.size > 0) {
       localStorage.setItem("history_favorites", JSON.stringify(Array.from(favorites)));
     }
   }, [favorites]);
-  
-  // Load sidebar state from localStorage
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("history_sidebar_open");
       if (stored !== null) {
         setIsSidebarOpen(stored === "true");
       } else {
-        // Default to open on desktop
         setIsSidebarOpen(window.innerWidth >= 1024);
       }
     }
   }, []);
-  
-  // Save sidebar state to localStorage
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("history_sidebar_open", String(isSidebarOpen));
     }
   }, [isSidebarOpen]);
-  
-  // Fetch documents
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterType, searchQuery, companyFilter]);
+
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [totalPages, page]);
+
   const refreshDocuments = useCallback(async () => {
     if (!isAuthenticated) {
       setDocuments([]);
       setRecentDocuments([]);
+      setTotal(0);
+      setTotalPages(1);
       return;
     }
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      // Only include company_id filter if user is Super Admin
       const companyId = isSuperAdmin && companyFilter ? companyFilter : undefined;
-      const response: DocumentListResponse = await getHistory(1, 100, searchQuery || undefined, companyId);
-      setDocuments(response.documents);
-      setTotal(response.total);
-      
-      // Get recent documents (last 10)
-      const recent = response.documents
-        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-        .slice(0, 10);
-      setRecentDocuments(recent);
+      const search = searchQuery.trim() || undefined;
+
+      const loadRecentSidebar = async () => {
+        try {
+          const r: DocumentListResponse = await getHistory(1, 10, search, companyId);
+          setRecentDocuments(sortDocuments(r.documents, "date", "desc"));
+        } catch {
+          /* non-fatal */
+        }
+      };
+
+      if (filterType === "all") {
+        const response: DocumentListResponse = await getHistory(
+          page,
+          HISTORY_PAGE_SIZE,
+          search,
+          companyId
+        );
+        setDocuments(response.documents);
+        setTotal(response.total);
+        setTotalPages(Math.max(1, response.total_pages));
+        await loadRecentSidebar();
+      } else {
+        const response: DocumentListResponse = await getHistory(
+          1,
+          CLIENT_FILTER_BATCH,
+          search,
+          companyId
+        );
+        let filtered = [...response.documents];
+
+        if (filterType === "favorites") {
+          filtered = filtered.filter((doc) => favorites.has(doc.id));
+        } else if (filterType === "shared") {
+          filtered = filtered.filter((doc) => doc.shared_with.length > 0 || doc.is_public);
+        } else if (filterType === "recent") {
+          filtered = sortDocuments(filtered, "modified", "desc");
+        }
+
+        filtered = sortDocuments(filtered, sortBy, sortOrder);
+        const totalFiltered = filtered.length;
+        const tp = Math.max(1, Math.ceil(totalFiltered / HISTORY_PAGE_SIZE));
+        setTotal(totalFiltered);
+        setTotalPages(tp);
+        const start = (page - 1) * HISTORY_PAGE_SIZE;
+        setDocuments(filtered.slice(start, start + HISTORY_PAGE_SIZE));
+        await loadRecentSidebar();
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load documents";
       setError(message);
@@ -133,87 +207,46 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, searchQuery, companyFilter, isSuperAdmin]);
-  
-  // Initial load and refresh on auth change
+  }, [
+    isAuthenticated,
+    isSuperAdmin,
+    companyFilter,
+    searchQuery,
+    filterType,
+    page,
+    favorites,
+    sortBy,
+    sortOrder,
+  ]);
+
   useEffect(() => {
     refreshDocuments();
   }, [refreshDocuments]);
-  
-  // Toggle favorite
+
   const toggleFavorite = useCallback((docId: string) => {
     setFavorites((prev) => {
-      const newFavorites = new Set(prev);
-      if (newFavorites.has(docId)) {
-        newFavorites.delete(docId);
+      const next = new Set(prev);
+      if (next.has(docId)) {
+        next.delete(docId);
       } else {
-        newFavorites.add(docId);
+        next.add(docId);
       }
-      return newFavorites;
+      return next;
     });
   }, []);
-  
-  // Get filtered and sorted documents
+
   const getFilteredDocuments = useCallback((): Document[] => {
-    let filtered = [...documents];
-    
-    // Apply filter type
-    if (filterType === "recent") {
-      filtered = recentDocuments;
-    } else if (filterType === "favorites") {
-      filtered = filtered.filter((doc) => favorites.has(doc.id));
-    } else if (filterType === "shared") {
-      filtered = filtered.filter((doc) => doc.shared_with.length > 0 || doc.is_public);
-    }
-    
-    // Apply search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (doc) =>
-          doc.title.toLowerCase().includes(query) ||
-          doc.original_filename.toLowerCase().includes(query)
-      );
-    }
-    
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortBy) {
-        case "date":
-          comparison =
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          break;
-        case "modified":
-          comparison =
-            new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
-          break;
-        case "name":
-          comparison = a.title.localeCompare(b.title);
-          break;
-        case "size":
-          // Use file_path or metadata to estimate size
-          const sizeA = a.metadata?.fileSize || 0;
-          const sizeB = b.metadata?.fileSize || 0;
-          comparison = sizeA - sizeB;
-          break;
-      }
-      
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-    
-    return filtered;
-  }, [documents, recentDocuments, favorites, filterType, searchQuery, sortBy, sortOrder]);
-  
+    return sortDocuments(documents, sortBy, sortOrder);
+  }, [documents, sortBy, sortOrder]);
+
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen((prev) => !prev);
   }, []);
-  
+
   const setSidebarOpen = useCallback((open: boolean) => {
     setIsSidebarOpen(open);
   }, []);
-  
+
   const value: HistoryContextType = {
     documents,
     recentDocuments,
@@ -221,6 +254,10 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     error,
     total,
+    page,
+    setPage,
+    totalPages,
+    pageSize: HISTORY_PAGE_SIZE,
     isSidebarOpen,
     toggleSidebar,
     setSidebarOpen,
@@ -238,7 +275,7 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
     toggleFavorite,
     getFilteredDocuments,
   };
-  
+
   return <HistoryContext.Provider value={value}>{children}</HistoryContext.Provider>;
 }
 
@@ -249,4 +286,3 @@ export function useHistory() {
   }
   return context;
 }
-

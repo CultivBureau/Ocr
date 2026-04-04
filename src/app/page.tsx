@@ -46,7 +46,7 @@ function HomeContent() {
     logout,
     refreshUser,
   } = useAuth();
-  const { documents, toggleSidebar } = useHistory();
+  const { total: historyTotal, toggleSidebar } = useHistory();
   const { t, isRTL, dir } = useLanguage();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -149,9 +149,9 @@ function HomeContent() {
               >
                 <Clock className="w-5 h-5 text-gray-700" />
                 <span className="text-sm font-semibold text-gray-700 hidden sm:inline">{t.home.history}</span>
-                {documents.length > 0 && (
+                {historyTotal > 0 && (
                   <span className={`absolute -top-1 ${isRTL ? '-left-1' : '-right-1'} w-5 h-5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-bold rounded-full flex items-center justify-center`}>
-                    {documents.length > 99 ? '99+' : documents.length}
+                    {historyTotal > 99 ? '99+' : historyTotal}
                   </span>
                 )}
               </button>

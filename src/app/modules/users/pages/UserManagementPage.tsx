@@ -12,6 +12,7 @@ import { getAllCompanies, type Company } from "@/app/modules/companies/services/
 import { getRoleDisplayName, getRoleBadgeColor } from "@/app/modules/shared/utils/rbac";
 import { format } from "date-fns";
 import ErrorDialog from "@/app/modules/pdf-document/components/ErrorDialog";
+import Pagination from "@/app/modules/shared/components/Pagination";
 import { 
   ChevronDown, 
   Users, 
@@ -56,8 +57,13 @@ function UserManagementContent() {
   const [isCreating, setIsCreating] = useState(false);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
 
+  const USERS_PAGE_SIZE = 10;
+
   // Users list state
   const [users, setUsers] = useState<User[]>([]);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersTotal, setUsersTotal] = useState(0);
+  const [usersTotalPages, setUsersTotalPages] = useState(1);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [usersError, setUsersError] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -86,26 +92,28 @@ function UserManagementContent() {
     }
   }, [isSuperAdmin]);
 
-  // Fetch users on mount and when company filter changes
+  useEffect(() => {
+    if (usersTotalPages > 0 && usersPage > usersTotalPages) {
+      setUsersPage(usersTotalPages);
+    }
+  }, [usersTotalPages, usersPage]);
+
+  // Fetch users on mount and when company filter or page changes
   useEffect(() => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyFilter]);
+  }, [companyFilter, usersPage]);
 
   const fetchUsers = async () => {
     try {
       setIsLoadingUsers(true);
       setUsersError("");
-      const response = await getAllUsers();
-      // Filter users by company if filter is set (Super Admin only)
-      let filteredUsers = response.users;
-      if (isSuperAdmin && companyFilter) {
-        filteredUsers = response.users.filter((u) => u.company_id === companyFilter);
-      } else if (!isSuperAdmin) {
-        // Company Admin only sees users in their company
-        filteredUsers = response.users.filter((u) => u.company_id === currentUser?.company_id);
-      }
-      setUsers(filteredUsers);
+      const companyIdForApi =
+        isSuperAdmin && companyFilter ? companyFilter : undefined;
+      const response = await getAllUsers(usersPage, USERS_PAGE_SIZE, companyIdForApi);
+      setUsers(response.users);
+      setUsersTotal(response.total);
+      setUsersTotalPages(response.total_pages ?? Math.max(1, Math.ceil(response.total / USERS_PAGE_SIZE)));
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch users";
       setUsersError(message);
@@ -472,7 +480,7 @@ function UserManagementContent() {
                 </div>
                 <span>
                   {isSuperAdmin ? t.userManagement.allUsers : t.userManagement.companyUsers} 
-                  <span className="text-[#C4B454]"> ({users.length})</span>
+                  <span className="text-[#C4B454]"> ({usersTotal})</span>
                 </span>
               </h2>
               <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -482,7 +490,7 @@ function UserManagementContent() {
                     value={companyFilter || ""}
                     onChange={(e) => {
                       setCompanyFilter(e.target.value || null);
-                      fetchUsers();
+                      setUsersPage(1);
                     }}
                     className="px-4 py-2 text-sm bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#C4B454] transition-all duration-200 text-black font-medium cursor-pointer"
                     dir={dir}
@@ -606,6 +614,25 @@ function UserManagementContent() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {!isLoadingUsers && !usersError && users.length > 0 && (
+              <div className="mt-6">
+                <Pagination
+                  currentPage={usersPage}
+                  totalPages={usersTotalPages}
+                  onPageChange={setUsersPage}
+                  totalItems={usersTotal}
+                  pageSize={USERS_PAGE_SIZE}
+                  isRTL={isRTL}
+                  labels={{
+                    previous: t.common.previous,
+                    next: t.common.next,
+                    pageOf: t.common.pageOf,
+                    showingRange: t.common.showingRange,
+                  }}
+                />
               </div>
             )}
           </div>

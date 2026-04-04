@@ -148,6 +148,9 @@ export interface UserResponse {
 export interface UserListResponse {
   users: User[];
   total: number;
+  page?: number;
+  page_size?: number;
+  total_pages?: number;
   message?: string;
 }
 
@@ -165,10 +168,21 @@ export async function register(data: RegisterRequest): Promise<UserResponse> {
 }
 
 /**
- * Get all users (Admin only)
+ * Get all users (Admin only), with server-side pagination.
  */
-export async function getAllUsers(): Promise<UserListResponse> {
-  return authRequest("/auth/users", {
+export async function getAllUsers(
+  page: number = 1,
+  pageSize: number = 10,
+  companyId?: string | null
+): Promise<UserListResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  if (companyId) {
+    params.set("company_id", companyId);
+  }
+  return authRequest(`/auth/users?${params.toString()}`, {
     method: "GET",
   });
 }
