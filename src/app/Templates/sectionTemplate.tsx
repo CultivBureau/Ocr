@@ -157,7 +157,10 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       "transition-all",
       "duration-300",
       "hover:shadow-xl",
+      /* z-0: own stacking context so rich-text toolbar (z-50) cannot paint above the app chrome */
       "relative",
+      "z-0",
+      "isolate",
       containerClassName,
       className,
     ];
