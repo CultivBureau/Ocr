@@ -150,8 +150,10 @@ export const translations = {
     // PDF Converter Page
     pdfConverter: {
       title: "PDF Converter",
-      subtitle: "Upload and convert your PDF documents",
-      uploadPdf: "Upload PDF",
+      subtitle: "Upload and convert your PDF or Word documents",
+      uploadHero:
+        "Upload your PDF or Word documents and let our intelligent OCR technology extract and transform them into editable templates.",
+      uploadPdf: "Upload document",
       selectFile: "Select File",
       chooseFile: "Choose File",
       noFileChosen: "No file chosen",
@@ -163,7 +165,7 @@ export const translations = {
       realTimeEditing: "Real-time editing",
       dragDropHere: "Drag and drop your PDF here",
       orClickToUpload: "or click to upload",
-      supportedFormats: "Supported formats: PDF",
+      supportedFormats: "Supported formats: PDF, Word (.docx, .doc)",
       maxFileSize: "Maximum file size: 50MB",
       processing: "Processing...",
       extracting: "Extracting content...",
@@ -184,14 +186,17 @@ export const translations = {
       discardChanges: "Discard Changes",
       addNewTrip: "Add New Trip",
       // Error messages
-      pleasChoosePdf: "Please choose a PDF before submitting.",
+      pleasChoosePdf: "Please choose a PDF or Word file before submitting.",
+      unsupportedFileType: "Please choose a PDF or Word file (.pdf, .docx, .doc).",
+      uploadLimitsFootnote:
+        "Supports PDF and Word (.docx, .doc), up to 15 pages, 20MB max.",
       uploadLimitReached: "Limit exceeded",
       uploadFailed: "Upload failed: No file path returned.",
       extractionFailed: "Extraction returned no content.",
       error: "Error",
       // Status messages
       uploadingFile: "Uploading file…",
-      extractingContent: "Extracting content from PDF…",
+      extractingContent: "Extracting content from your document…",
       extractingContentNote: "This may take a minute for larger files.",
       savingToHistory: "Saving to history…",
       openingEditor: "Opening editor…",
@@ -1105,8 +1110,10 @@ export const translations = {
     // PDF Converter Page
     pdfConverter: {
       title: "محول PDF",
-      subtitle: "ارفع وحوّل مستندات PDF الخاصة بك",
-      uploadPdf: "رفع PDF",
+      subtitle: "ارفع وحوّل مستندات PDF أو Word",
+      uploadHero:
+        "ارفع مستندات PDF أو Word ودع تقنية OCR الذكية لدينا تستخرجها وتحوّلها إلى قوالب قابلة للتحرير.",
+      uploadPdf: "رفع المستند",
       selectFile: "اختر ملف",
       chooseFile: "اختر ملف",
       noFileChosen: "لم يتم اختيار ملف",
@@ -1118,7 +1125,7 @@ export const translations = {
       realTimeEditing: "تحرير مباشر",
       dragDropHere: "اسحب وأفلت ملف PDF هنا",
       orClickToUpload: "أو انقر للرفع",
-      supportedFormats: "الصيغ المدعومة: PDF",
+      supportedFormats: "الصيغ المدعومة: PDF، Word (.docx، .doc)",
       maxFileSize: "الحجم الأقصى للملف: 50 ميجابايت",
       processing: "جاري المعالجة...",
       extracting: "جاري استخراج المحتوى...",
@@ -1139,14 +1146,17 @@ export const translations = {
       discardChanges: "تجاهل التغييرات",
       addNewTrip: "إضافة رحلة جديدة",
       // Error messages
-      pleasChoosePdf: "يرجى اختيار ملف PDF قبل الإرسال.",
+      pleasChoosePdf: "يرجى اختيار ملف PDF أو Word قبل الإرسال.",
+      unsupportedFileType: "يرجى اختيار ملف PDF أو Word (.pdf، .docx، .doc).",
+      uploadLimitsFootnote:
+        "يدعم PDF وWord (.docx، .doc) حتى 15 صفحة و20 ميجابايت كحد أقصى.",
       uploadLimitReached: "تجاوز الحد",
       uploadFailed: "فشل في الرفع: لم يتم إرجاع مسار الملف.",
       extractionFailed: "لم يتم إرجاع أي محتوى من عملية الاستخراج.",
       error: "خطأ",
       // Status messages
       uploadingFile: "جاري رفع الملف...",
-      extractingContent: "جاري استخراج المحتوى من PDF...",
+      extractingContent: "جاري استخراج المحتوى من المستند...",
       extractingContentNote: "قد يستغرق ذلك دقيقة للملفات الكبيرة.",
       savingToHistory: "جاري الحفظ في السجل...",
       openingEditor: "جاري فتح المحرر...",

@@ -91,6 +91,7 @@ const PdfConverterContent: React.FC = () => {
   // Upload limits (must match backend config.py)
   const MAX_UPLOAD_SIZE_MB = 20;
   const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
+  const ALLOWED_DOCUMENT = /\.(pdf|docx|doc)$/i;
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
@@ -102,11 +103,22 @@ const PdfConverterContent: React.FC = () => {
       const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
       showErrorDialog(
         t.pdfConverter.uploadLimitReached,
-        `${isRTL ? 'حجم الملف' : 'File size'} (${sizeMB}MB) ${isRTL ? 'يتجاوز الحد الأقصى' : 'exceeds the maximum'} ${MAX_UPLOAD_SIZE_MB}MB. ${isRTL ? 'يدعم JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 صفحة، 20 ميجابايت كحد أقصى).' : 'Supports JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 pages, 20MB max).'}`,
+        `${isRTL ? "حجم الملف" : "File size"} (${sizeMB}MB) ${isRTL ? "يتجاوز الحد الأقصى" : "exceeds the maximum"} ${MAX_UPLOAD_SIZE_MB}MB. ${t.pdfConverter.uploadLimitsFootnote}`,
         "warning"
       );
       setSelectedFile(null);
       // Reset file input
+      event.target.value = "";
+      return;
+    }
+
+    if (file && !ALLOWED_DOCUMENT.test(file.name)) {
+      showErrorDialog(
+        t.pdfConverter.error,
+        t.pdfConverter.unsupportedFileType,
+        "warning"
+      );
+      setSelectedFile(null);
       event.target.value = "";
       return;
     }
@@ -127,7 +139,7 @@ const PdfConverterContent: React.FC = () => {
       setUploadPercent(0);
       setStatus(t.pdfConverter.uploadingFile);
 
-      // Step 1: Upload PDF with progress
+      // Step 1: Upload file with progress
       const uploadResponse = await uploadFileWithProgress(selectedFile, (_, __, percent) => {
         setUploadPercent(percent);
       });
@@ -210,7 +222,9 @@ const PdfConverterContent: React.FC = () => {
       if (isAuthenticated()) {
         try {
           setStatus(t.pdfConverter.savingToHistory);
-          const docTitle = uploadResponse.original_filename?.replace(/\.pdf$/i, "") || selectedFile.name.replace(/\.pdf$/i, "");
+          const docTitle =
+            uploadResponse.original_filename?.replace(/\.(pdf|docx|doc)$/i, "") ||
+            selectedFile.name.replace(/\.(pdf|docx|doc)$/i, "");
           
           const savedDoc = await saveDocument({
             title: docTitle,
@@ -271,7 +285,7 @@ const PdfConverterContent: React.FC = () => {
         // If it was a CORS error, show a user-friendly message instead of the raw error
         if (isCorsOrNetworkError) {
           const sizeMB = selectedFile ? (selectedFile.size / (1024 * 1024)).toFixed(1) : '?';
-          cleanMessage = `${isRTL ? 'حجم الملف' : 'File size'} (${sizeMB}MB) ${isRTL ? 'يتجاوز الحد المسموح به من الخادم.' : 'exceeds the server upload limit.'} ${isRTL ? 'يدعم JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 صفحة، 20 ميجابايت كحد أقصى).' : 'Supports JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 pages, 20MB max).'}`;
+          cleanMessage = `${isRTL ? "حجم الملف" : "File size"} (${sizeMB}MB) ${isRTL ? "يتجاوز الحد المسموح به من الخادم." : "exceeds the server upload limit."} ${t.pdfConverter.uploadLimitsFootnote}`;
         }
         
         showErrorDialog(
@@ -347,7 +361,7 @@ const PdfConverterContent: React.FC = () => {
             <span className="bg-gradient-to-r from-[#C4B454] to-[#B8A040] bg-clip-text text-transparent">{isRTL ? 'مستنداتك' : 'Documents'}</span>
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            {isRTL ? 'قم بتحميل مستندات PDF الخاصة بك ودع تقنية OCR الذكية لدينا تستخرج وتحولها إلى قوالب قابلة للتحرير' : 'Upload your PDF documents and let our intelligent OCR technology extract and transform them into editable templates'}
+            {t.pdfConverter.uploadHero}
           </p>
         </div>
 
@@ -377,7 +391,7 @@ const PdfConverterContent: React.FC = () => {
               <div className="relative">
                 <input
                   type="file"
-                  accept=".pdf,.txt,.docx"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   onChange={handleFileChange}
                   className="block w-full text-sm text-gray-700
                     file:mr-4 file:py-3 file:px-6

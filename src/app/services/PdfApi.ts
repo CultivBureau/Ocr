@@ -102,7 +102,7 @@ export function uploadFileWithProgress(
   if (file.size > MAX_UPLOAD_SIZE_MB * 1024 * 1024) {
     return Promise.reject(
       new Error(
-        `File too large. Maximum size is ${MAX_UPLOAD_SIZE_MB}MB. Supports JPEG, JPG, PNG, BMP, PDF, TIFF, TIF, GIF (15 pages, 20MB max).`
+        `File too large. Maximum size is ${MAX_UPLOAD_SIZE_MB}MB. Supports PDF and Word (.docx, .doc), up to 15 pages, 20MB max.`
       )
     );
   }
