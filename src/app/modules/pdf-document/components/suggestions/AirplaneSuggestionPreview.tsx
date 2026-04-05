@@ -88,6 +88,11 @@ const AirplaneSuggestionPreview: React.FC<AirplaneSuggestionPreviewProps> = ({
                   <span>{flight.luggage}</span>
                 </div>
               </div>
+              {flight.note?.trim() ? (
+                <p className="mt-2 text-sm font-bold text-red-800 bg-red-50 rounded px-2 py-1.5 border border-red-100">
+                  {flight.note.trim()}
+                </p>
+              ) : null}
             </div>
           ))}
         </div>

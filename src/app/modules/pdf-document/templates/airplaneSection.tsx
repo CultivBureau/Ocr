@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Link as LinkIcon } from 'lucide-react';
+import { AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
 
 /**
@@ -33,6 +33,7 @@ export interface AirplaneSectionProps {
       infants: number;
     };
     luggage: string;
+    note?: string;
   }[];
   
   // Title
@@ -302,8 +303,8 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
           {/* Data Rows */}
           <tbody>
             {flights.map((flight, index) => (
+              <React.Fragment key={index}>
                 <tr 
-                  key={index} 
                   className="bg-[#E8E8E8] hover:bg-[#D8D8D8] transition-colors duration-200 border-b-2 border-white group"
                 >
                 {editable && (
@@ -428,6 +429,21 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                     </div>
                 </td>
               </tr>
+                {flight.note?.trim() ? (
+                  <tr className="bg-red-50 border-b-2 border-white">
+                    <td colSpan={editable ? 8 : 7} className="px-4 py-3">
+                      <div
+                        className={`flex items-center justify-center gap-2 text-center text-red-800 font-bold text-sm md:text-base whitespace-pre-line ${
+                          direction === 'rtl' ? 'flex-row-reverse' : ''
+                        }`}
+                      >
+                        <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" aria-hidden />
+                        <span>{flight.note.trim()}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : null}
+              </React.Fragment>
             ))}
             {editable && (
                 <tr className="bg-gray-50 hover:bg-gray-100 transition-colors">

@@ -116,6 +116,8 @@ export interface AirplaneSectionData {
       infants: number;
     };
     luggage: string;
+    /** Optional note shown under the flight row */
+    note?: string;
   }[];
   title?: string;
   showTitle?: boolean;

@@ -30,6 +30,8 @@ export interface FlightData {
     infants: number;
   };
   luggage: string;
+  /** Optional per-flight note; shown in red under the row in PDF/preview */
+  note?: string;
 }
 
 interface AddAirplaneModalProps {
@@ -72,7 +74,8 @@ export default function AddAirplaneModal({
       toAirport: "",
       toAirportLink: "",
       travelers: { adults: 1, children: 0, infants: 0 },
-      luggage: "20 كيلو"
+      luggage: "20 كيلو",
+      note: ""
     }
   ]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -159,7 +162,8 @@ export default function AddAirplaneModal({
           toAirport: "",
           toAirportLink: "",
           travelers: { adults: 1, children: 0, infants: 0 },
-          luggage: "20 كيلو"
+          luggage: "20 كيلو",
+          note: ""
         }
       ]);
       setErrors({});
@@ -336,7 +340,10 @@ export default function AddAirplaneModal({
       showTitle,
       noticeMessage: noticeMessage.trim() || undefined,
       showNotice,
-      flights,
+      flights: flights.map((f) => ({
+        ...f,
+        note: f.note?.trim() || undefined,
+      })),
       direction,
       language,
     });
@@ -357,7 +364,8 @@ export default function AddAirplaneModal({
         toAirport: "",
         toAirportLink: "",
         travelers: { adults: 1, children: 0, infants: 0 },
-        luggage: "20 كيلو"
+        luggage: "20 كيلو",
+        note: ""
       }
     ]);
   };
@@ -776,6 +784,19 @@ export default function AddAirplaneModal({
                       onChange={(e) => updateFlight(index, 'luggage', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5568] focus:border-transparent text-sm"
                       placeholder="20 كيلو"
+                    />
+                  </div>
+
+                  <div className="mt-3">
+                    <label className="block text-xs font-semibold text-red-600 mb-1">
+                      {t.modals.flightNote}
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.note ?? ""}
+                      onChange={(e) => updateFlight(index, 'note', e.target.value)}
+                      className="w-full px-3 py-2 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-400 focus:border-red-300 text-sm placeholder:text-red-300"
+                      placeholder={t.modals.flightNotePlaceholder}
                     />
                   </div>
                   

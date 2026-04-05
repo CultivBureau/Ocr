@@ -533,7 +533,7 @@ function CodePageContent() {
         fromAirport: "",
         toAirport: "",
         travelers: { adults: 1, children: 0, infants: 0 },
-        luggage: "20 كيلو"
+        luggage: "20 كيلو",
       };
       
       // Add flight to JSON structure

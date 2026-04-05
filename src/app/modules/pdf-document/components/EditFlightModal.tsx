@@ -33,6 +33,7 @@ export default function EditFlightModal({
   const [children, setChildren] = useState(0);
   const [infants, setInfants] = useState(0);
   const [luggage, setLuggage] = useState("20 كيلو");
+  const [note, setNote] = useState("");
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const { user, isCompanyAdmin } = useAuth();
   const [airlineCompanies, setAirlineCompanies] = useState<string[]>([]);
@@ -87,6 +88,7 @@ export default function EditFlightModal({
       setChildren(initialFlight.travelers.children);
       setInfants(initialFlight.travelers.infants);
       setLuggage(initialFlight.luggage);
+      setNote(initialFlight.note ?? "");
       setErrors({});
     }
   }, [isOpen, initialFlight]);
@@ -129,6 +131,7 @@ export default function EditFlightModal({
       toAirportLink: toAirportLink.trim() || undefined,
       travelers: { adults, children, infants },
       luggage: luggage.trim(),
+      note: note.trim() || undefined,
     });
 
     onClose();
@@ -385,6 +388,21 @@ export default function EditFlightModal({
               onChange={(e) => setLuggage(e.target.value)}
               className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5568] focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
               placeholder={isRTL ? "20 كيلو" : "20 kg"}
+              dir={language === 'ar' ? 'rtl' : 'ltr'}
+            />
+          </div>
+
+          {/* Optional note (red label — shown under flight row in table) */}
+          <div>
+            <label className={`block text-sm font-semibold text-red-600 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t.modals.flightNote}
+            </label>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className={`w-full px-4 py-2 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-400 focus:border-red-300 placeholder:text-red-300 ${isRTL ? 'text-right' : 'text-left'}`}
+              placeholder={t.modals.flightNotePlaceholder}
               dir={language === 'ar' ? 'rtl' : 'ltr'}
             />
           </div>
