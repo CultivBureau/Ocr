@@ -8,10 +8,9 @@
  */
 
 import { cookies } from "next/headers";
+import { getServerApiBaseUrl } from "@/app/modules/shared/utils/serverApiBaseUrl";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
+const API_BASE_URL = getServerApiBaseUrl();
 
 export interface Document {
   id: string;
@@ -207,16 +206,17 @@ export async function getCompanyBrandingServer(
     }
     
     // Convert relative paths to absolute URLs if needed
+    const apiBase = getServerApiBaseUrl();
     const headerImage = company.header_image
       ? company.header_image.startsWith("http")
         ? company.header_image
-        : `${API_BASE_URL}${company.header_image.startsWith("/") ? "" : "/"}${company.header_image}`
+        : `${apiBase}${company.header_image.startsWith("/") ? "" : "/"}${company.header_image}`
       : null;
     
     const footerImage = company.footer_image
       ? company.footer_image.startsWith("http")
         ? company.footer_image
-        : `${API_BASE_URL}${company.footer_image.startsWith("/") ? "" : "/"}${company.footer_image}`
+        : `${apiBase}${company.footer_image.startsWith("/") ? "" : "/"}${company.footer_image}`
       : null;
 
     return {

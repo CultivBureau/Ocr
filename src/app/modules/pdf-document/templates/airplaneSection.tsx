@@ -3,6 +3,11 @@
 import React from 'react';
 import { AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
+import {
+  columnLabel,
+  resolveAirplaneColumnConfig,
+  type AirplaneColumnConfigItem,
+} from "@/app/modules/pdf-document/types/airplaneColumnConfig";
 
 /**
  * Airplane Section Template Component
@@ -34,6 +39,7 @@ export interface AirplaneSectionProps {
     };
     luggage: string;
     note?: string;
+    customColumnValues?: Record<string, string>;
   }[];
   
   // Title
@@ -48,7 +54,8 @@ export interface AirplaneSectionProps {
   direction?: "rtl" | "ltr";
   language?: "ar" | "en";
   
-  // Column Labels
+  /** Ordered columns (built-in + custom). Legacy columnLabels merged when this is absent. */
+  columnConfig?: AirplaneColumnConfigItem[];
   columnLabels?: {
     date: string;
     time?: string;
@@ -99,6 +106,7 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
   showNotice = true,
   direction = "rtl",
   language = "ar",
+  columnConfig,
   columnLabels,
   editable = false,
   id,
@@ -136,23 +144,11 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
   const defaultNotice = noticeMessage || (language === 'ar' 
     ? 'التواجد في صاله المطار قبل الاقلاع بساعتين' 
     : 'Please arrive at the airport 2 hours before departure');
-  const defaultColumnLabels = columnLabels || (language === 'ar' ? {
-    date: "التاريخ",
-    time: "الوقت",
-    airlineCompany: "شركة الطيران",
-    fromAirport: "من مطار",
-    toAirport: "الى مطار",
-    travelers: "المسافرين",
-    luggage: "الأمتعه"
-  } : {
-    date: "Date",
-    time: "Time",
-    airlineCompany: "Airline Company",
-    fromAirport: "From Airport",
-    toAirport: "To Airport",
-    travelers: "Travelers",
-    luggage: "Luggage"
-  });
+  const columns = React.useMemo(
+    () => resolveAirplaneColumnConfig(columnConfig, columnLabels ?? undefined),
+    [columnConfig, columnLabels]
+  );
+  const dataColumnCount = columns.length;
   
   const formatTravelers = (travelers: { adults: number; children: number; infants: number }) => {
     const parts = [];
@@ -198,6 +194,106 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
       return dateString;
     }
   };
+
+  type FlightRow = NonNullable<AirplaneSectionProps["flights"]>[number];
+
+  const renderDataCell = (col: AirplaneColumnConfigItem, flight: FlightRow) => {
+    if (col.kind === "custom") {
+      const v = flight.customColumnValues?.[col.id]?.trim();
+      return (
+        <div className="whitespace-pre-line leading-relaxed text-[#2D3748]">{v || "—"}</div>
+      );
+    }
+
+    switch (col.key) {
+      case "date":
+        return (
+          <div className="flex flex-col items-center">
+            <span className="text-[#4A5568] font-bold">{formatDate(flight.date)}</span>
+          </div>
+        );
+      case "time":
+        return (
+          <div className="flex flex-col items-center">
+            <span className="text-[#4A5568] font-bold">{flight.time || "-"}</span>
+          </div>
+        );
+      case "airlineCompany":
+        return (
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-[#2D3748]">{flight.airlineCompany || "-"}</span>
+            {flight.airlineCompanyLink && flight.airlineCompanyLink.trim() && (
+              <a
+                href={flight.airlineCompanyLink.trim()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-8 h-8 bg-white rounded-full border border-blue-300 hover:bg-blue-50 hover:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
+                title="Open airline company link"
+              >
+                <LinkIcon className="w-4 h-4 text-blue-600" />
+              </a>
+            )}
+          </div>
+        );
+      case "fromAirport":
+        return (
+          <div className={`flex items-center justify-center gap-2 ${direction === "rtl" ? "flex-row-reverse" : ""}`}>
+            <div className="whitespace-pre-line leading-relaxed text-[#2D3748]">{flight.fromAirport}</div>
+            {flight.fromAirportLink && flight.fromAirportLink.trim() && (
+              <a
+                href={flight.fromAirportLink.trim()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-8 h-8 bg-white rounded-full border border-blue-300 hover:bg-blue-50 hover:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
+                title="Open airport location link"
+              >
+                <LinkIcon className="w-4 h-4 text-blue-600" />
+              </a>
+            )}
+          </div>
+        );
+      case "toAirport":
+        return (
+          <div className={`flex items-center justify-center gap-2 ${direction === "rtl" ? "flex-row-reverse" : ""}`}>
+            <div className="whitespace-pre-line leading-relaxed text-[#2D3748]">{flight.toAirport}</div>
+            {flight.toAirportLink && flight.toAirportLink.trim() && (
+              <a
+                href={flight.toAirportLink.trim()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-8 h-8 bg-white rounded-full border border-blue-300 hover:bg-blue-50 hover:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
+                title="Open airport location link"
+              >
+                <LinkIcon className="w-4 h-4 text-blue-600" />
+              </a>
+            )}
+          </div>
+        );
+      case "travelers":
+        return <div className="flex items-center justify-center">{formatTravelers(flight.travelers)}</div>;
+      case "luggage":
+        return (
+          <div className={`flex items-center justify-center gap-2 ${direction === "rtl" ? "flex-row-reverse" : ""}`}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="w-5 h-5 text-[#4A5568] shrink-0"
+            >
+              <path d="M19 7h-3V6a4 4 0 00-8 0v1H5a1 1 0 00-1 1v11a3 3 0 003 3h10a3 3 0 003-3V8a1 1 0 00-1-1zM10 6a2 2 0 014 0v1h-4V6zm8 13a1 1 0 01-1 1H7a1 1 0 01-1-1V9h12v10z" />
+            </svg>
+            <span className="text-[#2D3748]">{flight.luggage}</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const cellWrapperClass = (isLast: boolean) =>
+    isLast
+      ? "px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base"
+      : "px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50";
 
   return (
     <div 
@@ -276,27 +372,16 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                     </div>
                   </th>
                 )}
-                <th className="px-4 py-4 text-center text-white font-bold text-sm md:text-base border-r-2 border-white/30 whitespace-nowrap">
-                  {defaultColumnLabels.date}
-                </th>
-                <th className="px-4 py-4 text-center text-white font-bold text-sm md:text-base border-r-2 border-white/30 whitespace-nowrap">
-                  {defaultColumnLabels.time}
-                </th>
-                <th className="px-4 py-4 text-center text-white font-bold text-sm md:text-base border-r-2 border-white/30 min-w-[150px]">
-                  {defaultColumnLabels.airlineCompany}
-                </th>
-                <th className="px-4 py-4 text-center text-white font-bold text-sm md:text-base border-r-2 border-white/30 min-w-[180px]">
-                  {defaultColumnLabels.fromAirport}
-              </th>
-                <th className="px-4 py-4 text-center text-white font-bold text-sm md:text-base border-r-2 border-white/30 min-w-[180px]">
-                  {defaultColumnLabels.toAirport}
-              </th>
-                <th className="px-4 py-4 text-center text-white font-bold text-sm md:text-base border-r-2 border-white/30 min-w-[140px]">
-                  {defaultColumnLabels.travelers}
-              </th>
-                <th className="px-4 py-4 text-center text-white font-bold text-sm md:text-base min-w-[100px]">
-                  {defaultColumnLabels.luggage}
-              </th>
+                {columns.map((col, colIndex) => (
+                  <th
+                    key={col.kind === "builtin" ? col.key : col.id}
+                    className={`px-4 py-4 text-center text-white font-bold text-sm md:text-base min-w-[100px] ${
+                      colIndex < columns.length - 1 ? "border-r-2 border-white/30" : ""
+                    } ${col.kind === "builtin" && (col.key === "airlineCompany" || col.key === "fromAirport" || col.key === "toAirport") ? "min-w-[150px]" : ""}`}
+                  >
+                    {columnLabel(col, language)}
+                  </th>
+                ))}
             </tr>
           </thead>
 
@@ -350,88 +435,18 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                     </div>
                   </td>
                 )}
-                  <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50">
-                    <div className="flex flex-col items-center">
-                      <span className="text-[#4A5568] font-bold">{formatDate(flight.date)}</span>
-                    </div>
-                </td>
-                  <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50">
-                    <div className="flex flex-col items-center">
-                      <span className="text-[#4A5568] font-bold">{flight.time || "-"}</span>
-                    </div>
-                </td>
-                  <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-[#2D3748]">{flight.airlineCompany || "-"}</span>
-                      {flight.airlineCompanyLink && flight.airlineCompanyLink.trim() && (
-                        <a 
-                          href={flight.airlineCompanyLink.trim()} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center w-8 h-8 bg-white rounded-full border border-blue-300 hover:bg-blue-50 hover:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
-                          title="Open airline company link"
-                        >
-                          <LinkIcon className="w-4 h-4 text-blue-600" />
-                        </a>
-                      )}
-                    </div>
-                </td>
-                  <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50">
-                    <div className={`flex items-center justify-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
-      
-                      <div className="whitespace-pre-line leading-relaxed text-[#2D3748]">{flight.fromAirport}</div>
-                      {flight.fromAirportLink && flight.fromAirportLink.trim() && (
-                        <a 
-                          href={flight.fromAirportLink.trim()} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center w-8 h-8 bg-white rounded-full border border-blue-300 hover:bg-blue-50 hover:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
-                          title="Open airport location link"
-                        >
-                          <LinkIcon className="w-4 h-4 text-blue-600" />
-                        </a>
-                      )}
-                    </div>
-                </td>
-                  <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50">
-                    <div className={`flex items-center justify-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
-    
-                      <div className="whitespace-pre-line leading-relaxed text-[#2D3748]">{flight.toAirport}</div>
-                      {flight.toAirportLink && flight.toAirportLink.trim() && (
-                        <a 
-                          href={flight.toAirportLink.trim()} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center w-8 h-8 bg-white rounded-full border border-blue-300 hover:bg-blue-50 hover:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
-                          title="Open airport location link"
-                        >
-                          <LinkIcon className="w-4 h-4 text-blue-600" />
-                        </a>
-                      )}
-                    </div>
-                </td>
-                  <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50">
-                    <div className="flex items-center justify-center">
-                      {formatTravelers(flight.travelers)}
-                    </div>
-                </td>
-                  <td className="px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base">
-                    <div className={`flex items-center justify-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        viewBox="0 0 24 24" 
-                        fill="currentColor" 
-                        className="w-5 h-5 text-[#4A5568] shrink-0"
-                      >
-                        <path d="M19 7h-3V6a4 4 0 00-8 0v1H5a1 1 0 00-1 1v11a3 3 0 003 3h10a3 3 0 003-3V8a1 1 0 00-1-1zM10 6a2 2 0 014 0v1h-4V6zm8 13a1 1 0 01-1 1H7a1 1 0 01-1-1V9h12v10z"/>
-                      </svg>
-                      <span className="text-[#2D3748]">{flight.luggage}</span>
-                    </div>
-                </td>
+                {columns.map((col, colIndex) => (
+                  <td
+                    key={col.kind === "builtin" ? col.key : col.id}
+                    className={cellWrapperClass(colIndex === columns.length - 1)}
+                  >
+                    {renderDataCell(col, flight)}
+                  </td>
+                ))}
               </tr>
                 {flight.note?.trim() ? (
                   <tr className="bg-red-50 border-b-2 border-white">
-                    <td colSpan={editable ? 8 : 7} className="px-4 py-3">
+                    <td colSpan={editable ? 1 + dataColumnCount : dataColumnCount} className="px-4 py-3">
                       <div
                         className={`flex items-center justify-center gap-2 text-center text-red-800 font-bold text-sm md:text-base whitespace-pre-line ${
                           direction === 'rtl' ? 'flex-row-reverse' : ''
@@ -447,7 +462,7 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
             ))}
             {editable && (
                 <tr className="bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <td colSpan={editable ? 8 : 7} className="px-4 py-5 text-center">
+                  <td colSpan={editable ? 1 + dataColumnCount : dataColumnCount} className="px-4 py-5 text-center">
                   <button
                     onClick={(e) => {
                       // Support prop handler if provided (for backward compatibility)

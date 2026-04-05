@@ -6,7 +6,18 @@ import { saveAirplaneTemplate } from "@/app/modules/pdf-document/services/Templa
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
 import { FlightData } from './AddAirplaneModal';
 import { useLanguage } from "@/app/modules/shared/contexts/LanguageContext";
-import type { AirplaneColumnConfigItem } from "../types/airplaneColumnConfig";
+import type {
+  AirplaneBuiltinColumnKey,
+  AirplaneColumnConfigItem,
+} from "@/app/modules/pdf-document/types/airplaneColumnConfig";
+import {
+  defaultBuiltinColumnItem,
+  generateCustomAirplaneColumnId,
+  getDefaultAirplaneColumnConfig,
+  getMissingBuiltinKeys,
+  resolveAirplaneColumnConfig,
+  syncFlightsCustomColumnValues,
+} from "@/app/modules/pdf-document/types/airplaneColumnConfig";
 
 interface EditAirplaneSectionModalProps {
   isOpen: boolean;
@@ -30,6 +41,15 @@ interface EditAirplaneSectionModalProps {
     language?: "ar" | "en";
     flights?: FlightData[];
     columnConfig?: AirplaneColumnConfigItem[];
+    columnLabels?: {
+      date?: string;
+      time?: string;
+      airlineCompany?: string;
+      fromAirport?: string;
+      toAirport?: string;
+      travelers?: string;
+      luggage?: string;
+    };
   } | null;
 }
 
@@ -49,7 +69,10 @@ export default function EditAirplaneSectionModal({
   
   // Store flights data for template saving
   const [flights, setFlights] = useState<FlightData[]>([]);
-  const [columnConfig, setColumnConfig] = useState<AirplaneColumnConfigItem[]>([]);
+  const [columnConfig, setColumnConfig] = useState<AirplaneColumnConfigItem[]>(() =>
+    getDefaultAirplaneColumnConfig()
+  );
+  const [newCustomColumnName, setNewCustomColumnName] = useState("");
   
   // Template-related state
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
@@ -66,14 +89,27 @@ export default function EditAirplaneSectionModal({
       setShowNotice(initialData.showNotice !== undefined ? initialData.showNotice : true);
       setDirection(initialData.direction || "rtl");
       setLanguage(initialData.language || "ar");
-      setFlights(initialData.flights || []); // Store flights data
-      setColumnConfig(initialData.columnConfig ?? []);
+      const resolved = resolveAirplaneColumnConfig(
+        initialData.columnConfig,
+        initialData.columnLabels ?? undefined
+      );
+      setColumnConfig(resolved);
+      const baseFlights = initialData.flights?.length ? initialData.flights : [];
+      setFlights(syncFlightsCustomColumnValues(baseFlights, resolved));
+      setNewCustomColumnName("");
     }
   }, [isOpen, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (columnConfig.length === 0) {
+      toast.error(t.modals.airplaneAtLeastOneColumn);
+      return;
+    }
+
+    const syncedFlights = syncFlightsCustomColumnValues(flights, columnConfig);
+
     onSubmit({
       title: title.trim() || undefined,
       showTitle,
@@ -82,11 +118,66 @@ export default function EditAirplaneSectionModal({
       direction,
       language,
       columnConfig,
-      flights,
+      flights: syncedFlights,
     });
 
     onClose();
   };
+
+  const applyFlightsSync = (cfg: AirplaneColumnConfigItem[]) => {
+    setFlights((prev) => syncFlightsCustomColumnValues(prev, cfg));
+  };
+
+  const moveColumn = (index: number, delta: -1 | 1) => {
+    const j = index + delta;
+    if (j < 0 || j >= columnConfig.length) return;
+    const next = [...columnConfig];
+    [next[index], next[j]] = [next[j], next[index]];
+    setColumnConfig(next);
+  };
+
+  const removeColumnAt = (index: number) => {
+    if (columnConfig.length <= 1) {
+      toast.error(t.modals.airplaneAtLeastOneColumn);
+      return;
+    }
+    const next = columnConfig.filter((_, i) => i !== index);
+    setColumnConfig(next);
+    applyFlightsSync(next);
+  };
+
+  const updateColumnLabels = (
+    index: number,
+    field: "labelAr" | "labelEn",
+    value: string
+  ) => {
+    const next = [...columnConfig];
+    next[index] = { ...next[index], [field]: value } as AirplaneColumnConfigItem;
+    setColumnConfig(next);
+  };
+
+  const addBuiltinColumn = (key: AirplaneBuiltinColumnKey) => {
+    const next = [...columnConfig, defaultBuiltinColumnItem(key)];
+    setColumnConfig(next);
+    applyFlightsSync(next);
+  };
+
+  const addCustomColumn = () => {
+    const raw = newCustomColumnName.trim();
+    if (!raw) return;
+    const item: AirplaneColumnConfigItem = {
+      kind: "custom",
+      id: generateCustomAirplaneColumnId(),
+      labelAr: raw,
+      labelEn: raw,
+    };
+    const next = [...columnConfig, item];
+    setColumnConfig(next);
+    setNewCustomColumnName("");
+    applyFlightsSync(next);
+  };
+
+  const missingBuiltin = getMissingBuiltinKeys(columnConfig);
 
   // Save current form as template
   const handleSaveTemplate = async () => {
@@ -104,9 +195,10 @@ export default function EditAirplaneSectionModal({
         showTitle,
         noticeMessage,
         showNotice,
-        flights: flights, // Use actual flights data instead of empty array
+        flights: syncFlightsCustomColumnValues(flights, columnConfig),
         direction,
         language,
+        columnConfig,
       };
 
       await saveAirplaneTemplate(templateName.trim(), templateData);
@@ -131,9 +223,10 @@ export default function EditAirplaneSectionModal({
         showTitle,
         noticeMessage,
         showNotice,
-        flights: flights, // Use actual flights data
+        flights: syncFlightsCustomColumnValues(flights, columnConfig),
         direction,
         language,
+        columnConfig,
       },
       exported_at: new Date().toISOString(),
     };
@@ -171,7 +264,11 @@ export default function EditAirplaneSectionModal({
       if (data.showNotice !== undefined) setShowNotice(data.showNotice);
       if (data.direction) setDirection(data.direction);
       if (data.language) setLanguage(data.language);
-      if (data.flights && Array.isArray(data.flights)) setFlights(data.flights); // Import flights data
+      if (data.flights && Array.isArray(data.flights)) {
+        const cfg = resolveAirplaneColumnConfig(data.columnConfig, data.columnLabels ?? undefined);
+        setColumnConfig(cfg);
+        setFlights(syncFlightsCustomColumnValues(data.flights, cfg));
+      }
 
       toast.success(language === 'ar' ? 'تم استيراد القالب بنجاح' : 'Template imported successfully');
     } catch (err) {
@@ -201,7 +298,7 @@ export default function EditAirplaneSectionModal({
       dir={dir}
     >
       <div 
-        className={`bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-scale-in ${isRTL ? 'text-right' : 'text-left'}`}
+        className={`bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-scale-in ${isRTL ? 'text-right' : 'text-left'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -309,6 +406,133 @@ export default function EditAirplaneSectionModal({
               <label htmlFor="showNotice" className="text-sm text-gray-700">
                 {t.modals.showNotice}
               </label>
+            </div>
+          </div>
+
+          {/* Column configuration */}
+          <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/80 space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-gray-800">{t.modals.airplaneColumnsTitle}</h3>
+              <p className="text-xs text-gray-600 mt-1">{t.modals.airplaneColumnsHelp}</p>
+            </div>
+
+            <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
+              {columnConfig.map((col, index) => (
+                <div
+                  key={col.kind === "builtin" ? col.key : col.id}
+                  className="flex flex-wrap items-end gap-2 bg-white border border-gray-200 rounded-lg p-3"
+                >
+                  <div className="w-full sm:w-auto shrink-0">
+                    <span
+                      className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                        col.kind === "builtin"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-amber-100 text-amber-900"
+                      }`}
+                    >
+                      {col.kind === "builtin" ? t.modals.columnTypeBuiltin : t.modals.columnTypeCustom}
+                      {col.kind === "builtin" ? ` · ${col.key}` : ` · ${col.id.slice(0, 12)}…`}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">العربية</label>
+                    <input
+                      type="text"
+                      value={col.labelAr}
+                      onChange={(e) => updateColumnLabels(index, "labelAr", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      dir="rtl"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">English</label>
+                    <input
+                      type="text"
+                      value={col.labelEn}
+                      onChange={(e) => updateColumnLabels(index, "labelEn", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className={`flex gap-1 ${isRTL ? "flex-row-reverse" : ""}`}>
+                    <button
+                      type="button"
+                      onClick={() => moveColumn(index, -1)}
+                      disabled={index === 0}
+                      className="px-2 py-2 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40"
+                      title={t.modals.moveColumnUp}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveColumn(index, 1)}
+                      disabled={index === columnConfig.length - 1}
+                      className="px-2 py-2 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40"
+                      title={t.modals.moveColumnDown}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeColumnAt(index)}
+                      className="px-2 py-2 text-xs border border-red-200 text-red-700 rounded-lg hover:bg-red-50"
+                      title={t.modals.airplaneRemoveColumn}
+                    >
+                      {t.modals.airplaneRemoveColumn}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {missingBuiltin.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-700 mb-2">{t.modals.addStandardColumn}</p>
+                <div className={`flex flex-wrap gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+                  {missingBuiltin.map((key) => {
+                    const ref = defaultBuiltinColumnItem(key);
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => addBuiltinColumn(key)}
+                        className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-100"
+                      >
+                        + {ref.labelEn}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className={`flex flex-wrap gap-2 items-end ${isRTL ? "flex-row-reverse" : ""}`}>
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  {t.modals.newColumnNamePlaceholder}
+                </label>
+                <input
+                  type="text"
+                  value={newCustomColumnName}
+                  onChange={(e) => setNewCustomColumnName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addCustomColumn();
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  placeholder={t.modals.newColumnNamePlaceholder}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={addCustomColumn}
+                className="px-4 py-2 bg-[#4A5568] text-white text-sm font-medium rounded-lg hover:bg-[#2D3748]"
+              >
+                {t.common.add}
+              </button>
             </div>
           </div>
         </form>

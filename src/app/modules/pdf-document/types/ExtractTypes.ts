@@ -2,6 +2,8 @@
  * Type definitions for PDF extraction and processing
  */
 
+import type { AirplaneColumnConfigItem } from "./airplaneColumnConfig";
+
 export interface Section {
   type: "section";
   id: string;
@@ -118,6 +120,7 @@ export interface AirplaneSectionData {
     luggage: string;
     /** Optional note shown under the flight row */
     note?: string;
+    customColumnValues?: Record<string, string>;
   }[];
   title?: string;
   showTitle?: boolean;
@@ -125,6 +128,8 @@ export interface AirplaneSectionData {
   showNotice?: boolean;
   direction?: "rtl" | "ltr";
   language?: "ar" | "en";
+  /** Ordered columns (built-in + custom). When absent, defaults are used. */
+  columnConfig?: AirplaneColumnConfigItem[];
   columnLabels?: {
     date: string;
     fromAirport: string;

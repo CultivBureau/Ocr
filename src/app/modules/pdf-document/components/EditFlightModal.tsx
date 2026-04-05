@@ -6,14 +6,14 @@ import { useLanguage } from "@/app/modules/shared/contexts/LanguageContext";
 import { FlightData } from './AddAirplaneModal';
 import { getCompanySettings, getAirlineCompanies, addAirlineCompanyUser } from "@/app/modules/company-settings/services/CompanySettingsApi";
 import AddAirlineCompanyModal from "./AddAirlineCompanyModal";
-import type { AirplaneColumnConfigItem } from "../types/airplaneColumnConfig";
+import { columnLabel } from "@/app/modules/pdf-document/types/airplaneColumnConfig";
+import type { AirplaneColumnConfigItem } from "@/app/modules/pdf-document/types/airplaneColumnConfig";
 
 interface EditFlightModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (flight: FlightData) => void;
   initialFlight: FlightData | null;
-  /** Optional custom flight row keys (from airplane column config); values are preserved on save. */
   customColumns?: Extract<AirplaneColumnConfigItem, { kind: "custom" }>[];
 }
 
@@ -38,6 +38,7 @@ export default function EditFlightModal({
   const [infants, setInfants] = useState(0);
   const [luggage, setLuggage] = useState("20 كيلو");
   const [note, setNote] = useState("");
+  const [customVals, setCustomVals] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const { user, isCompanyAdmin } = useAuth();
   const [airlineCompanies, setAirlineCompanies] = useState<string[]>([]);
@@ -93,9 +94,14 @@ export default function EditFlightModal({
       setInfants(initialFlight.travelers.infants);
       setLuggage(initialFlight.luggage);
       setNote(initialFlight.note ?? "");
+      const cv: Record<string, string> = {};
+      for (const c of customColumns) {
+        cv[c.id] = initialFlight.customColumnValues?.[c.id] ?? "";
+      }
+      setCustomVals(cv);
       setErrors({});
     }
-  }, [isOpen, initialFlight]);
+  }, [isOpen, initialFlight, customColumns]);
 
   const validate = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -124,7 +130,12 @@ export default function EditFlightModal({
       return;
     }
 
-    const base: FlightData = {
+    const customColumnValues: Record<string, string> = {};
+    for (const c of customColumns) {
+      customColumnValues[c.id] = customVals[c.id]?.trim() ?? "";
+    }
+
+    onSubmit({
       date,
       time: time.trim() || undefined,
       airlineCompany: airlineCompany.trim() || undefined,
@@ -136,18 +147,9 @@ export default function EditFlightModal({
       travelers: { adults, children, infants },
       luggage: luggage.trim(),
       note: note.trim() || undefined,
-    };
-
-    const custom: Record<string, string> = {};
-    if (initialFlight && customColumns.length > 0) {
-      const src = initialFlight as unknown as Record<string, unknown>;
-      for (const col of customColumns) {
-        const v = src[col.id];
-        custom[col.id] = v === undefined || v === null ? "" : String(v);
-      }
-    }
-
-    onSubmit({ ...base, ...custom } as FlightData);
+      customColumnValues:
+        customColumns.length > 0 ? customColumnValues : undefined,
+    });
 
     onClose();
   };
@@ -406,6 +408,32 @@ export default function EditFlightModal({
               dir={language === 'ar' ? 'rtl' : 'ltr'}
             />
           </div>
+
+          {customColumns.length > 0 && (
+            <div className="space-y-4 border-t border-gray-100 pt-4">
+              {customColumns.map((col) => (
+                <div key={col.id}>
+                  <label
+                    className={`block text-sm font-semibold text-gray-700 mb-2 ${isRTL ? "text-right" : "text-left"}`}
+                  >
+                    {columnLabel(col, language)}
+                  </label>
+                  <input
+                    type="text"
+                    value={customVals[col.id] ?? ""}
+                    onChange={(e) =>
+                      setCustomVals((prev) => ({
+                        ...prev,
+                        [col.id]: e.target.value,
+                      }))
+                    }
+                    className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5568] focus:border-transparent ${isRTL ? "text-right" : "text-left"}`}
+                    dir={language === "ar" ? "rtl" : "ltr"}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Optional note (red label — shown under flight row in table) */}
           <div>
