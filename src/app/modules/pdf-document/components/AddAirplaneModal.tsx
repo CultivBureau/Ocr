@@ -14,6 +14,13 @@ import {
 } from "@/app/modules/pdf-document/services/TemplatesApi";
 import AddAirlineCompanyModal from "./AddAirlineCompanyModal";
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
+import {
+  columnLabel,
+  getDefaultAirplaneColumnConfig,
+  resolveAirplaneColumnConfig,
+  syncFlightsCustomColumnValues,
+} from "@/app/modules/pdf-document/types/airplaneColumnConfig";
+import type { AirplaneColumnConfigItem } from "@/app/modules/pdf-document/types/airplaneColumnConfig";
 
 export interface FlightData {
   date: string;
@@ -32,6 +39,8 @@ export interface FlightData {
   luggage: string;
   /** Optional per-flight note; shown in red under the row in PDF/preview */
   note?: string;
+  /** Values for custom columns (keys = custom column ids from columnConfig) */
+  customColumnValues?: Record<string, string>;
 }
 
 interface AddAirplaneModalProps {
@@ -45,6 +54,7 @@ interface AddAirplaneModalProps {
     flights: FlightData[];
     direction?: "rtl" | "ltr";
     language?: "ar" | "en";
+    columnConfig?: AirplaneColumnConfigItem[];
   }) => void;
 }
 
@@ -79,7 +89,10 @@ export default function AddAirplaneModal({
     }
   ]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  
+  const [columnConfig, setColumnConfig] = useState<AirplaneColumnConfigItem[]>(() =>
+    getDefaultAirplaneColumnConfig()
+  );
+
   // Template-related state
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
@@ -170,6 +183,7 @@ export default function AddAirplaneModal({
       setShowTemplateSelection(false);
       setShowSaveTemplateModal(false);
       setTemplateName("");
+      setColumnConfig(getDefaultAirplaneColumnConfig());
     }
   }, [isOpen]);
 
@@ -182,8 +196,10 @@ export default function AddAirplaneModal({
     if (data.showNotice !== undefined) setShowNotice(data.showNotice);
     if (data.direction) setDirection(data.direction);
     if (data.language) setLanguage(data.language);
+    const cfg = resolveAirplaneColumnConfig(data.columnConfig, data.columnLabels ?? undefined);
+    setColumnConfig(cfg);
     if (data.flights && data.flights.length > 0) {
-      setFlights(data.flights);
+      setFlights(syncFlightsCustomColumnValues(data.flights, cfg));
     }
     setShowTemplateSelection(false);
   };
@@ -204,9 +220,10 @@ export default function AddAirplaneModal({
         showTitle,
         noticeMessage,
         showNotice,
-        flights,
+        flights: syncFlightsCustomColumnValues(flights, columnConfig),
         direction,
         language,
+        columnConfig,
       };
 
       await saveAirplaneTemplate(templateName.trim(), templateData);
@@ -232,9 +249,10 @@ export default function AddAirplaneModal({
         showTitle,
         noticeMessage,
         showNotice,
-        flights,
+        flights: syncFlightsCustomColumnValues(flights, columnConfig),
         direction,
         language,
+        columnConfig,
       },
       exported_at: new Date().toISOString(),
     };
@@ -272,8 +290,10 @@ export default function AddAirplaneModal({
       if (data.showNotice !== undefined) setShowNotice(data.showNotice);
       if (data.direction) setDirection(data.direction);
       if (data.language) setLanguage(data.language);
+      const cfg = resolveAirplaneColumnConfig(data.columnConfig, data.columnLabels ?? undefined);
+      setColumnConfig(cfg);
       if (data.flights && data.flights.length > 0) {
-        setFlights(data.flights);
+        setFlights(syncFlightsCustomColumnValues(data.flights, cfg));
       }
 
       toast.success(language === 'ar' ? 'تم استيراد القالب بنجاح' : 'Template imported successfully');
@@ -335,39 +355,53 @@ export default function AddAirplaneModal({
       return;
     }
 
+    const synced = syncFlightsCustomColumnValues(
+      flights.map((f) => ({
+        ...f,
+        note: f.note?.trim() || undefined,
+      })),
+      columnConfig
+    );
+
     onSubmit({
       title: title.trim() || undefined,
       showTitle,
       noticeMessage: noticeMessage.trim() || undefined,
       showNotice,
-      flights: flights.map((f) => ({
-        ...f,
-        note: f.note?.trim() || undefined,
-      })),
+      flights: synced,
       direction,
       language,
+      columnConfig,
     });
 
     onClose();
   };
 
   const addFlight = () => {
-    setFlights([
-      ...flights,
-      {
-        date: new Date().toISOString().split('T')[0],
-        time: "",
-        airlineCompany: "",
-        airlineCompanyLink: "",
-        fromAirport: "",
-        fromAirportLink: "",
-        toAirport: "",
-        toAirportLink: "",
-        travelers: { adults: 1, children: 0, infants: 0 },
-        luggage: "20 كيلو",
-        note: ""
-      }
-    ]);
+    const customIds = columnConfig
+      .filter((c): c is Extract<AirplaneColumnConfigItem, { kind: "custom" }> => c.kind === "custom")
+      .map((c) => c.id);
+    const customColumnValues: Record<string, string> = {};
+    customIds.forEach((id) => {
+      customColumnValues[id] = "";
+    });
+    const newFlight: FlightData = {
+      date: new Date().toISOString().split("T")[0],
+      time: "",
+      airlineCompany: "",
+      airlineCompanyLink: "",
+      fromAirport: "",
+      fromAirportLink: "",
+      toAirport: "",
+      toAirportLink: "",
+      travelers: { adults: 1, children: 0, infants: 0 },
+      luggage: "20 كيلو",
+      note: "",
+    };
+    if (Object.keys(customColumnValues).length > 0) {
+      newFlight.customColumnValues = customColumnValues;
+    }
+    setFlights([...flights, newFlight]);
   };
 
   const removeFlight = (index: number) => {
@@ -389,6 +423,18 @@ export default function AddAirplaneModal({
         [field]: value
       };
     }
+    setFlights(newFlights);
+  };
+
+  const updateFlightCustomColumn = (index: number, columnId: string, value: string) => {
+    const newFlights = [...flights];
+    newFlights[index] = {
+      ...newFlights[index],
+      customColumnValues: {
+        ...newFlights[index].customColumnValues,
+        [columnId]: value,
+      },
+    };
     setFlights(newFlights);
   };
 
@@ -799,6 +845,28 @@ export default function AddAirplaneModal({
                       placeholder={t.modals.flightNotePlaceholder}
                     />
                   </div>
+
+                  {columnConfig
+                    .filter(
+                      (c): c is Extract<AirplaneColumnConfigItem, { kind: "custom" }> =>
+                        c.kind === "custom"
+                    )
+                    .map((col) => (
+                      <div key={col.id} className="mt-3">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          {columnLabel(col, language)}
+                        </label>
+                        <input
+                          type="text"
+                          value={flight.customColumnValues?.[col.id] ?? ""}
+                          onChange={(e) =>
+                            updateFlightCustomColumn(index, col.id, e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5568] focus:border-transparent text-sm"
+                          dir={language === "ar" ? "rtl" : "ltr"}
+                        />
+                      </div>
+                    ))}
                   
                   <div className="mt-3">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
