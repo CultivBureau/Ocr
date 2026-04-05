@@ -203,7 +203,10 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
         }
       }
 
-      if (branding.terms_and_conditions) {
+      const override = document.terms_and_conditions_override;
+      if (override !== undefined && override !== null) {
+        termsAndConditions = override;
+      } else if (branding.terms_and_conditions) {
         termsAndConditions = branding.terms_and_conditions;
       }
     }

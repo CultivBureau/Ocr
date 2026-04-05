@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import TermsAndConditionsEditor from "../components/TermsAndConditionsEditor";
 
 /**
  * Customizable Base Template Component
@@ -27,8 +28,13 @@ export interface BaseTemplateProps {
   showFooter?: boolean;
   footerClassName?: string;
 
-  // Terms & Conditions
+  // Terms & Conditions (resolved: document override or company default)
   termsAndConditions?: string | null;
+  /** Company default for inline editor seed / reset (not modified by document edits). */
+  companyTermsDefault?: string | null;
+  termsEditable?: boolean;
+  onTermsDocumentSave?: (html: string | null) => void | Promise<void>;
+  termsSavePending?: boolean;
   
   // Background Configuration
   backgroundColor?: string;
@@ -80,6 +86,10 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
   footerClassName = "",
   // Terms & Conditions
   termsAndConditions,
+  companyTermsDefault = null,
+  termsEditable = false,
+  onTermsDocumentSave,
+  termsSavePending = false,
   // Background
   backgroundColor,
   backgroundGradient,
@@ -206,36 +216,14 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
           {children}
         </div>
 
-        {/* Terms & Conditions */}
-        {termsAndConditions && (
-          <div
-            className="w-full px-6 pb-4"
-            dir="auto"
-            style={{ pageBreakInside: "avoid" }}
-          >
-            <div
-              style={{
-                borderTop: "1.5px solid #C4B454",
-                marginBottom: "8px",
-              }}
-            />
-            <div
-              style={{
-                fontFamily: "'Cairo', 'Arial', sans-serif",
-                fontSize: "14px",
-                fontWeight:900,
-                lineHeight: "1.8",
-                color: "#1a1a1a",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                textAlign: "right",
-                direction: "rtl",
-              }}
-            >
-              {termsAndConditions}
-            </div>
-          </div>
-        )}
+        {/* Terms & Conditions — inline Tiptap in editor; static / HTML in PDF */}
+        <TermsAndConditionsEditor
+          resolvedDisplay={termsAndConditions ?? null}
+          companyDefault={companyTermsDefault ?? null}
+          editable={termsEditable}
+          onSave={onTermsDocumentSave ?? (async () => {})}
+          isSaving={termsSavePending}
+        />
 
         {/* Footer Image */}
         {showFooter && footerImage && (

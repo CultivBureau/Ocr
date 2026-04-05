@@ -32,6 +32,10 @@ interface StructureRendererProps {
   headerImage?: string;
   footerImage?: string;
   termsAndConditions?: string | null;
+  companyTermsDefault?: string | null;
+  termsEditable?: boolean;
+  onTermsDocumentSave?: (html: string | null) => void | Promise<void>;
+  termsSavePending?: boolean;
   // If true, won't render BaseTemplate wrapper (useful when already wrapped)
   skipBaseTemplate?: boolean;
 }
@@ -60,6 +64,10 @@ export default function StructureRenderer({
   headerImage,
   footerImage,
   termsAndConditions,
+  companyTermsDefault,
+  termsEditable = false,
+  onTermsDocumentSave,
+  termsSavePending = false,
   skipBaseTemplate = false,
 }: StructureRendererProps) {
   const { t } = useLanguage();
@@ -519,6 +527,10 @@ export default function StructureRenderer({
       showHeader={!!headerImage}
       showFooter={!!footerImage}
       termsAndConditions={termsAndConditions}
+      companyTermsDefault={companyTermsDefault}
+      termsEditable={termsEditable}
+      onTermsDocumentSave={onTermsDocumentSave}
+      termsSavePending={termsSavePending}
       className={className}
     >
       {content}

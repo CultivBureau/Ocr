@@ -39,6 +39,7 @@ export interface Document {
   current_version?: number;
   original_version_id?: string | null;
   total_versions?: number;
+  terms_and_conditions_override?: string | null;
 }
 
 export interface DocumentResponse {

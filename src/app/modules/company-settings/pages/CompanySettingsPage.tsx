@@ -747,8 +747,8 @@ function CompanySettingsContent() {
                 </div>
                 <p className="text-sm text-gray-600 mb-3">
                   {isRTL
-                    ? "اكتب الشروط والأحكام الخاصة بشركتك. ستظهر تلقائياً في جميع المستندات المُنشأة لهذه الشركة."
-                    : "Write your company's terms and conditions. They will automatically appear on all documents generated for this company."}
+                    ? "اكتب الشروط والأحكام الافتراضية لشركتك. تُستخدم كبداية لكل مستند، ويمكن تعديل الشروط لكل مستند على حدة من محرر المستند دون تغيير هذا النص."
+                    : "Write your company's default terms and conditions. They apply to new documents as the starting text; each document can use its own wording from the document editor without changing this company text."}
                 </p>
 
                 {isEditingTerms ? (

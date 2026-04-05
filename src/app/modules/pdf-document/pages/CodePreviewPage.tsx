@@ -14,8 +14,10 @@ import { useSearchParams } from "next/navigation";
 import StructureRenderer from "../components/StructureRenderer";
 import CreateTableModal from "../components/CreateTableModal";
 import AddAirplaneModal, { FlightData } from "../components/AddAirplaneModal";
+import type { AirplaneColumnConfigItem } from "../types/airplaneColumnConfig";
+import { resolveAirplaneColumnConfig, syncFlightsCustomColumnValues } from "../types/airplaneColumnConfig";
 import EditFlightModal from "../components/EditFlightModal";
-import EditAirplaneSectionModal from "../components/EditAirplaneSectionModal";;
+import EditAirplaneSectionModal from "../components/EditAirplaneSectionModal";
 import AddHotelModal from "../components/AddHotelModal";
 import EditHotelModal from "../components/EditHotelModal";
 import EditHotelSectionModal from "../components/EditHotelSectionModal";
@@ -126,6 +128,7 @@ function CodePageContent() {
   const [currentVersion, setCurrentVersion] = useState<number>(1);
   const [totalVersions, setTotalVersions] = useState<number>(1);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [isSavingTerms, setIsSavingTerms] = useState(false);
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
   const [showAddAirplaneModal, setShowAddAirplaneModal] = useState(false);
   const [editingAirplaneId, setEditingAirplaneId] = useState<string | null>(null);
@@ -162,7 +165,15 @@ function CodePageContent() {
   // Company branding state
   const [headerImage, setHeaderImage] = useState<string | undefined>(undefined);
   const [footerImage, setFooterImage] = useState<string | undefined>(undefined);
-  const [termsAndConditions, setTermsAndConditions] = useState<string | null>(null);
+  const [companyTermsDefault, setCompanyTermsDefault] = useState<string | null>(null);
+  /** null = inherit company default */
+  const [termsConditionsOverride, setTermsConditionsOverride] = useState<string | null>(null);
+  const resolvedTerms = useMemo(() => {
+    if (termsConditionsOverride !== null) {
+      return termsConditionsOverride;
+    }
+    return companyTermsDefault;
+  }, [termsConditionsOverride, companyTermsDefault]);
   
   // Load saved suggestions when document ID changes
   // Load suggestions from document structure
@@ -528,14 +539,6 @@ function CodePageContent() {
         console.log(`[AIRPLANE CRUD] Adding flight to airplane section ${id}`);
       }
       
-      const newFlight: FlightData = {
-        date: new Date().toISOString().split('T')[0],
-        fromAirport: "",
-        toAirport: "",
-        travelers: { adults: 1, children: 0, infants: 0 },
-        luggage: "20 كيلو",
-      };
-      
       // Add flight to JSON structure
       setStructureWithUndo(prev => {
         const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'airplane');
@@ -546,6 +549,18 @@ function CodePageContent() {
         
         const updatedElements = [...prev.user.elements];
         const element = updatedElements[userElementIndex];
+        const cfg = resolveAirplaneColumnConfig(
+          element.data.columnConfig,
+          element.data.columnLabels
+        );
+        let newFlight: FlightData = {
+          date: new Date().toISOString().split('T')[0],
+          fromAirport: "",
+          toAirport: "",
+          travelers: { adults: 1, children: 0, infants: 0 },
+          luggage: "20 كيلو",
+        };
+        newFlight = syncFlightsCustomColumnValues([newFlight], cfg)[0];
         const flights = [...(element.data.flights || []), newFlight];
         
         updatedElements[userElementIndex] = {
@@ -712,6 +727,8 @@ function CodePageContent() {
     showNotice?: boolean;
     direction?: "rtl" | "ltr";
     language?: "ar" | "en";
+    columnConfig: AirplaneColumnConfigItem[];
+    flights: FlightData[];
   }) => {
     if (!editingAirplaneId) {
       return;
@@ -742,7 +759,14 @@ function CodePageContent() {
           ...element,
           data: {
             ...element.data,
-            ...props
+            title: props.title,
+            showTitle: props.showTitle,
+            noticeMessage: props.noticeMessage,
+            showNotice: props.showNotice,
+            direction: props.direction,
+            language: props.language,
+            columnConfig: props.columnConfig,
+            flights: props.flights,
           }
         };
         
@@ -796,7 +820,9 @@ function CodePageContent() {
     showNotice?: boolean;
     direction?: "rtl" | "ltr";
     language?: "ar" | "en";
-    flights?: FlightData[]; // Add flights data
+    flights?: FlightData[];
+    columnConfig?: AirplaneColumnConfigItem[];
+    columnLabels?: Record<string, string>;
   } | null => {
     if (!editingAirplaneId) {
       return null;
@@ -819,7 +845,9 @@ function CodePageContent() {
         showNotice: element.data.showNotice,
         direction: element.data.direction,
         language: element.data.language,
-        flights: element.data.flights // Include flights data for template saving
+        flights: element.data.flights,
+        columnConfig: element.data.columnConfig,
+        columnLabels: element.data.columnLabels,
       };
     } catch (error) {
       console.error('Error extracting section data:', error);
@@ -827,6 +855,25 @@ function CodePageContent() {
     
     return null;
   }, [editingAirplaneId, structure]);
+
+  const editFlightCustomColumns = useMemo((): Extract<
+    AirplaneColumnConfigItem,
+    { kind: "custom" }
+  >[] => {
+    if (!editingAirplaneId) return [];
+    const element = structure.user.elements.find(
+      (el) => el.id === editingAirplaneId && el.type === "airplane"
+    );
+    if (!element?.data) return [];
+    const cfg = resolveAirplaneColumnConfig(
+      element.data.columnConfig,
+      element.data.columnLabels
+    );
+    return cfg.filter(
+      (c): c is Extract<AirplaneColumnConfigItem, { kind: "custom" }> =>
+        c.kind === "custom"
+    );
+  }, [editingAirplaneId, structure.user.elements]);
 
   // Handler functions for hotel section actions - Updated to work with JSON structure
   const handleRemoveHotel = useCallback((id: string, hotelIndex: number) => {
@@ -1681,13 +1728,15 @@ function CodePageContent() {
         } else {
           setFooterImage(undefined);
         }
-        setTermsAndConditions(company.terms_and_conditions || null);
+        setCompanyTermsDefault(company.terms_and_conditions || null);
+        setTermsConditionsOverride(null);
       } catch (err) {
         console.error("Failed to fetch company branding for user company:", err);
         if (!cancelled) {
           setHeaderImage(undefined);
           setFooterImage(undefined);
-          setTermsAndConditions(null);
+          setCompanyTermsDefault(null);
+          setTermsConditionsOverride(null);
         }
       }
     })();
@@ -1835,19 +1884,26 @@ function CodePageContent() {
             setFooterImage(undefined);
           }
 
-          setTermsAndConditions(company.terms_and_conditions || null);
+          setCompanyTermsDefault(company.terms_and_conditions || null);
+          setTermsConditionsOverride(
+            doc.terms_and_conditions_override !== undefined
+              ? doc.terms_and_conditions_override
+              : null
+          );
         } catch (err) {
           console.error("Failed to fetch company branding:", err);
           // Don't set images if fetch fails
           setHeaderImage(undefined);
           setFooterImage(undefined);
-          setTermsAndConditions(null);
+          setCompanyTermsDefault(null);
+          setTermsConditionsOverride(null);
         }
       } else {
         // No company_id, clear branding
         setHeaderImage(undefined);
         setFooterImage(undefined);
-        setTermsAndConditions(null);
+        setCompanyTermsDefault(null);
+        setTermsConditionsOverride(null);
       }
     } catch (err) {
       console.error("Failed to load document:", err);
@@ -1895,22 +1951,48 @@ function CodePageContent() {
             setFooterImage(undefined);
           }
 
-          setTermsAndConditions(company.terms_and_conditions || null);
+          setCompanyTermsDefault(company.terms_and_conditions || null);
+          setTermsConditionsOverride(
+            doc.terms_and_conditions_override !== undefined
+              ? doc.terms_and_conditions_override
+              : null
+          );
         } catch (err) {
           console.error("Failed to fetch company branding:", err);
           setHeaderImage(undefined);
           setFooterImage(undefined);
-          setTermsAndConditions(null);
+          setCompanyTermsDefault(null);
+          setTermsConditionsOverride(null);
         }
       } else {
         setHeaderImage(undefined);
         setFooterImage(undefined);
-        setTermsAndConditions(null);
+        setCompanyTermsDefault(null);
+        setTermsConditionsOverride(null);
       }
     } catch (err) {
       console.error("Failed to load document metadata:", err);
     }
   };
+
+  const handleTermsDocumentSave = useCallback(
+    async (html: string | null) => {
+      setTermsConditionsOverride(html);
+      if (documentId) {
+        setIsSavingTerms(true);
+        try {
+          await updateDocument(documentId, {
+            terms_and_conditions_override: html,
+          });
+        } catch (e) {
+          alert(t.modals.documentTermsSaveFailed);
+        } finally {
+          setIsSavingTerms(false);
+        }
+      }
+    },
+    [documentId, t.modals.documentTermsSaveFailed]
+  );
 
   const handleRestore = async () => {
     if (!documentId) return;
@@ -2085,6 +2167,9 @@ function CodePageContent() {
             ...sourceMetadata,
             savedAt: new Date().toISOString(),
           },
+          ...(termsConditionsOverride !== null
+            ? { terms_and_conditions_override: termsConditionsOverride }
+            : {}),
         });
         
         if (response.document?.id) {
@@ -2109,7 +2194,7 @@ function CodePageContent() {
     } finally {
       setIsSaving(false);
     }
-  }, [structure, documentId, sourceMetadata, hasChanges]);
+  }, [structure, documentId, sourceMetadata, hasChanges, termsConditionsOverride]);
 
   const handleExportPDFWithPlaywright = useCallback(async () => {
     // Ensure document is saved first
@@ -2145,6 +2230,9 @@ function CodePageContent() {
             ...sourceMetadata,
             savedAt: new Date().toISOString(),
           },
+          ...(termsConditionsOverride !== null
+            ? { terms_and_conditions_override: termsConditionsOverride }
+            : {}),
         });
         
         console.log('Save response:', response);
@@ -2203,7 +2291,7 @@ function CodePageContent() {
     } finally {
       setIsExportingPlaywright(false);
     }
-  }, [documentId, sourceMetadata, structure]);
+  }, [documentId, sourceMetadata, structure, termsConditionsOverride]);
 
   // Fallback copy method for mobile and older browsers
   const copyToClipboardFallback = (text: string): boolean => {
@@ -2331,6 +2419,7 @@ function CodePageContent() {
     flights: FlightData[];
     direction?: "rtl" | "ltr";
     language?: "ar" | "en";
+    columnConfig?: AirplaneColumnConfigItem[];
   }) => {
     // Generate unique ID for user element
     const elementId = `user_airplane_${Date.now()}`;
@@ -2346,7 +2435,10 @@ function CodePageContent() {
         noticeMessage: data.noticeMessage,
         showNotice: data.showNotice,
         direction: data.direction || "rtl",
-        language: data.language || "ar"
+        language: data.language || "ar",
+        ...(data.columnConfig && data.columnConfig.length > 0
+          ? { columnConfig: data.columnConfig }
+          : {}),
       }
     };
     
@@ -2951,7 +3043,11 @@ function CodePageContent() {
               editable={true}
               headerImage={headerImage}
               footerImage={footerImage}
-              termsAndConditions={termsAndConditions}
+              termsAndConditions={resolvedTerms}
+              companyTermsDefault={companyTermsDefault}
+              termsEditable={!!user?.company_id}
+              onTermsDocumentSave={handleTermsDocumentSave}
+              termsSavePending={isSavingTerms}
               onMoveUp={handleMoveUp}
               onMoveDown={handleMoveDown}
               onSectionEdit={(section) => {
@@ -3095,6 +3191,7 @@ function CodePageContent() {
         }}
         onSubmit={handleEditFlightSubmit}
         initialFlight={getInitialFlightData()}
+        customColumns={editFlightCustomColumns}
       />
       
       {/* Edit Airplane Section Modal */}

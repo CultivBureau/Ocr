@@ -751,6 +751,15 @@ export const translations = {
       rtl: "Right to Left (RTL)",
       ltr: "Left to Right (LTR)",
       saveChanges: "Save Changes",
+      documentTermsTitle: "Terms & Conditions (this document)",
+      documentTermsMenu: "Document terms",
+      documentTermsDescription:
+        "Edits apply only to this document. Company-wide terms in settings are unchanged. Matching the company text follows updates from settings.",
+      documentTermsPlaceholder: "Terms for this document only…",
+      documentTermsResetToCompany: "Use company default text",
+      documentTermsSaved: "Document terms saved",
+      documentTermsSaveFailed: "Could not save document terms",
+      documentTermsCharacters: "characters",
       
       // Airplane Modal
       addAirplaneSection: "Add Airplane Section",
@@ -786,6 +795,17 @@ export const translations = {
       createAirplaneSectionDesc: "Create a new airplane section and save it as a template for future use",
       templateTipDesc: "You can save the forms you create and reuse them quickly",
       arrivalAirportNotice: "Be at the airport 2 hours before departure",
+      airplaneColumnsTitle: "Table columns",
+      airplaneColumnsHelp:
+        "Show or hide columns, rename labels (Arabic / English), reorder, or add custom columns. Values for custom columns are filled per flight in Edit Flight.",
+      columnTypeBuiltin: "Standard",
+      columnTypeCustom: "Custom",
+      addStandardColumn: "Add standard column",
+      moveColumnUp: "Move up",
+      moveColumnDown: "Move down",
+      airplaneRemoveColumn: "Remove",
+      airplaneAtLeastOneColumn: "Keep at least one column.",
+      newColumnNamePlaceholder: "New column name",
       
       // Hotel Modal
       addHotelSection: "Add Hotel Section",
@@ -1714,6 +1734,15 @@ export const translations = {
       rtl: "من اليمين لليسار (RTL)",
       ltr: "من اليسار لليمين (LTR)",
       saveChanges: "حفظ التغييرات",
+      documentTermsTitle: "الشروط والأحكام (هذا المستند)",
+      documentTermsMenu: "شروط المستند",
+      documentTermsDescription:
+        "التعديلات تنطبق على هذا المستند فقط. الشروط العامة للشركة في الإعدادات لا تتغير. مطابقة نص الشركة تتبع التحديثات من الإعدادات.",
+      documentTermsPlaceholder: "شروط خاصة بهذا المستند فقط…",
+      documentTermsResetToCompany: "استخدام نص الشركة الافتراضي",
+      documentTermsSaved: "تم حفظ شروط المستند",
+      documentTermsSaveFailed: "تعذر حفظ شروط المستند",
+      documentTermsCharacters: "حرف",
       
       // Airplane Modal
       addAirplaneSection: "إضافة قسم الطيران",
@@ -1749,6 +1778,17 @@ export const translations = {
       createAirplaneSectionDesc: "ابدأ بإنشاء قسم طيران جديد وحفظه كقالب لاستخدام لاحق",
       templateTipDesc: "ستتمكن من حفظ النماذج التي تنشئها وإعادة استخدامها بسرعة",
       arrivalAirportNotice: "التواجد في صالة المطار قبل الإقلاع بساعتين",
+      airplaneColumnsTitle: "أعمدة الجدول",
+      airplaneColumnsHelp:
+        "إظهار أو إخفاء الأعمدة، تغيير التسميات (عربي / إنجليزي)، الترتيب، أو إضافة أعمدة مخصصة. تُعبأ قيم الأعمدة المخصصة لكل رحلة من تعديل الرحلة.",
+      columnTypeBuiltin: "قياسي",
+      columnTypeCustom: "مخصص",
+      addStandardColumn: "إضافة عمود قياسي",
+      moveColumnUp: "أعلى",
+      moveColumnDown: "أسفل",
+      airplaneRemoveColumn: "إزالة",
+      airplaneAtLeastOneColumn: "يجب الإبقاء على عمود واحد على الأقل.",
+      newColumnNamePlaceholder: "اسم العمود الجديد",
       
       // Hotel Modal
       addHotelSection: "إضافة قسم الفنادق",

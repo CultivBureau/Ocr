@@ -83,6 +83,8 @@ export interface Document {
   total_versions?: number;
   creator_name?: string | null;
   creator_email?: string | null;
+  /** If set (including empty string), replaces company terms for this document only. Null/undefined means use company default. */
+  terms_and_conditions_override?: string | null;
 }
 
 export interface DocumentListResponse {
@@ -114,6 +116,7 @@ export interface CreateDocumentRequest {
     meta: Record<string, any>;
   };
   metadata?: Record<string, any>;
+  terms_and_conditions_override?: string | null;
 }
 
 export interface UpdateDocumentRequest {
@@ -130,6 +133,8 @@ export interface UpdateDocumentRequest {
     meta: Record<string, any>;
   };
   metadata?: Record<string, any>;
+  /** Omit to leave unchanged; null to clear and use company default again */
+  terms_and_conditions_override?: string | null;
 }
 
 export interface ShareDocumentRequest {
