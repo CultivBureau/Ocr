@@ -206,6 +206,8 @@ export interface SectionContentEditorProps {
   onChange: (html: string) => void;
   editable?: boolean;
   className?: string;
+  /** When false, hides the keyboard/hint strip under the editor (e.g. table cell modal with explicit Save). */
+  showFooterHint?: boolean;
 }
 
 /* ─────────────────────────────────────────
@@ -697,6 +699,7 @@ export default function SectionContentEditor({
   onChange,
   editable = true,
   className = "",
+  showFooterHint = true,
 }: SectionContentEditorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const initialHtmlRef = useRef<string | null>(null);
@@ -872,7 +875,7 @@ export default function SectionContentEditor({
           <EditorContent editor={editor} />
 
           {/* Character hint at bottom when focused */}
-          {isFocused && (
+          {showFooterHint && isFocused && (
             <div className="border-t border-slate-100/80 px-4 py-1.5">
               <p className="text-[10px] leading-relaxed text-slate-400">
                 <span className="font-medium text-slate-500">Undo / Redo</span> in the toolbar

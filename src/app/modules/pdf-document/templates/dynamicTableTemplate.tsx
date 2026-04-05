@@ -1,7 +1,58 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
+import SectionContentEditor from "@/app/modules/pdf-document/components/SectionContentEditor";
+import {
+  legacySectionContentToHtml,
+  sectionContentLooksLikeHtml,
+} from "@/app/modules/pdf-document/utils/legacySectionContentToHtml";
+
+function nestedHtmlAlignClasses(alignClass: string): string {
+  if (alignClass === "text-center") {
+    return "[&_p]:text-center [&_li]:text-center [&_ul]:text-center [&_ol]:text-center";
+  }
+  if (alignClass === "text-right") {
+    return "[&_p]:text-right [&_li]:text-right [&_ul]:text-right [&_ol]:text-right";
+  }
+  return "[&_p]:text-left [&_li]:text-left [&_ul]:text-left [&_ol]:text-left";
+}
+
+function DynamicTableCellPreview({
+  raw,
+  compact,
+  alignClass = "text-center",
+}: {
+  raw: string;
+  compact?: boolean;
+  alignClass?: string;
+}) {
+  const t = raw.trim();
+  if (!t) {
+    return <span className="text-gray-400">—</span>;
+  }
+  const nested = nestedHtmlAlignClasses(alignClass);
+  const prose = compact
+    ? `[&_p]:my-0 [&_p]:leading-snug [&_ul]:my-0 [&_ol]:my-0 [&_li]:my-0 [&_strong]:font-semibold ${nested}`
+    : nested;
+  if (sectionContentLooksLikeHtml(raw)) {
+    return (
+      <div
+        className={`dynamic-table-cell-html wrap-break-word hyphens-auto ${alignClass} ${prose}`}
+        style={{ wordBreak: "break-word" }}
+        dangerouslySetInnerHTML={{ __html: raw }}
+      />
+    );
+  }
+  return (
+    <div
+      className={`whitespace-pre-wrap wrap-break-word hyphens-auto ${alignClass}`}
+      style={{ wordBreak: "break-word" }}
+    >
+      {raw}
+    </div>
+  );
+}
 
 /**
  * Customizable Dynamic Table Template Component
@@ -130,7 +181,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
   cellTextColor = "text-gray-700",
   cellTextSize = "sm",
   cellPadding = "px-6 py-4",
-  cellAlignment = "left",
+  cellAlignment = "center",
   // Row
   stripedRows = true,
   stripeColor = "bg-gray-50/30",
@@ -162,6 +213,12 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  /** One modal + one Tiptap instance — only mounted while editing a cell */
+  const [cellEditor, setCellEditor] = useState<{ row: number; col: number } | null>(
+    null,
+  );
+  const cellDraftRef = useRef("");
+  const [cellDraft, setCellDraft] = useState("");
   const [selectedColor, setSelectedColor] = useState<'dark-blue' | 'dark-red' | 'pink' | 'green' | 'black' | 'purple' | 'teal' | 'orange' | 'indigo' | 'emerald'>(tableBackgroundColor);
   
   // Get background color classes - Enhanced with more professional options
@@ -263,10 +320,17 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
     headerClassName,
   ].filter(Boolean).join(" ");
 
+  const cellAlignClass =
+    cellAlignment === "left"
+      ? "text-left"
+      : cellAlignment === "right"
+        ? "text-right"
+        : "text-center";
+
   // Build cell classes - Compact for perfect compression
   const cellClasses = [
     cellTextColor,
-    "text-center",
+    cellAlignClass,
     "border-r border-gray-200",
     "last:border-r-0",
     cellClassName,
@@ -302,6 +366,44 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
     tableWrapperClassName,
     className,
   ].filter(Boolean).join(" ");
+
+  const openCellEditor = (row: number, col: number) => {
+    const raw = normalizedRows[row]?.[col];
+    const str = raw !== null && raw !== undefined ? String(raw) : "";
+    const html = legacySectionContentToHtml(str);
+    cellDraftRef.current = html;
+    setCellDraft(html);
+    setCellEditor({ row, col });
+  };
+
+  const commitCellEditor = () => {
+    if (!cellEditor || !onCellChange) return;
+    onCellChange(cellEditor.row, cellEditor.col, cellDraftRef.current);
+    setCellEditor(null);
+  };
+
+  const cancelCellEditor = () => {
+    setCellEditor(null);
+  };
+
+  useEffect(() => {
+    if (!cellEditor) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setCellEditor(null);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        if (onCellChange) {
+          onCellChange(cellEditor.row, cellEditor.col, cellDraftRef.current);
+        }
+        setCellEditor(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [cellEditor, onCellChange]);
 
   return (
     <div className={`${wrapperClasses} relative px-4 py-3`} style={style}>
@@ -532,6 +634,89 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
           message="Are you sure you want to delete this table? This action cannot be undone."
         />
       )}
+
+      {cellEditor && editable && onCellChange && (
+        <div
+          className="no-pdf-export fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4"
+          role="presentation"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            aria-label="Close cell editor"
+            onClick={cancelCellEditor}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dynamic-table-cell-editor-title"
+            className="relative z-10 flex max-h-[min(90vh,720px)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white px-4 py-3">
+              <div className="min-w-0">
+                <p
+                  id="dynamic-table-cell-editor-title"
+                  className="truncate text-sm font-bold text-gray-900"
+                >
+                  Edit cell
+                </p>
+                <p className="truncate text-xs text-gray-500">
+                  {cleanHeaders[cellEditor.col] ?? `Column ${cellEditor.col + 1}`} · Row{" "}
+                  {cellEditor.row + 1}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={cancelCellEditor}
+                className="shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100"
+                aria-label="Close"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto border-b border-gray-100">
+              <SectionContentEditor
+                key={`${cellEditor.row}-${cellEditor.col}`}
+                value={cellDraft}
+                onChange={(html) => {
+                  cellDraftRef.current = html;
+                  setCellDraft(html);
+                }}
+                editable
+                showFooterHint={false}
+                className="border-0 shadow-none"
+              />
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 bg-gray-50/80 px-4 py-3">
+              <p className="mr-auto hidden text-[11px] text-gray-400 sm:block">
+                ⌘↵ save · Esc cancel
+              </p>
+              <button
+                type="button"
+                onClick={cancelCellEditor}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={commitCellEditor}
+                className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-95"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Table Title - Compact */}
       {showTitle && title && (
@@ -654,8 +839,8 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                         key={cellIndex} 
                         className={`${cellClasses} ${cellIndex === 0 ? 'relative' : ''}`}
                         style={{ 
-                          fontSize: '8px',
-                          lineHeight: '1.3',
+                          fontSize: '10px',
+                          lineHeight: '1.35',
                           padding: '5px 4px',
                           verticalAlign: 'middle'
                         }}
@@ -676,24 +861,55 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                             </svg>
                           </button>
                         )}
-                        <div 
-                          className={`wrap-break-word font-medium ${editable ? 'cursor-text hover:bg-blue-50 rounded-md px-1.5 py-1 transition-all duration-200 min-h-[1.2em]' : ''}`}
-                          style={{ wordBreak: 'break-word' }}
-                          contentEditable={editable}
-                          suppressContentEditableWarning={true}
-                          onBlur={(e) => {
-                            if (editable && onCellChange) {
-                              onCellChange(rowIndex, cellIndex, e.currentTarget.textContent || '');
-                            }
-                          }}
-                          onClick={(e) => {
-                            if (editable && e.currentTarget !== document.activeElement) {
-                              e.currentTarget.focus();
-                            }
-                          }}
-                        >
-                          {cellValue || '—'}
-                        </div>
+                        {editable && onCellChange ? (
+                          <div className="group/cell relative w-full">
+                            <button
+                              type="button"
+                              className={`no-pdf-export min-h-[1.35em] w-full rounded-md px-1 py-0.5 font-medium text-gray-800 transition-colors hover:bg-blue-50/90 focus:outline-none focus:ring-2 focus:ring-blue-400/50 ${cellAlignClass}`}
+                              style={{ wordBreak: "break-word" }}
+                              title="Open rich text editor"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openCellEditor(rowIndex, cellIndex);
+                              }}
+                            >
+                              <DynamicTableCellPreview
+                                raw={cellValue}
+                                compact
+                                alignClass={cellAlignClass}
+                              />
+                            </button>
+                            <span
+                              className="no-pdf-export pointer-events-none absolute top-0 end-0 rounded bg-white/95 p-0.5 text-blue-600 opacity-0 shadow-sm ring-1 ring-gray-200/90 transition-opacity group-hover/cell:opacity-100"
+                              aria-hidden
+                            >
+                              <svg
+                                className="h-2.5 w-2.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                            </span>
+                          </div>
+                        ) : (
+                          <div
+                            className={`wrap-break-word font-medium text-gray-800 ${cellAlignClass}`}
+                            style={{ wordBreak: "break-word" }}
+                          >
+                            <DynamicTableCellPreview
+                              raw={cellValue}
+                              compact
+                              alignClass={cellAlignClass}
+                            />
+                          </div>
+                        )}
                       </td>
                     );
                   })}
