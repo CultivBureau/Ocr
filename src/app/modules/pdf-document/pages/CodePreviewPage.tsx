@@ -42,6 +42,7 @@ import {
 import {
   collectClaimedSupersedesIds,
   findSupersedesGeneratedIds,
+  repairTransportSupersedes,
 } from "../utils/aiSuggestionSupersedes";
 import { useDocumentStructureHistory } from "../hooks/useDocumentStructureHistory";
 
@@ -64,6 +65,7 @@ const defaultStructure: SeparatedStructure = {
 
 // Utility function to remove duplicates from structure
 const deduplicateStructure = (structure: SeparatedStructure): SeparatedStructure => {
+  structure = repairTransportSupersedes(structure);
   // Deduplicate user elements by ID
   const seenIds = new Set<string>();
   const uniqueElements = structure.user.elements.filter(el => {
@@ -1582,7 +1584,7 @@ function CodePageContent() {
         const parsed = JSON.parse(storedExtractedData);
         // Ensure it's v2 format
         if (parsed && parsed.generated && parsed.user && parsed.layout) {
-          const loadedStructure = parsed as SeparatedStructure;
+          const loadedStructure = deduplicateStructure(parsed as SeparatedStructure);
           setStructure(loadedStructure);
           clearHistory();
           
@@ -1633,7 +1635,7 @@ function CodePageContent() {
       try {
         const parsed = JSON.parse(uploadedStructure);
         if (parsed && parsed.generated && parsed.user && parsed.layout) {
-          const loadedStructure = parsed as SeparatedStructure;
+          const loadedStructure = deduplicateStructure(parsed as SeparatedStructure);
           setStructure(loadedStructure);
           clearHistory();
           // Store as initial structure after load
@@ -1762,6 +1764,7 @@ function CodePageContent() {
       
       // Load v2 structure from extracted_data
       let loadedStructure: SeparatedStructure | null = null;
+      let structureForInitialRef: SeparatedStructure | null = null;
       if (doc.extracted_data) {
         const extractedData = doc.extracted_data as any;
         // Ensure it's v2 format
@@ -1769,6 +1772,7 @@ function CodePageContent() {
           loadedStructure = extractedData as SeparatedStructure;
           // Apply deduplication to clean up any duplicate entries
           const cleanedStructure = deduplicateStructure(loadedStructure);
+          structureForInitialRef = cleanedStructure;
           setStructure(cleanedStructure);
           clearHistory();
         } else if (extractedData.sections || extractedData.tables) {
@@ -1787,15 +1791,16 @@ function CodePageContent() {
             ],
             meta: extractedData.meta || {}
           };
+          structureForInitialRef = loadedStructure;
           setStructure(loadedStructure);
           clearHistory();
         }
       }
       
-      // Store as initial structure after load
-      if (loadedStructure) {
+      // Store as initial structure after load (must match what setStructure received)
+      if (structureForInitialRef) {
         setTimeout(() => {
-          initialStructureRef.current = JSON.parse(JSON.stringify(loadedStructure));
+          initialStructureRef.current = JSON.parse(JSON.stringify(structureForInitialRef));
           setHasChanges(false);
         }, 100);
       }
