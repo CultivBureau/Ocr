@@ -6,6 +6,7 @@ import { saveAirplaneTemplate } from "@/app/modules/pdf-document/services/Templa
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
 import { FlightData } from './AddAirplaneModal';
 import { useLanguage } from "@/app/modules/shared/contexts/LanguageContext";
+import type { AirplaneColumnConfigItem } from "../types/airplaneColumnConfig";
 
 interface EditAirplaneSectionModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ interface EditAirplaneSectionModalProps {
     showNotice?: boolean;
     direction?: "rtl" | "ltr";
     language?: "ar" | "en";
+    columnConfig: AirplaneColumnConfigItem[];
+    flights: FlightData[];
   }) => void;
   initialData: {
     title?: string;
@@ -25,7 +28,8 @@ interface EditAirplaneSectionModalProps {
     showNotice?: boolean;
     direction?: "rtl" | "ltr";
     language?: "ar" | "en";
-    flights?: FlightData[]; // Add flights data
+    flights?: FlightData[];
+    columnConfig?: AirplaneColumnConfigItem[];
   } | null;
 }
 
@@ -45,6 +49,7 @@ export default function EditAirplaneSectionModal({
   
   // Store flights data for template saving
   const [flights, setFlights] = useState<FlightData[]>([]);
+  const [columnConfig, setColumnConfig] = useState<AirplaneColumnConfigItem[]>([]);
   
   // Template-related state
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
@@ -62,6 +67,7 @@ export default function EditAirplaneSectionModal({
       setDirection(initialData.direction || "rtl");
       setLanguage(initialData.language || "ar");
       setFlights(initialData.flights || []); // Store flights data
+      setColumnConfig(initialData.columnConfig ?? []);
     }
   }, [isOpen, initialData]);
 
@@ -75,6 +81,8 @@ export default function EditAirplaneSectionModal({
       showNotice,
       direction,
       language,
+      columnConfig,
+      flights,
     });
 
     onClose();

@@ -6,12 +6,15 @@ import { useLanguage } from "@/app/modules/shared/contexts/LanguageContext";
 import { FlightData } from './AddAirplaneModal';
 import { getCompanySettings, getAirlineCompanies, addAirlineCompanyUser } from "@/app/modules/company-settings/services/CompanySettingsApi";
 import AddAirlineCompanyModal from "./AddAirlineCompanyModal";
+import type { AirplaneColumnConfigItem } from "../types/airplaneColumnConfig";
 
 interface EditFlightModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (flight: FlightData) => void;
   initialFlight: FlightData | null;
+  /** Optional custom flight row keys (from airplane column config); values are preserved on save. */
+  customColumns?: Extract<AirplaneColumnConfigItem, { kind: "custom" }>[];
 }
 
 export default function EditFlightModal({
@@ -19,6 +22,7 @@ export default function EditFlightModal({
   onClose,
   onSubmit,
   initialFlight,
+  customColumns = [],
 }: EditFlightModalProps) {
   const { t, isRTL, dir } = useLanguage();
   const [date, setDate] = useState("");
@@ -120,7 +124,7 @@ export default function EditFlightModal({
       return;
     }
 
-    onSubmit({
+    const base: FlightData = {
       date,
       time: time.trim() || undefined,
       airlineCompany: airlineCompany.trim() || undefined,
@@ -132,7 +136,18 @@ export default function EditFlightModal({
       travelers: { adults, children, infants },
       luggage: luggage.trim(),
       note: note.trim() || undefined,
-    });
+    };
+
+    const custom: Record<string, string> = {};
+    if (initialFlight && customColumns.length > 0) {
+      const src = initialFlight as unknown as Record<string, unknown>;
+      for (const col of customColumns) {
+        const v = src[col.id];
+        custom[col.id] = v === undefined || v === null ? "" : String(v);
+      }
+    }
+
+    onSubmit({ ...base, ...custom } as FlightData);
 
     onClose();
   };
