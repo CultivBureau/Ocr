@@ -3,6 +3,7 @@ import StructureRenderer from "@/app/modules/pdf-document/components/StructureRe
 import BaseTemplate from "@/app/modules/pdf-document/templates/baseTemplate";
 import type { SeparatedStructure } from "@/app/modules/pdf-document/types/ExtractTypes";
 import { getDocumentServer, getCompanyBrandingServer } from "@/app/modules/history/services/HistoryApiServer";
+import { getServerApiBaseUrl } from "@/app/modules/shared/utils/serverApiBaseUrl";
 import "./print.css";
 import "./fonts.css";
 
@@ -157,9 +158,9 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
         const authToken = cookieStore.get("auth_token")?.value;
         
         if (authToken) {
-          const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000";
+          const apiBase = getServerApiBaseUrl();
           try {
-            const userResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+            const userResponse = await fetch(`${apiBase}/auth/me`, {
               method: "GET",
               headers: {
                 "Authorization": `Bearer ${authToken}`,
@@ -190,16 +191,16 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
       if (branding.header_image) {
         headerImage = branding.header_image;
         if (headerImage && !headerImage.startsWith("http")) {
-          const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000";
-          headerImage = `${API_BASE_URL}${headerImage.startsWith("/") ? "" : "/"}${headerImage}`;
+          const apiBase = getServerApiBaseUrl();
+          headerImage = `${apiBase}${headerImage.startsWith("/") ? "" : "/"}${headerImage}`;
         }
       }
       
       if (branding.footer_image) {
         footerImage = branding.footer_image;
         if (footerImage && !footerImage.startsWith("http")) {
-          const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000";
-          footerImage = `${API_BASE_URL}${footerImage.startsWith("/") ? "" : "/"}${footerImage}`;
+          const apiBase = getServerApiBaseUrl();
+          footerImage = `${apiBase}${footerImage.startsWith("/") ? "" : "/"}${footerImage}`;
         }
       }
 

@@ -14,8 +14,11 @@ import { useSearchParams } from "next/navigation";
 import StructureRenderer from "../components/StructureRenderer";
 import CreateTableModal from "../components/CreateTableModal";
 import AddAirplaneModal, { FlightData } from "../components/AddAirplaneModal";
-import type { AirplaneColumnConfigItem } from "../types/airplaneColumnConfig";
-import { resolveAirplaneColumnConfig, syncFlightsCustomColumnValues } from "../types/airplaneColumnConfig";
+import type { AirplaneColumnConfigItem } from "@/app/modules/pdf-document/types/airplaneColumnConfig";
+import {
+  resolveAirplaneColumnConfig,
+  syncFlightsCustomColumnValues,
+} from "@/app/modules/pdf-document/types/airplaneColumnConfig";
 import EditFlightModal from "../components/EditFlightModal";
 import EditAirplaneSectionModal from "../components/EditAirplaneSectionModal";
 import AddHotelModal from "../components/AddHotelModal";
