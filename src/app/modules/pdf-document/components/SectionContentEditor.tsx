@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
 import { mergeAttributes, posToDOMRect, type Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Paragraph from "@tiptap/extension-paragraph";
 import { BulletList, ListItem, OrderedList } from "@tiptap/extension-list";
+import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
 import { TextStyleKit } from "@tiptap/extension-text-style/text-style-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import { BubbleMenu } from "@tiptap/react/menus";
@@ -26,9 +28,15 @@ import {
   Undo2,
   Redo2,
   Eraser,
+  ImagePlus,
+  Paperclip,
+  LoaderCircle,
+  Link2,
+  Pencil,
 } from "lucide-react";
 import { undoDepth, redoDepth } from "@tiptap/pm/history";
 import { legacySectionContentToHtml } from "../utils/legacySectionContentToHtml";
+import { uploadFileWithProgress } from "../services/PdfApi";
 
 /* ─────────────────────────────────────────
    Bidi / language (dominant doc hint + block-level dir="auto")
@@ -199,6 +207,29 @@ const PRESET_HIGHLIGHTS = [
 
 function normalizeIncomingHtml(raw: string): string {
   return legacySectionContentToHtml(raw || "");
+}
+
+const PUBLIC_API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000";
+
+const IMAGE_MIME_PREFIX = "image/";
+const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/jpg,image/webp,image/gif";
+const ACCEPTED_ATTACHMENT_TYPES =
+  ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/zip,application/x-rar-compressed";
+
+function resolveUploadedAssetUrl(filePath: string): string {
+  if (!filePath) return "";
+  if (/^https?:\/\//i.test(filePath)) return filePath;
+  return `${PUBLIC_API_BASE_URL}${filePath.startsWith("/") ? filePath : `/${filePath}`}`;
+}
+
+function createSafeAttachmentLabel(name: string): string {
+  return name.replace(/[<>]/g, "").trim() || "Attachment";
+}
+
+function isSupportedEditorAsset(file: File): boolean {
+  if (file.type.startsWith(IMAGE_MIME_PREFIX)) return true;
+  return file.size > 0;
 }
 
 export interface SectionContentEditorProps {
@@ -506,7 +537,19 @@ function ColorPickerBtn({
 /* ─────────────────────────────────────────
    Full formatting toolbar (always shown in edit mode)
 ───────────────────────────────────────── */
-function Toolbar({ editor }: { editor: Editor }) {
+function Toolbar({
+  editor,
+  onInsertImage,
+  onAttachFile,
+  isUploadingAsset,
+  uploadPercent,
+}: {
+  editor: Editor;
+  onInsertImage: () => void;
+  onAttachFile: () => void;
+  isUploadingAsset: boolean;
+  uploadPercent: number | null;
+}) {
   const state = useEditorState({
     editor,
     selector: (s) => ({
@@ -624,6 +667,27 @@ function Toolbar({ editor }: { editor: Editor }) {
 
       <Divider />
 
+      <ToolBtn
+        title="Insert image"
+        disabled={isUploadingAsset}
+        onClick={onInsertImage}
+      >
+        {isUploadingAsset ? (
+          <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <ImagePlus className="h-3.5 w-3.5" />
+        )}
+      </ToolBtn>
+      <ToolBtn
+        title="Attach file"
+        disabled={isUploadingAsset}
+        onClick={onAttachFile}
+      >
+        <Paperclip className="h-3.5 w-3.5" />
+      </ToolBtn>
+
+      <Divider />
+
       {/* Clear formatting */}
       <ToolBtn
         title="Clear all formatting"
@@ -634,6 +698,11 @@ function Toolbar({ editor }: { editor: Editor }) {
       >
         <Eraser className="h-3.5 w-3.5" />
       </ToolBtn>
+      {isUploadingAsset && (
+        <span className="ml-1 text-[11px] font-medium text-blue-600">
+          Uploading{uploadPercent != null ? ` ${uploadPercent}%` : "..."}
+        </span>
+      )}
     </div>
   );
 }
@@ -642,6 +711,11 @@ function Toolbar({ editor }: { editor: Editor }) {
    Mini bubble menu (appears on selection)
 ───────────────────────────────────────── */
 function BubbleMenuInner({ editor }: { editor: Editor }) {
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [linkLabelDraft, setLinkLabelDraft] = useState("");
+  const [linkHrefDraft, setLinkHrefDraft] = useState("");
+  const [linkRange, setLinkRange] = useState<{ from: number; to: number } | null>(null);
+
   const state = useEditorState({
     editor,
     selector: (s) => ({
@@ -649,10 +723,47 @@ function BubbleMenuInner({ editor }: { editor: Editor }) {
       italic: s.editor.isActive("italic"),
       underline: s.editor.isActive("underline"),
       strike: s.editor.isActive("strike"),
+      link: s.editor.isActive("link"),
     }),
   });
 
   if (!state) return null;
+
+  const openLinkEditModal = () => {
+    const { state: editorState } = editor;
+    const { from, to } = editorState.selection;
+    const selectedText = editorState.doc.textBetween(from, to, " ").trim();
+    const currentHref = (editor.getAttributes("link").href as string | undefined) ?? "";
+    setLinkRange({ from, to });
+    setLinkLabelDraft(selectedText || "Attachment");
+    setLinkHrefDraft(currentHref);
+    setIsLinkModalOpen(true);
+  };
+
+  const closeLinkEditModal = () => {
+    setIsLinkModalOpen(false);
+  };
+
+  const saveLinkChanges = () => {
+    const cleanLabel = createSafeAttachmentLabel(linkLabelDraft);
+    if (!cleanLabel) return;
+    const cleanHref = linkHrefDraft.trim();
+    if (!cleanHref) return;
+    const targetRange = linkRange ?? {
+      from: editor.state.selection.from,
+      to: editor.state.selection.to,
+    };
+
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(
+        targetRange,
+        `<a href="${cleanHref}" target="_blank" rel="noopener noreferrer">${cleanLabel}</a>`,
+      )
+      .run();
+    closeLinkEditModal();
+  };
 
   return (
     <>
@@ -687,6 +798,72 @@ function BubbleMenuInner({ editor }: { editor: Editor }) {
       <span className="mx-0.5 h-4 w-px bg-slate-200" aria-hidden />
       <ColorPickerBtn editor={editor} mode="color" />
       <ColorPickerBtn editor={editor} mode="backgroundColor" />
+      <span className="mx-0.5 h-4 w-px bg-slate-200" aria-hidden />
+      <ToolBtn
+        title={state.link ? "Edit selected link" : "Select a link to edit"}
+        disabled={!state.link}
+        onClick={openLinkEditModal}
+      >
+        {state.link ? <Pencil className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+      </ToolBtn>
+
+      {isLinkModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-[1px]">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/25">
+            <div className="border-b border-slate-100 bg-linear-to-r from-[#E8F8FF] via-[#F5EEFF] to-[#FFF7ED] px-5 py-3">
+              <p className="text-sm font-semibold text-slate-800">Edit attachment link</p>
+              <p className="text-xs text-slate-500">Set readable label and destination URL</p>
+            </div>
+
+            <div className="space-y-3 px-5 py-4">
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Link text
+                </span>
+                <input
+                  autoFocus
+                  type="text"
+                  value={linkLabelDraft}
+                  onChange={(e) => setLinkLabelDraft(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200"
+                  placeholder="Price"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  URL
+                </span>
+                <input
+                  type="url"
+                  value={linkHrefDraft}
+                  onChange={(e) => setLinkHrefDraft(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-200"
+                  placeholder="https://example.com/file"
+                />
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">
+              <button
+                type="button"
+                onClick={closeLinkEditModal}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveLinkChanges}
+                disabled={!linkLabelDraft.trim() || !linkHrefDraft.trim()}
+                className="rounded-lg bg-linear-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:from-cyan-600 hover:to-violet-600 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Save link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -702,16 +879,71 @@ export default function SectionContentEditor({
   showFooterHint = true,
 }: SectionContentEditorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
   const initialHtmlRef = useRef<string | null>(null);
   if (initialHtmlRef.current === null) {
     initialHtmlRef.current = normalizeIncomingHtml(value ?? "");
   }
   const [isFocused, setIsFocused] = useState(false);
+  const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
 
   const initialBidi = useMemo(
     () => analyzeEditorPlainText(plainTextFromHtml(initialHtmlRef.current ?? "")),
     [],
   );
+
+  const uploadAsset = async (file: File): Promise<{ url: string; fileName: string } | null> => {
+    setIsUploadingAsset(true);
+    setUploadPercent(null);
+    try {
+      const response = await uploadFileWithProgress(file, (_, __, percent) => {
+        setUploadPercent(percent);
+      });
+      const url = resolveUploadedAssetUrl(response.file_path);
+      if (!url) return null;
+      return {
+        url,
+        fileName: response.original_filename || file.name,
+      };
+    } catch (error) {
+      console.error("Failed to upload editor asset:", error);
+      return null;
+    } finally {
+      setIsUploadingAsset(false);
+      setUploadPercent(null);
+    }
+  };
+
+  const insertUploadedFile = async (file: File) => {
+    if (!editor || !editable) return;
+    if (!isSupportedEditorAsset(file)) return;
+    const uploaded = await uploadAsset(file);
+    if (!uploaded) return;
+    const isImage = file.type.startsWith(IMAGE_MIME_PREFIX);
+    if (isImage) {
+      editor
+        .chain()
+        .focus()
+        .setImage({
+          src: uploaded.url,
+          alt: uploaded.fileName,
+          title: uploaded.fileName,
+        })
+        .run();
+      editor.chain().focus().createParagraphNear().run();
+      return;
+    }
+    const label = createSafeAttachmentLabel(uploaded.fileName);
+    editor
+      .chain()
+      .focus()
+      .insertContent(
+        `<a href="${uploaded.url}" target="_blank" rel="noopener noreferrer">Attachment: ${label}</a> `,
+      )
+      .run();
+  };
 
   const extensions = useMemo(
     () => [
@@ -740,6 +972,23 @@ export default function SectionContentEditor({
       TextAlign.configure({
         types: ["paragraph", "listItem"],
       }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        defaultProtocol: "https",
+        HTMLAttributes: {
+          class: "tiptap-link",
+          rel: "noopener noreferrer",
+          target: "_blank",
+        },
+      }),
+      Image.configure({
+        inline: false,
+        allowBase64: true,
+        HTMLAttributes: {
+          class: "tiptap-uploaded-image",
+        },
+      }),
     ],
     [],
   );
@@ -764,7 +1013,23 @@ export default function SectionContentEditor({
           "[&_strong]:font-semibold",
           "[&_s]:line-through",
           "[&_mark]:rounded-sm [&_mark]:px-0.5",
+          "[&_a]:text-blue-600 [&_a]:underline [&_a]:decoration-blue-200 [&_a]:underline-offset-2",
+          "[&_img]:my-2 [&_img]:max-h-80 [&_img]:w-auto [&_img]:max-w-full [&_img]:rounded-lg [&_img]:border [&_img]:border-slate-200 [&_img]:shadow-sm",
         ].join(" "),
+      },
+      handleDrop: (_view, event) => {
+        const fileList = Array.from(event.dataTransfer?.files ?? []);
+        if (fileList.length === 0) return false;
+        event.preventDefault();
+        void insertUploadedFile(fileList[0]);
+        return true;
+      },
+      handlePaste: (_view, event) => {
+        const fileList = Array.from(event.clipboardData?.files ?? []);
+        if (fileList.length === 0) return false;
+        event.preventDefault();
+        void insertUploadedFile(fileList[0]);
+        return true;
       },
     },
     onUpdate: ({ editor: ed }) => {
@@ -799,6 +1064,28 @@ export default function SectionContentEditor({
       editor.off("update", run);
     };
   }, [editor]);
+
+  const openImagePicker = () => {
+    if (!editable || isUploadingAsset) return;
+    imageInputRef.current?.click();
+  };
+
+  const openAttachmentPicker = () => {
+    if (!editable || isUploadingAsset) return;
+    attachmentInputRef.current?.click();
+  };
+
+  const handleImageInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) void insertUploadedFile(file);
+    event.target.value = "";
+  };
+
+  const handleAttachmentInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) void insertUploadedFile(file);
+    event.target.value = "";
+  };
 
   if (!editor) {
     return (
@@ -836,7 +1123,13 @@ export default function SectionContentEditor({
               isFocused ? "border-blue-100 bg-slate-50/80" : "border-slate-100 bg-slate-50/60"
             }`}
           >
-            <Toolbar editor={editor} />
+            <Toolbar
+              editor={editor}
+              onInsertImage={openImagePicker}
+              onAttachFile={openAttachmentPicker}
+              isUploadingAsset={isUploadingAsset}
+              uploadPercent={uploadPercent}
+            />
           </div>
 
           {/*
@@ -873,6 +1166,21 @@ export default function SectionContentEditor({
 
           {/* Editor content */}
           <EditorContent editor={editor} />
+
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept={ACCEPTED_IMAGE_TYPES}
+            className="hidden"
+            onChange={handleImageInputChange}
+          />
+          <input
+            ref={attachmentInputRef}
+            type="file"
+            accept={ACCEPTED_ATTACHMENT_TYPES}
+            className="hidden"
+            onChange={handleAttachmentInputChange}
+          />
 
           {/* Character hint at bottom when focused */}
           {showFooterHint && isFocused && (
