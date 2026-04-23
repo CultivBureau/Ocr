@@ -116,9 +116,12 @@ function HistoryPageContent() {
   // Get filtered documents
   const filteredDocuments = getFilteredDocuments();
 
-  const handleOpen = (docId: string) => {
-    // Store document ID and navigate to editor
-    router.push(`/pages/CodePreview?docId=${docId}`);
+  const handleOpen = (docId: string, versionNumber?: number) => {
+    const versionSuffix =
+      typeof versionNumber === "number" && Number.isFinite(versionNumber)
+        ? `&versionNumber=${versionNumber}`
+        : "";
+    router.push(`/pages/CodePreview?docId=${docId}${versionSuffix}`);
   };
 
   const handleRename = (docId: string) => {

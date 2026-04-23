@@ -81,6 +81,12 @@ export interface Document {
   current_version?: number;
   original_version_id?: string | null;
   total_versions?: number;
+  sku?: string | null;
+  version_date?: string | null;
+  version_time?: string | null;
+  matched_version_number?: number | null;
+  matched_version_sku?: string | null;
+  matched_by?: "title" | "current_sku" | "version_sku" | null;
   creator_name?: string | null;
   creator_email?: string | null;
   /** If set (including empty string), replaces company terms for this document only. Null/undefined means use company default. */
@@ -171,6 +177,9 @@ export interface DocumentVersion {
   created_by: string;
   change_summary?: string | null;
   version_name?: string | null;
+  sku?: string | null;
+  version_date?: string | null;
+  version_time?: string | null;
 }
 
 export interface DocumentVersionListResponse {

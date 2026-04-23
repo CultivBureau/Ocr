@@ -31,6 +31,9 @@ interface StructureRendererProps {
   // Branding props - if provided, will use company branding instead of defaults
   headerImage?: string;
   footerImage?: string;
+  versionSku?: string | null;
+  versionDate?: string | null;
+  versionTime?: string | null;
   termsAndConditions?: string | null;
   companyTermsDefault?: string | null;
   termsEditable?: boolean;
@@ -63,6 +66,9 @@ export default function StructureRenderer({
   className = "",
   headerImage,
   footerImage,
+  versionSku,
+  versionDate,
+  versionTime,
   termsAndConditions,
   companyTermsDefault,
   termsEditable = false,
@@ -526,6 +532,9 @@ export default function StructureRenderer({
       footerImage={footerImage}
       showHeader={!!headerImage}
       showFooter={!!footerImage}
+      versionSku={versionSku}
+      versionDate={versionDate}
+      versionTime={versionTime}
       termsAndConditions={termsAndConditions}
       companyTermsDefault={companyTermsDefault}
       termsEditable={termsEditable}

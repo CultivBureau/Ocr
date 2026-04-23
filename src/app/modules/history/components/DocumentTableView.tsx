@@ -8,7 +8,7 @@ import { FileText, Heart, Globe, Users, Building2, Edit2, Trash2, History as His
 
 interface DocumentTableViewProps {
   documents: Document[];
-  onOpen: (docId: string) => void;
+  onOpen: (docId: string, versionNumber?: number) => void;
   onRename: (docId: string) => void;
   onDelete: (docId: string) => void;
   onViewVersions?: (docId: string) => void;
@@ -127,6 +127,11 @@ export default function DocumentTableView({
                               Shared
                             </span>
                           )}
+                          {doc.matched_by === "version_sku" && doc.matched_version_number && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+                              Matched v{doc.matched_version_number}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -218,7 +223,7 @@ export default function DocumentTableView({
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button
-                        onClick={() => onOpen(doc.id)}
+                        onClick={() => onOpen(doc.id, doc.matched_version_number ?? undefined)}
                         className="px-3 py-1.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-bold rounded-lg hover:shadow-md transition-all duration-200"
                         title="Open document"
                       >

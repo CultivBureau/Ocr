@@ -10,7 +10,7 @@ import React, {
 import Image from "next/image";
 import Link from "next/link";
 import { Undo2, Redo2 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import StructureRenderer from "../components/StructureRenderer";
 import CreateTableModal from "../components/CreateTableModal";
 import AddAirplaneModal, { FlightData } from "../components/AddAirplaneModal";
@@ -32,7 +32,15 @@ import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfi
 import ComponentSuggestionModal from "../components/ComponentSuggestionModal";
 import { Hotel } from "../templates/HotelsSection";
 import { isAuthenticated } from "@/app/modules/auth/services/AuthApi";
-import { saveDocument, updateDocument, getDocument, generatePublicLink, getPublicLink } from "@/app/modules/history/services/HistoryApi";
+import {
+  saveDocument,
+  updateDocument,
+  getDocument,
+  getDocumentVersion,
+  restoreDocumentVersion,
+  generatePublicLink,
+  getPublicLink,
+} from "@/app/modules/history/services/HistoryApi";
 import { generatePDFWithPlaywright, downloadPDFBlob } from "../services/PdfApi";
 import { getCompany } from "@/app/modules/companies/services/CompanyApi";
 import ProtectedRoute from "@/app/modules/auth/components/ProtectedRoute";
@@ -107,6 +115,7 @@ const deduplicateStructure = (structure: SeparatedStructure): SeparatedStructure
 function CodePageContent() {
   const { t, isRTL, dir } = useLanguage();
   const { user } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const {
     structure,
@@ -130,6 +139,11 @@ function CodePageContent() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [currentVersion, setCurrentVersion] = useState<number>(1);
   const [totalVersions, setTotalVersions] = useState<number>(1);
+  const [currentVersionSku, setCurrentVersionSku] = useState<string | null>(null);
+  const [currentVersionDate, setCurrentVersionDate] = useState<string | null>(null);
+  const [currentVersionTime, setCurrentVersionTime] = useState<string | null>(null);
+  const [viewingHistoricalVersion, setViewingHistoricalVersion] = useState<number | null>(null);
+  const [isRestoringHistoricalVersion, setIsRestoringHistoricalVersion] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [isSavingTerms, setIsSavingTerms] = useState(false);
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
@@ -1599,6 +1613,9 @@ function CodePageContent() {
     
     // Check if we're loading a specific document from URL (e.g., from history)
     const docIdParam = searchParams?.get("docId");
+    const versionNumberParamRaw = searchParams?.get("versionNumber");
+    const parsedVersionNumber = versionNumberParamRaw ? parseInt(versionNumberParamRaw, 10) : NaN;
+    const hasVersionParam = Number.isFinite(parsedVersionNumber) && parsedVersionNumber > 0;
     
     // Load from sessionStorage (from upload flow) - FIRST
     const storedDocId = sessionStorage.getItem("codePreview.documentId");
@@ -1614,7 +1631,11 @@ function CodePageContent() {
       }
     } else if (docIdParam && isAuthenticated() && !hasSessionStorageData) {
       // Loading from history (no sessionStorage data) - load full document from database
-      loadDocument(docIdParam);
+      if (hasVersionParam) {
+        loadDocumentVersionForPreview(docIdParam, parsedVersionNumber);
+      } else {
+        loadDocument(docIdParam);
+      }
     }
 
     const storedMetadata = sessionStorage.getItem("codePreview.metadata");
@@ -1813,6 +1834,10 @@ function CodePageContent() {
       setDocumentId(doc.id);
       setCurrentVersion(doc.current_version || 1);
       setTotalVersions(doc.total_versions || 1);
+      setCurrentVersionSku(doc.sku || null);
+      setCurrentVersionDate(doc.version_date || null);
+      setCurrentVersionTime(doc.version_time || null);
+      setViewingHistoricalVersion(null);
       
       // Load v2 structure from extracted_data
       let loadedStructure: SeparatedStructure | null = null;
@@ -1924,6 +1949,10 @@ function CodePageContent() {
       setDocumentId(doc.id);
       setCurrentVersion(doc.current_version || 1);
       setTotalVersions(doc.total_versions || 1);
+      setCurrentVersionSku(doc.sku || null);
+      setCurrentVersionDate(doc.version_date || null);
+      setCurrentVersionTime(doc.version_time || null);
+      setViewingHistoricalVersion(null);
       
       if (doc.metadata) {
         setSourceMetadata({
@@ -1978,6 +2007,108 @@ function CodePageContent() {
     }
   };
 
+  const loadDocumentVersionForPreview = async (docId: string, versionNumber: number) => {
+    try {
+      const [documentResponse, versionResponse] = await Promise.all([
+        getDocument(docId),
+        getDocumentVersion(docId, versionNumber),
+      ]);
+      const doc = documentResponse.document;
+      const version = versionResponse.version;
+
+      setDocumentId(doc.id);
+      setCurrentVersion(version.version_number || versionNumber);
+      setTotalVersions(doc.total_versions || 1);
+      setCurrentVersionSku(version.sku || doc.sku || null);
+      setCurrentVersionDate(version.version_date || doc.version_date || null);
+      setCurrentVersionTime(version.version_time || doc.version_time || null);
+      setViewingHistoricalVersion(version.version_number || versionNumber);
+
+      const extractedData = version.extracted_data as any;
+      if (extractedData.generated && extractedData.user && extractedData.layout) {
+        const loadedStructure = deduplicateStructure(extractedData as SeparatedStructure);
+        setStructure(loadedStructure);
+        clearHistory();
+        setTimeout(() => {
+          initialStructureRef.current = JSON.parse(JSON.stringify(loadedStructure));
+          setHasChanges(false);
+        }, 100);
+      } else if (extractedData.sections || extractedData.tables) {
+        const migratedStructure: SeparatedStructure = {
+          generated: {
+            sections: extractedData.sections || [],
+            tables: extractedData.tables || [],
+          },
+          user: {
+            elements: [],
+          },
+          layout: [
+            ...(extractedData.sections || []).map((s: any) => s.id),
+            ...(extractedData.tables || []).map((t: any) => t.id),
+          ],
+          meta: extractedData.meta || {},
+        };
+        setStructure(migratedStructure);
+        clearHistory();
+        setTimeout(() => {
+          initialStructureRef.current = JSON.parse(JSON.stringify(migratedStructure));
+          setHasChanges(false);
+        }, 100);
+      }
+
+      if (doc.metadata) {
+        setSourceMetadata({
+          filename: doc.metadata.filename || doc.original_filename,
+          uploadedAt: doc.created_at,
+        });
+      }
+
+      if (doc.company_id) {
+        try {
+          const company = await getCompany(doc.company_id);
+          if (company.header_image) {
+            const headerUrl = company.header_image.startsWith("http")
+              ? company.header_image
+              : `${API_BASE_URL}${company.header_image}`;
+            setHeaderImage(headerUrl);
+          } else {
+            setHeaderImage(undefined);
+          }
+
+          if (company.footer_image) {
+            const footerUrl = company.footer_image.startsWith("http")
+              ? company.footer_image
+              : `${API_BASE_URL}${company.footer_image}`;
+            setFooterImage(footerUrl);
+          } else {
+            setFooterImage(undefined);
+          }
+
+          setCompanyTermsDefault(company.terms_and_conditions || null);
+          setTermsConditionsOverride(
+            doc.terms_and_conditions_override !== undefined
+              ? doc.terms_and_conditions_override
+              : null
+          );
+        } catch (err) {
+          console.error("Failed to fetch company branding:", err);
+          setHeaderImage(undefined);
+          setFooterImage(undefined);
+          setCompanyTermsDefault(null);
+          setTermsConditionsOverride(null);
+        }
+      } else {
+        setHeaderImage(undefined);
+        setFooterImage(undefined);
+        setCompanyTermsDefault(null);
+        setTermsConditionsOverride(null);
+      }
+    } catch (err) {
+      console.error("Failed to load document version:", err);
+      alert("Failed to load requested version");
+    }
+  };
+
   const handleTermsDocumentSave = useCallback(
     async (html: string | null) => {
       setTermsConditionsOverride(html);
@@ -2005,6 +2136,10 @@ function CodePageContent() {
       
       setCurrentVersion(doc.current_version || 1);
       setTotalVersions(doc.total_versions || 1);
+      setCurrentVersionSku(doc.sku || null);
+      setCurrentVersionDate(doc.version_date || null);
+      setCurrentVersionTime(doc.version_time || null);
+      setViewingHistoricalVersion(null);
       
       // Reload structure - handle both v2 and legacy formats
       if (doc.extracted_data) {
@@ -2157,6 +2292,10 @@ function CodePageContent() {
         if (updateResponse.document) {
           setCurrentVersion(updateResponse.document.current_version || 1);
           setTotalVersions(updateResponse.document.total_versions || 1);
+          setCurrentVersionSku(updateResponse.document.sku || null);
+          setCurrentVersionDate(updateResponse.document.version_date || null);
+          setCurrentVersionTime(updateResponse.document.version_time || null);
+          setViewingHistoricalVersion(null);
         }
       } else {
         // Create new document
@@ -2179,6 +2318,10 @@ function CodePageContent() {
           setDocumentId(response.document.id);
           setCurrentVersion(response.document.current_version || 1);
           setTotalVersions(response.document.total_versions || 1);
+          setCurrentVersionSku(response.document.sku || null);
+          setCurrentVersionDate(response.document.version_date || null);
+          setCurrentVersionTime(response.document.version_time || null);
+          setViewingHistoricalVersion(null);
         }
       }
 
@@ -2198,6 +2341,38 @@ function CodePageContent() {
       setIsSaving(false);
     }
   }, [structure, documentId, sourceMetadata, hasChanges, termsConditionsOverride]);
+
+  const handleRestoreViewedVersion = useCallback(async () => {
+    if (!documentId || !viewingHistoricalVersion) return;
+    try {
+      setIsRestoringHistoricalVersion(true);
+      const response = await restoreDocumentVersion(
+        documentId,
+        viewingHistoricalVersion,
+        `Restored from previewed version ${viewingHistoricalVersion}`
+      );
+      const doc = response.document;
+      setCurrentVersion(doc.current_version || viewingHistoricalVersion);
+      setTotalVersions(doc.total_versions || 1);
+      setCurrentVersionSku(doc.sku || null);
+      setCurrentVersionDate(doc.version_date || null);
+      setCurrentVersionTime(doc.version_time || null);
+      setViewingHistoricalVersion(null);
+      await loadDocument(documentId);
+
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        params.delete("versionNumber");
+        const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+        router.replace(next);
+      }
+    } catch (err) {
+      console.error("Failed to restore viewed version:", err);
+      alert("Failed to restore this version");
+    } finally {
+      setIsRestoringHistoricalVersion(false);
+    }
+  }, [documentId, viewingHistoricalVersion, router]);
 
   const handleExportPDFWithPlaywright = useCallback(async () => {
     // Ensure document is saved first
@@ -2245,6 +2420,10 @@ function CodePageContent() {
           setDocumentId(response.document.id);
           setCurrentVersion(response.document.current_version || 1);
           setTotalVersions(response.document.total_versions || 1);
+          setCurrentVersionSku(response.document.sku || null);
+          setCurrentVersionDate(response.document.version_date || null);
+          setCurrentVersionTime(response.document.version_time || null);
+          setViewingHistoricalVersion(null);
           console.log('Document saved with ID:', currentDocId);
         } else {
           console.error('No document ID in response:', response);
@@ -2747,6 +2926,11 @@ function CodePageContent() {
                   )}
                 </p>
               )}
+              {viewingHistoricalVersion && (
+                <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                  Viewing historical version v{viewingHistoricalVersion}
+                </p>
+              )}
             </div>
           </div>
 
@@ -2778,9 +2962,9 @@ function CodePageContent() {
             {isAuthenticated() && (
               <button
                 onClick={handleSave}
-                disabled={isSaving || !hasChanges}
+                disabled={isSaving || !hasChanges || !!viewingHistoricalVersion}
                 className={`px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm ${
-                  !hasChanges
+                  !hasChanges || viewingHistoricalVersion
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                     : saveStatus === "success"
                     ? "bg-green-500 text-white hover:bg-green-600"
@@ -2818,6 +3002,26 @@ function CodePageContent() {
                     </svg>
                     <span>Save</span>
                   </>
+                )}
+              </button>
+            )}
+            {isAuthenticated() && viewingHistoricalVersion && documentId && (
+              <button
+                onClick={handleRestoreViewedVersion}
+                disabled={isRestoringHistoricalVersion}
+                className="px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                title={`Restore version ${viewingHistoricalVersion}`}
+              >
+                {isRestoringHistoricalVersion ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Restoring...</span>
+                  </>
+                ) : (
+                  <span>Restore this version</span>
                 )}
               </button>
             )}
@@ -3019,7 +3223,7 @@ function CodePageContent() {
         </div>
       </div>
     </div>
-  ), [handleExportCode, handleExportPDF, handleExportPDFWithPlaywright, handleCopyPublicLink, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown, isExportingPlaywright, hasChanges, isCopyingLink, linkCopied, undoDocument, redoDocument, canUndo, canRedo, historyEpoch, t]);
+  ), [handleExportCode, handleExportPDF, handleExportPDFWithPlaywright, handleCopyPublicLink, handleSave, handleRestoreViewedVersion, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, viewingHistoricalVersion, isRestoringHistoricalVersion, showMenuDropdown, isExportingPlaywright, hasChanges, isCopyingLink, linkCopied, undoDocument, redoDocument, canUndo, canRedo, historyEpoch, t]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-cyan-50 via-blue-50 to-lime-50 text-gray-900">
@@ -3046,6 +3250,9 @@ function CodePageContent() {
               editable={true}
               headerImage={headerImage}
               footerImage={footerImage}
+              versionSku={currentVersionSku}
+              versionDate={currentVersionDate}
+              versionTime={currentVersionTime}
               termsAndConditions={resolvedTerms}
               companyTermsDefault={companyTermsDefault}
               termsEditable={!!user?.company_id}

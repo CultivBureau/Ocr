@@ -30,6 +30,9 @@ interface DocumentCardProps {
     is_public?: boolean;
     current_version?: number;
     total_versions?: number;
+    matched_version_number?: number | null;
+    matched_version_sku?: string | null;
+    matched_by?: "title" | "current_sku" | "version_sku" | null;
     creator_name?: string | null;
     creator_email?: string | null;
     metadata?: {
@@ -38,7 +41,7 @@ interface DocumentCardProps {
       fileSize?: number;
     };
   };
-  onOpen: (docId: string) => void;
+  onOpen: (docId: string, versionNumber?: number) => void;
   onRename: (docId: string) => void;
   onDelete: (docId: string) => void;
   onViewVersions?: (docId: string) => void;
@@ -297,12 +300,18 @@ export default function DocumentCard({
             {formatFileSize(document.metadata.fileSize)}
           </span>
         )}
+        {document.matched_by === "version_sku" && document.matched_version_number && (
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg font-semibold bg-blue-100 text-blue-700">
+            <History className="w-4 h-4 text-blue-600" />
+            Matched v{document.matched_version_number}
+          </span>
+        )}
       </div>
 
       {/* Actions */}
       <div className={`flex flex-wrap gap-2 transition-all duration-300 ${showActions ? 'opacity-100' : 'opacity-90'} ${isRTL ? 'flex-row-reverse' : ''}`}>
         <button
-          onClick={() => onOpen(document.id)}
+          onClick={() => onOpen(document.id, document.matched_version_number ?? undefined)}
           className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-sm font-bold rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105"
         >
           {t.history.open}

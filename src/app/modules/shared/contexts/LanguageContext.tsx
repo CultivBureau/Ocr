@@ -209,7 +209,7 @@ export const translations = {
     history: {
       title: "Document History",
       subtitle: "View and manage your converted documents",
-      searchDocuments: "Search documents...",
+      searchDocuments: "Search by document name or SKU ID...",
       filterByDate: "Filter by date",
       filterByType: "Filter by type",
       sortBy: "Sort by",
@@ -232,9 +232,9 @@ export const translations = {
       restoreVersion: "Restore Version",
       // Filter and sort
       filters: "Filters",
-      filterByNameOrFavorites: "Filter by name or favorites",
-      filterByName: "Filter by Name",
-      searchByDocumentName: "Search by document name...",
+      filterByNameOrFavorites: "Filter by name, SKU ID, or favorites",
+      filterByName: "Filter by Name or SKU ID",
+      searchByDocumentName: "Search by document name or SKU ID...",
       showFavoritesOnly: "Show Favorites Only",
       allDocuments: "All Documents",
       favoritesOnly: "Favorites Only",
@@ -1194,7 +1194,7 @@ export const translations = {
     history: {
       title: "سجل المستندات",
       subtitle: "عرض وإدارة المستندات المحولة",
-      searchDocuments: "البحث في المستندات...",
+      searchDocuments: "ابحث باسم المستند أو معرف SKU...",
       filterByDate: "تصفية حسب التاريخ",
       filterByType: "تصفية حسب النوع",
       sortBy: "ترتيب حسب",
@@ -1217,9 +1217,9 @@ export const translations = {
       restoreVersion: "استعادة الإصدار",
       // Filter and sort
       filters: "مرشحات",
-      filterByNameOrFavorites: "الترشيح بالاسم أو المفضلات",
-      filterByName: "الترشيح بالاسم",
-      searchByDocumentName: "ابحث باسم المستند...",
+      filterByNameOrFavorites: "التصفية بالاسم أو معرف SKU أو المفضلات",
+      filterByName: "التصفية بالاسم أو معرف SKU",
+      searchByDocumentName: "ابحث باسم المستند أو معرف SKU...",
       showFavoritesOnly: "إظهار المفضلات فقط",
       allDocuments: "جميع المستندات",
       favoritesOnly: "المفضلات فقط",
