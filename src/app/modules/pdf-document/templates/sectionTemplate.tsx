@@ -266,6 +266,18 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
 
   const containerClasses = getSectionClasses();
 
+  const toAlpha = (hex: string | undefined, alpha: number, fallback: string) => {
+    if (!hex || !/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) return fallback;
+    const normalized =
+      hex.length === 4
+        ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+        : hex;
+    const r = parseInt(normalized.slice(1, 3), 16);
+    const g = parseInt(normalized.slice(3, 5), 16);
+    const b = parseInt(normalized.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
   const containerStyle: React.CSSProperties = {
     position: "relative",
     ...(backgroundColor &&
@@ -275,8 +287,11 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
       currentPalette.applyBackground !== false && {
         background: currentPalette.colors.background,
       }),
+    "--section-grid-bg": toAlpha(currentPalette?.colors.primary, 0.08, "rgba(148, 163, 184, 0.12)"),
+    "--section-grid-cell-bg": toAlpha(currentPalette?.colors.accent, 0.1, "rgba(241, 245, 249, 0.9)"),
+    "--section-grid-border": toAlpha(currentPalette?.colors.secondary, 0.25, "rgba(148, 163, 184, 0.35)"),
     ...style,
-  };
+  } as React.CSSProperties;
 
   const getPaletteColor = (
     colorType: "primary" | "secondary" | "accent" | "text"

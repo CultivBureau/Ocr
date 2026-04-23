@@ -96,7 +96,8 @@ export type UploadResponse = {
  */
 export function uploadFileWithProgress(
   file: File,
-  onProgress?: (loaded: number, total: number, percent: number) => void
+  onProgress?: (loaded: number, total: number, percent: number) => void,
+  purpose: "document" | "editor_asset" = "document",
 ): Promise<UploadResponse> {
   const MAX_UPLOAD_SIZE_MB = 20;
   if (file.size > MAX_UPLOAD_SIZE_MB * 1024 * 1024) {
@@ -112,7 +113,7 @@ export function uploadFileWithProgress(
     return Promise.reject(new Error("Not authenticated. Please login again."));
   }
 
-  const url = `${API_BASE_URL}/upload/`;
+  const url = `${API_BASE_URL}/upload/?purpose=${encodeURIComponent(purpose)}`;
   const formData = new FormData();
   formData.append("file", file);
 
@@ -166,6 +167,16 @@ export function uploadFileWithProgress(
  */
 export async function uploadFile(file: File): Promise<UploadResponse> {
   return uploadFileWithProgress(file);
+}
+
+/**
+ * Upload editor-only asset (image/file attachment) without consuming document upload quota.
+ */
+export async function uploadEditorAssetWithProgress(
+  file: File,
+  onProgress?: (loaded: number, total: number, percent: number) => void,
+): Promise<UploadResponse> {
+  return uploadFileWithProgress(file, onProgress, "editor_asset");
 }
 
 /**

@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
-import { mergeAttributes, posToDOMRect, type Editor } from "@tiptap/core";
+import { createPortal } from "react-dom";
+import { useEditor, EditorContent, useEditorState, ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react";
+import { mergeAttributes, posToDOMRect, Node as TiptapNode, type Editor, type NodeViewRendererProps } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Paragraph from "@tiptap/extension-paragraph";
 import { BulletList, ListItem, OrderedList } from "@tiptap/extension-list";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
 import { TextStyleKit } from "@tiptap/extension-text-style/text-style-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import { BubbleMenu } from "@tiptap/react/menus";
@@ -33,10 +38,13 @@ import {
   LoaderCircle,
   Link2,
   Pencil,
+  LayoutGrid,
+  Trash2,
+  X,
 } from "lucide-react";
 import { undoDepth, redoDepth } from "@tiptap/pm/history";
 import { legacySectionContentToHtml } from "../utils/legacySectionContentToHtml";
-import { uploadFileWithProgress } from "../services/PdfApi";
+import { uploadEditorAssetWithProgress } from "../services/PdfApi";
 
 /* ─────────────────────────────────────────
    Bidi / language (dominant doc hint + block-level dir="auto")
@@ -216,6 +224,171 @@ const IMAGE_MIME_PREFIX = "image/";
 const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/jpg,image/webp,image/gif";
 const ACCEPTED_ATTACHMENT_TYPES =
   ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/zip,application/x-rar-compressed";
+
+type GridLayoutOption = {
+  id: string;
+  label: string;
+  rows: number;
+  cols: number;
+};
+
+const GRID_LAYOUT_OPTIONS: GridLayoutOption[] = [
+  { id: "1x2", label: "1 x 2", rows: 1, cols: 2 },
+  { id: "2x2", label: "2 x 2", rows: 2, cols: 2 },
+  { id: "2x3", label: "2 x 3", rows: 2, cols: 3 },
+  { id: "3x3", label: "3 x 3", rows: 3, cols: 3 },
+];
+
+/* ─────────────────────────────────────────
+   Image Grid — custom TipTap node
+───────────────────────────────────────── */
+
+interface ImageGridImage {
+  src: string;
+  alt: string;
+}
+
+interface ImageGridViewProps extends NodeViewRendererProps {
+  deleteNode: () => void;
+  selected: boolean;
+}
+
+function ImageGridView({ node, deleteNode, selected }: ImageGridViewProps) {
+  const cols = node.attrs.cols as number;
+  const images = node.attrs.images as ImageGridImage[];
+
+  return (
+    <NodeViewWrapper>
+      <div
+        contentEditable={false}
+        className={`relative my-2 group rounded-xl overflow-hidden transition-all duration-150 select-none ${
+          selected
+            ? "ring-2 ring-blue-400 ring-offset-2"
+            : "hover:ring-2 hover:ring-blue-200 hover:ring-offset-1"
+        }`}
+        style={{
+          background: "var(--section-grid-bg, rgba(148, 163, 184, 0.12))",
+          border: "1px solid var(--section-grid-border, rgba(148, 163, 184, 0.35))",
+        }}
+      >
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onClick={(e) => { e.stopPropagation(); deleteNode(); }}
+          className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 flex items-center justify-center w-7 h-7 rounded-full bg-white/90 text-red-500 shadow-md hover:bg-red-50 transition-all duration-150"
+          title="Remove image grid"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+            gap: "6px",
+          }}
+        >
+          {images.map((img, i) => (
+            <div
+              key={i}
+              className="overflow-hidden rounded-lg"
+              style={{
+                aspectRatio: "16/9",
+                background: "var(--section-grid-cell-bg, rgba(241, 245, 249, 0.9))",
+              }}
+            >
+              <img
+                src={img.src}
+                alt={img.alt}
+                data-grid-image="true"
+                className="block"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  objectPosition: "center",
+                }}
+                draggable={false}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </NodeViewWrapper>
+  );
+}
+
+const ImageGridNode = TiptapNode.create({
+  name: "imageGrid",
+  group: "block",
+  atom: true,
+  draggable: true,
+  selectable: true,
+
+  addAttributes() {
+    return {
+      cols: {
+        default: 2,
+        parseHTML: (element) => parseInt(element.getAttribute("data-cols") ?? "2", 10),
+        renderHTML: (attrs) => ({ "data-cols": String(attrs.cols) }),
+      },
+      images: {
+        default: [],
+        parseHTML: (element) => {
+          try {
+            return JSON.parse(element.getAttribute("data-images") ?? "[]") as ImageGridImage[];
+          } catch {
+            return [];
+          }
+        },
+        renderHTML: (attrs) => ({
+          "data-images": JSON.stringify(attrs.images as ImageGridImage[]),
+        }),
+      },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: "div[data-image-grid]" }];
+  },
+
+  renderHTML({ node }) {
+    const cols = node.attrs.cols as number;
+    const images = node.attrs.images as ImageGridImage[];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cellNodes: any[] = images.map((img) => [
+      "div",
+      {
+        style:
+          "overflow:hidden;border-radius:8px;aspect-ratio:16/9;background:var(--section-grid-cell-bg, rgba(241,245,249,.9));",
+      },
+      [
+        "img",
+        {
+          src: img.src,
+          alt: img.alt,
+          "data-grid-image": "true",
+          style: "display:block;width:100%;height:100%;object-fit:contain;object-position:center;",
+        },
+      ],
+    ]);
+
+    return [
+      "div",
+      {
+        "data-image-grid": "true",
+        "data-cols": String(cols),
+        "data-images": JSON.stringify(images),
+        style: `display:grid;grid-template-columns:repeat(${cols},minmax(0,1fr));gap:6px;margin:8px 0;background:var(--section-grid-bg, rgba(148,163,184,.12));border:1px solid var(--section-grid-border, rgba(148,163,184,.35));border-radius:12px;padding:6px;`,
+      },
+      ...cellNodes,
+    ];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageGridView);
+  },
+});
 
 function resolveUploadedAssetUrl(filePath: string): string {
   if (!filePath) return "";
@@ -541,12 +714,14 @@ function Toolbar({
   editor,
   onInsertImage,
   onAttachFile,
+  onInsertImageGrid,
   isUploadingAsset,
   uploadPercent,
 }: {
   editor: Editor;
   onInsertImage: () => void;
   onAttachFile: () => void;
+  onInsertImageGrid: () => void;
   isUploadingAsset: boolean;
   uploadPercent: number | null;
 }) {
@@ -685,6 +860,13 @@ function Toolbar({
       >
         <Paperclip className="h-3.5 w-3.5" />
       </ToolBtn>
+      <ToolBtn
+        title="Insert image grid"
+        disabled={isUploadingAsset}
+        onClick={onInsertImageGrid}
+      >
+        <LayoutGrid className="h-3.5 w-3.5" />
+      </ToolBtn>
 
       <Divider />
 
@@ -724,12 +906,17 @@ function BubbleMenuInner({ editor }: { editor: Editor }) {
       underline: s.editor.isActive("underline"),
       strike: s.editor.isActive("strike"),
       link: s.editor.isActive("link"),
+      hasSelection: !s.editor.state.selection.empty,
     }),
   });
 
   if (!state) return null;
 
   const openLinkEditModal = () => {
+    // If caret is inside a link, expand to full link so rename works.
+    if (editor.isActive("link")) {
+      editor.chain().focus().extendMarkRange("link").run();
+    }
     const { state: editorState } = editor;
     const { from, to } = editorState.selection;
     const selectedText = editorState.doc.textBetween(from, to, " ").trim();
@@ -800,69 +987,152 @@ function BubbleMenuInner({ editor }: { editor: Editor }) {
       <ColorPickerBtn editor={editor} mode="backgroundColor" />
       <span className="mx-0.5 h-4 w-px bg-slate-200" aria-hidden />
       <ToolBtn
-        title={state.link ? "Edit selected link" : "Select a link to edit"}
-        disabled={!state.link}
+        title={
+          state.link
+            ? "Edit selected link"
+            : state.hasSelection
+            ? "Add link to selected text"
+            : "Select text to add a link"
+        }
+        disabled={!state.link && !state.hasSelection}
         onClick={openLinkEditModal}
       >
         {state.link ? <Pencil className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
       </ToolBtn>
 
-      {isLinkModalOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-[1px]">
-          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/25">
-            <div className="border-b border-slate-100 bg-linear-to-r from-[#E8F8FF] via-[#F5EEFF] to-[#FFF7ED] px-5 py-3">
-              <p className="text-sm font-semibold text-slate-800">Edit attachment link</p>
-              <p className="text-xs text-slate-500">Set readable label and destination URL</p>
+      {isLinkModalOpen && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-9999 flex items-center justify-center p-4 backdrop-blur-sm"
+          style={{ background: "rgba(15,23,42,0.45)" }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) closeLinkEditModal(); }}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/30 overflow-hidden">
+
+            {/* ── Header ── */}
+            <div className="relative overflow-hidden px-6 py-5">
+              {/* gradient accent strip */}
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(135deg,#E0F2FE 0%,#EDE9FE 50%,#FFF7ED 100%)",
+                  opacity: 0.6,
+                }}
+              />
+              <div className="relative flex items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 shadow-sm ring-1 ring-slate-200/70">
+                  <Link2 className="h-4 w-4 text-violet-500" />
+                </span>
+                <div>
+                  <p className="text-[15px] font-semibold leading-tight text-slate-800">
+                    Edit attachment link
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Set a readable label and the destination URL
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-3 px-5 py-4">
-              <label className="block">
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {/* ── Body ── */}
+            <div className="space-y-4 px-6 pb-2 pt-4">
+              {/* Link text */}
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-400" />
                   Link text
-                </span>
+                </label>
                 <input
                   autoFocus
                   type="text"
                   value={linkLabelDraft}
                   onChange={(e) => setLinkLabelDraft(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200"
-                  placeholder="Price"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveLinkChanges();
+                    if (e.key === "Escape") closeLinkEditModal();
+                  }}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-300 outline-none transition-all duration-150 focus:border-cyan-400 focus:bg-white focus:ring-3 focus:ring-cyan-100"
+                  placeholder="e.g. Download Price List"
                 />
-              </label>
+              </div>
 
-              <label className="block">
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  URL
-                </span>
-                <input
-                  type="url"
-                  value={linkHrefDraft}
-                  onChange={(e) => setLinkHrefDraft(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-200"
-                  placeholder="https://example.com/file"
-                />
-              </label>
+              {/* URL */}
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-violet-400" />
+                  Destination URL
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={linkHrefDraft}
+                    onChange={(e) => setLinkHrefDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveLinkChanges();
+                      if (e.key === "Escape") closeLinkEditModal();
+                    }}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2.5 pl-3.5 pr-10 text-sm text-slate-800 placeholder:text-slate-300 outline-none transition-all duration-150 focus:border-violet-400 focus:bg-white focus:ring-3 focus:ring-violet-100"
+                    placeholder="https://example.com/file.pdf"
+                  />
+                  {linkHrefDraft.trim() && (
+                    <a
+                      href={linkHrefDraft}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      tabIndex={-1}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 transition hover:text-violet-500"
+                      title="Preview link"
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      <Link2 className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* live preview pill */}
+              {(linkLabelDraft.trim() || linkHrefDraft.trim()) && (
+                <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3.5 py-2.5">
+                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                    Preview
+                  </span>
+                  <span className="mx-1 h-3 w-px shrink-0 bg-slate-200" />
+                  <span className="truncate text-sm font-medium text-blue-600 underline decoration-blue-200 underline-offset-2">
+                    {linkLabelDraft.trim() || "—"}
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">
-              <button
-                type="button"
-                onClick={closeLinkEditModal}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={saveLinkChanges}
-                disabled={!linkLabelDraft.trim() || !linkHrefDraft.trim()}
-                className="rounded-lg bg-linear-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:from-cyan-600 hover:to-violet-600 disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                Save link
-              </button>
+            {/* ── Footer ── */}
+            <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
+              <p className="text-[10px] text-slate-400">
+                <kbd className="rounded border border-slate-200 bg-slate-100 px-1 py-0.5 font-mono text-[9px]">Enter</kbd>
+                {" "}to save · {" "}
+                <kbd className="rounded border border-slate-200 bg-slate-100 px-1 py-0.5 font-mono text-[9px]">Esc</kbd>
+                {" "}to cancel
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={closeLinkEditModal}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveLinkChanges}
+                  disabled={!linkLabelDraft.trim() || !linkHrefDraft.trim()}
+                  className="rounded-xl bg-linear-to-r from-cyan-500 to-violet-500 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-violet-200 transition-all hover:from-cyan-600 hover:to-violet-600 hover:shadow-violet-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                >
+                  Save link
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -888,6 +1158,10 @@ export default function SectionContentEditor({
   const [isFocused, setIsFocused] = useState(false);
   const [isUploadingAsset, setIsUploadingAsset] = useState(false);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
+  const [isGridModalOpen, setIsGridModalOpen] = useState(false);
+  const [selectedGridLayoutId, setSelectedGridLayoutId] = useState<string>(GRID_LAYOUT_OPTIONS[1].id);
+  const [gridFiles, setGridFiles] = useState<File[]>([]);
+  const [gridFilePreviews, setGridFilePreviews] = useState<string[]>([]);
 
   const initialBidi = useMemo(
     () => analyzeEditorPlainText(plainTextFromHtml(initialHtmlRef.current ?? "")),
@@ -898,7 +1172,7 @@ export default function SectionContentEditor({
     setIsUploadingAsset(true);
     setUploadPercent(null);
     try {
-      const response = await uploadFileWithProgress(file, (_, __, percent) => {
+      const response = await uploadEditorAssetWithProgress(file, (_, __, percent) => {
         setUploadPercent(percent);
       });
       const url = resolveUploadedAssetUrl(response.file_path);
@@ -945,6 +1219,35 @@ export default function SectionContentEditor({
       .run();
   };
 
+  const insertImageGrid = async () => {
+    if (!editor || !editable || gridFiles.length === 0) return;
+    const layout =
+      GRID_LAYOUT_OPTIONS.find((option) => option.id === selectedGridLayoutId) ??
+      GRID_LAYOUT_OPTIONS[1];
+    const maxSlots = layout.rows * layout.cols;
+    const filesToUpload = gridFiles
+      .filter((file) => file.type.startsWith(IMAGE_MIME_PREFIX))
+      .slice(0, maxSlots);
+    if (filesToUpload.length === 0) return;
+
+    const uploadedImages: ImageGridImage[] = [];
+    for (const file of filesToUpload) {
+      const uploaded = await uploadAsset(file);
+      if (!uploaded) continue;
+      uploadedImages.push({ src: uploaded.url, alt: uploaded.fileName });
+    }
+    if (uploadedImages.length === 0) return;
+
+    editor.chain().focus().insertContent({
+      type: "imageGrid",
+      attrs: { cols: layout.cols, images: uploadedImages },
+    }).run();
+
+    setIsGridModalOpen(false);
+    setGridFiles([]);
+    setGridFilePreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return []; });
+  };
+
   const extensions = useMemo(
     () => [
       StarterKit.configure({
@@ -989,6 +1292,14 @@ export default function SectionContentEditor({
           class: "tiptap-uploaded-image",
         },
       }),
+      ImageGridNode,
+      Table.configure({
+        resizable: false,
+        allowTableNodeSelection: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     [],
   );
@@ -1014,7 +1325,10 @@ export default function SectionContentEditor({
           "[&_s]:line-through",
           "[&_mark]:rounded-sm [&_mark]:px-0.5",
           "[&_a]:text-blue-600 [&_a]:underline [&_a]:decoration-blue-200 [&_a]:underline-offset-2",
-          "[&_img]:my-2 [&_img]:max-h-80 [&_img]:w-auto [&_img]:max-w-full [&_img]:rounded-lg [&_img]:border [&_img]:border-slate-200 [&_img]:shadow-sm",
+          "[&_img:not([data-grid-image='true'])]:my-2 [&_img:not([data-grid-image='true'])]:max-h-80 [&_img:not([data-grid-image='true'])]:w-auto [&_img:not([data-grid-image='true'])]:max-w-full [&_img:not([data-grid-image='true'])]:rounded-lg [&_img:not([data-grid-image='true'])]:border [&_img:not([data-grid-image='true'])]:border-slate-200 [&_img:not([data-grid-image='true'])]:shadow-sm",
+          "[&_table]:my-2 [&_table]:w-full [&_table]:border-collapse",
+          "[&_table_td]:border-0 [&_table_td]:align-top [&_table_td]:p-1.5",
+          "[&_table_td_img]:my-0 [&_table_td_img]:h-auto [&_table_td_img]:max-h-56 [&_table_td_img]:w-full [&_table_td_img]:object-cover",
         ].join(" "),
       },
       handleDrop: (_view, event) => {
@@ -1075,6 +1389,18 @@ export default function SectionContentEditor({
     attachmentInputRef.current?.click();
   };
 
+  const openGridPickerModal = () => {
+    if (!editable || isUploadingAsset) return;
+    setIsGridModalOpen(true);
+  };
+
+  const closeGridPickerModal = () => {
+    if (isUploadingAsset) return;
+    setIsGridModalOpen(false);
+    setGridFiles([]);
+    setGridFilePreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return []; });
+  };
+
   const handleImageInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) void insertUploadedFile(file);
@@ -1085,6 +1411,28 @@ export default function SectionContentEditor({
     const file = event.target.files?.[0];
     if (file) void insertUploadedFile(file);
     event.target.value = "";
+  };
+
+  const handleGridFilesInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []).filter((file) =>
+      file.type.startsWith(IMAGE_MIME_PREFIX),
+    );
+    setGridFilePreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return files.map((f) => URL.createObjectURL(f)); });
+    setGridFiles(files);
+    // Auto-select best layout for the number of images
+    if (files.length <= 2) setSelectedGridLayoutId(GRID_LAYOUT_OPTIONS[0].id);
+    else if (files.length <= 4) setSelectedGridLayoutId(GRID_LAYOUT_OPTIONS[1].id);
+    else if (files.length <= 6) setSelectedGridLayoutId(GRID_LAYOUT_OPTIONS[2].id);
+    else setSelectedGridLayoutId(GRID_LAYOUT_OPTIONS[3].id);
+    event.target.value = "";
+  };
+
+  const removeGridFile = (index: number) => {
+    setGridFilePreviews((prev) => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
+    setGridFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   if (!editor) {
@@ -1127,6 +1475,7 @@ export default function SectionContentEditor({
               editor={editor}
               onInsertImage={openImagePicker}
               onAttachFile={openAttachmentPicker}
+              onInsertImageGrid={openGridPickerModal}
               isUploadingAsset={isUploadingAsset}
               uploadPercent={uploadPercent}
             />
@@ -1181,6 +1530,185 @@ export default function SectionContentEditor({
             className="hidden"
             onChange={handleAttachmentInputChange}
           />
+
+          {isGridModalOpen && (
+            <div
+              className="fixed inset-0 z-120 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-[1px]"
+              onMouseDown={(e) => { if (e.target === e.currentTarget) closeGridPickerModal(); }}
+            >
+              <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/25 overflow-hidden">
+
+                {/* Header */}
+                <div className="relative overflow-hidden border-b border-slate-100 px-5 py-4">
+                  <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(135deg,#E8F8FF 0%,#F5EEFF 50%,#FFF7ED 100%)", opacity: 0.7 }} />
+                  <div className="relative flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 shadow-sm ring-1 ring-slate-200/70">
+                      <LayoutGrid className="h-4 w-4 text-violet-500" />
+                    </span>
+                    <div>
+                      <p className="text-[15px] font-semibold leading-tight text-slate-800">Insert image grid</p>
+                      <p className="mt-0.5 text-xs text-slate-500">Pick photos · choose layout · insert as one block</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="max-h-[70vh] overflow-y-auto">
+                  <div className="space-y-5 px-5 py-5">
+
+                    {/* Step 1 — Photos */}
+                    <div>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                        1 · Photos
+                      </p>
+                      <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-4 py-5 transition hover:border-violet-300 hover:bg-violet-50/30">
+                        <ImagePlus className="h-6 w-6 text-slate-300" />
+                        <span className="text-sm font-medium text-slate-500">Click to select images</span>
+                        <span className="text-[11px] text-slate-400">PNG, JPG, WEBP, GIF</span>
+                        <input
+                          type="file"
+                          accept={ACCEPTED_IMAGE_TYPES}
+                          multiple
+                          onChange={handleGridFilesInputChange}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {/* Thumbnails */}
+                      {gridFilePreviews.length > 0 && (
+                        <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                          {gridFilePreviews.map((previewUrl, index) => (
+                            <div
+                              key={index}
+                              className="group/thumb relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                            >
+                              <img
+                                src={previewUrl}
+                                alt={gridFiles[index]?.name}
+                                className="h-full w-full object-cover"
+                              />
+                              {/* Remove button */}
+                              <button
+                                type="button"
+                                onClick={() => removeGridFile(index)}
+                                className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-red-500 opacity-0 shadow transition-opacity group-hover/thumb:opacity-100 hover:bg-red-50"
+                                title="Remove"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                              {/* Order badge */}
+                              <span className="absolute bottom-0.5 left-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/50 text-[9px] font-bold text-white">
+                                {index + 1}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {gridFiles.length > 0 && (
+                        <p className="mt-1.5 text-[11px] text-slate-400">
+                          {gridFiles.length} image{gridFiles.length === 1 ? "" : "s"} selected
+                          {(() => {
+                            const layout = GRID_LAYOUT_OPTIONS.find((o) => o.id === selectedGridLayoutId) ?? GRID_LAYOUT_OPTIONS[1];
+                            const maxSlots = layout.rows * layout.cols;
+                            return gridFiles.length > maxSlots ? ` · only first ${maxSlots} will be used` : "";
+                          })()}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Step 2 — Layout */}
+                    <div>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                        2 · Layout
+                        {gridFiles.length > 0 && (
+                          <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-600">
+                            auto-selected
+                          </span>
+                        )}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {GRID_LAYOUT_OPTIONS.map((layout) => {
+                          const isSelected = selectedGridLayoutId === layout.id;
+                          const slots = layout.rows * layout.cols;
+                          const overLimit = gridFiles.length > slots;
+                          return (
+                            <button
+                              key={layout.id}
+                              type="button"
+                              onClick={() => setSelectedGridLayoutId(layout.id)}
+                              className={`rounded-xl border p-2.5 text-center transition ${
+                                isSelected
+                                  ? "border-violet-400 bg-violet-50 ring-2 ring-violet-100"
+                                  : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                              }`}
+                            >
+                              <span
+                                className="mx-auto mb-2 grid h-12 w-12 overflow-hidden rounded-md border border-slate-200 bg-white"
+                                style={{
+                                  gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))`,
+                                  gridTemplateRows: `repeat(${layout.rows}, minmax(0, 1fr))`,
+                                  gap: "2px",
+                                }}
+                              >
+                                {Array.from({ length: slots }, (_, idx) => {
+                                  const filled = idx < gridFiles.length;
+                                  return (
+                                    <span
+                                      key={`${layout.id}-${idx}`}
+                                      className={`rounded-xs transition-colors ${filled ? "bg-violet-300" : "bg-slate-200"}`}
+                                    />
+                                  );
+                                })}
+                              </span>
+                              <span className="text-xs font-medium text-slate-700">{layout.label}</span>
+                              {overLimit && (
+                                <span className="mt-0.5 block text-[10px] text-amber-500">clips to {slots}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-5 py-3">
+                  {isUploadingAsset && uploadPercent != null && (
+                    <div className="flex flex-1 items-center gap-2">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-linear-to-r from-cyan-400 to-violet-500 transition-all duration-300"
+                          style={{ width: `${uploadPercent}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-medium text-slate-500">{uploadPercent}%</span>
+                    </div>
+                  )}
+                  {!isUploadingAsset && <span />}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={closeGridPickerModal}
+                      disabled={isUploadingAsset}
+                      className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-40"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void insertImageGrid()}
+                      disabled={gridFiles.length === 0 || isUploadingAsset}
+                      className="rounded-xl bg-linear-to-r from-cyan-500 to-violet-500 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-violet-200 transition-all hover:from-cyan-600 hover:to-violet-600 hover:shadow-violet-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                    >
+                      {isUploadingAsset ? "Uploading…" : `Insert ${gridFiles.length > 0 ? gridFiles.length : ""} image${gridFiles.length === 1 ? "" : "s"}`}
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
 
           {/* Character hint at bottom when focused */}
           {showFooterHint && isFocused && (
