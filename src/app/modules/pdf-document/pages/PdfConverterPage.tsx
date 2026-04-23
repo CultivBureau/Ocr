@@ -91,7 +91,7 @@ const PdfConverterContent: React.FC = () => {
   // Upload limits (must match backend config.py)
   const MAX_UPLOAD_SIZE_MB = 20;
   const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
-  const ALLOWED_DOCUMENT = /\.(pdf|docx|doc)$/i;
+  const ALLOWED_DOCUMENT = /\.(pdf|docx|doc|png|jpe?g|webp)$/i;
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
@@ -223,8 +223,8 @@ const PdfConverterContent: React.FC = () => {
         try {
           setStatus(t.pdfConverter.savingToHistory);
           const docTitle =
-            uploadResponse.original_filename?.replace(/\.(pdf|docx|doc)$/i, "") ||
-            selectedFile.name.replace(/\.(pdf|docx|doc)$/i, "");
+            uploadResponse.original_filename?.replace(/\.(pdf|docx|doc|png|jpe?g|webp)$/i, "") ||
+            selectedFile.name.replace(/\.(pdf|docx|doc|png|jpe?g|webp)$/i, "");
           
           const savedDoc = await saveDocument({
             title: docTitle,
@@ -391,7 +391,7 @@ const PdfConverterContent: React.FC = () => {
               <div className="relative">
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/webp"
                   onChange={handleFileChange}
                   className="block w-full text-sm text-gray-700
                     file:mr-4 file:py-3 file:px-6
