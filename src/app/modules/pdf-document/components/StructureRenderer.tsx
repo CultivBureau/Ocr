@@ -354,7 +354,37 @@ export default function StructureRenderer({
                 title={extraData.title || "خدمات اخرى"}
                 columns={["يوم", "التاريخ", "البلد", "اسم الخدمة", "العدد"]}
                 rows={tableRows}
-                editable={false}
+                editable={editable}
+                onTitleChange={
+                  editable && onUserElementEdit
+                    ? (newTitle) =>
+                        onUserElementEdit({
+                          ...userElement,
+                          data: { ...extraData, title: newTitle },
+                        })
+                    : undefined
+                }
+                onCellChange={
+                  editable && onUserElementEdit
+                    ? (rowIndex, cellIndex, newValue) => {
+                        const keyMap = ["day", "date", "country", "service_name", "count"] as const;
+                        const key = keyMap[cellIndex];
+                        if (!key) return;
+                        const nextRows = rows.map((row, idx) => {
+                          if (idx !== rowIndex) return row;
+                          if (key === "count") {
+                            const parsed = Number(String(newValue).replace(/[^\d.-]/g, ""));
+                            return { ...row, count: Number.isFinite(parsed) ? parsed : row.count };
+                          }
+                          return { ...row, [key]: newValue };
+                        });
+                        onUserElementEdit({
+                          ...userElement,
+                          data: { ...extraData, rows: nextRows },
+                        });
+                      }
+                    : undefined
+                }
                 tableBackgroundColor="pink"
               />
             </div>
@@ -365,14 +395,38 @@ export default function StructureRenderer({
           return (
             <div className="w-full">
               {restoreBar}
-              <div className="border rounded-lg overflow-hidden">
-                <div className="bg-green-600 text-white text-center font-bold text-2xl py-2 px-3">
-                  {totalData.title || "الاجمالي كليا"}
-                </div>
-                <div className="border border-green-600 border-t-0 bg-white text-center font-bold text-5xl py-3 px-3 text-gray-800">
-                  {totalText || "-"}
-                </div>
-              </div>
+              <SectionTemplate
+                key={userElement.id}
+                title={totalData.title || "الاجمالي كليا"}
+                content={totalText || "-"}
+                editable={editable}
+                onTitleChange={
+                  editable && onUserElementEdit
+                    ? (newTitle) =>
+                        onUserElementEdit({
+                          ...userElement,
+                          data: { ...totalData, title: newTitle },
+                        })
+                    : undefined
+                }
+                onContentChange={
+                  editable && onUserElementEdit
+                    ? (newContent) =>
+                        onUserElementEdit({
+                          ...userElement,
+                          data: { ...totalData, formattedTotal: newContent },
+                        })
+                    : undefined
+                }
+                showUnderline={false}
+                titleSize="3xl"
+                contentSize="xl"
+                contentAlignment="center"
+                containerClassName="border rounded-lg overflow-hidden"
+                backgroundColor="bg-white"
+                border
+                borderColor="border-green-600"
+              />
             </div>
           );
         }

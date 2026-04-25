@@ -136,6 +136,11 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
   // Detect document direction
   const direction = detectDocumentDirection(structure);
 
+  // Version strip metadata (ID / DATE / TIME) used in editor and should also print in PDF.
+  const versionSku = (document.sku as string | undefined) ?? null;
+  const versionDate = (document.version_date as string | undefined) ?? null;
+  const versionTime = (document.version_time as string | undefined) ?? null;
+
   // Fetch company branding from logged-in user's company_id
   let headerImage: string | undefined = undefined;
   let footerImage: string | undefined = undefined;
@@ -285,6 +290,9 @@ export default async function PDFDocumentPage({ params, searchParams }: PageProp
         footerImage={footerImage}
         showHeader={!!headerImage}
         showFooter={!!footerImage}
+        versionSku={versionSku}
+        versionDate={versionDate}
+        versionTime={versionTime}
         termsAndConditions={termsAndConditions}
         pageSize="A4"
       >

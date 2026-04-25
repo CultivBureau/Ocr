@@ -3348,6 +3348,19 @@ function CodePageContent() {
                 } else if (element.type === 'hotel') {
                   setEditingHotelId(element.id);
                   setShowEditHotelSectionModal(true);
+                } else if (element.type === 'transport') {
+                  setEditingTransportId(element.id);
+                  setShowEditTransportSectionModal(true);
+                } else if (element.type === 'extra_service' || element.type === 'total_price') {
+                  // These component types are edited inline from StructureRenderer (TipTap/table cell editors).
+                  setStructureWithUndo((prev) => ({
+                    ...prev,
+                    user: {
+                      elements: prev.user.elements.map((el) =>
+                        el.id === element.id ? { ...el, data: element.data } : el
+                      ),
+                    },
+                  }));
                 }
               }}
               onUserElementDelete={(id) => {
