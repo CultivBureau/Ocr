@@ -6,6 +6,8 @@ import type { ComponentSuggestion } from '../types/ExtractTypes';
 import AirplaneSuggestionPreview from './suggestions/AirplaneSuggestionPreview';
 import HotelSuggestionPreview from './suggestions/HotelSuggestionPreview';
 import TransportSuggestionPreview from './suggestions/TransportSuggestionPreview';
+import ExtraServiceSuggestionPreview from './suggestions/ExtraServiceSuggestionPreview';
+import TotalPriceSuggestionPreview from './suggestions/TotalPriceSuggestionPreview';
 
 interface ComponentSuggestionModalProps {
   isOpen: boolean;
@@ -113,6 +115,18 @@ const ComponentSuggestionModal: React.FC<ComponentSuggestionModalProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
           </svg>
         );
+      case 'extra_service':
+        return (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 6h11M9 12h11M9 18h11M5 6h.01M5 12h.01M5 18h.01" />
+          </svg>
+        );
+      case 'total_price':
+        return (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2.21 0-4 .895-4 2s1.79 2 4 2 4 .895 4 2-1.79 2-4 2m0-10v12m0-12c1.105 0 2 .895 2 2M12 6c-1.105 0-2 .895-2 2" />
+          </svg>
+        );
     }
   };
 
@@ -124,6 +138,10 @@ const ComponentSuggestionModal: React.FC<ComponentSuggestionModalProps> = ({
         return t.modals.hotelBooking;
       case 'transport':
         return t.modals.transportation;
+      case 'extra_service':
+        return language === 'ar' ? 'خدمات اخرى' : 'Extra Services';
+      case 'total_price':
+        return language === 'ar' ? 'الاجمالي كليا' : 'Grand Total';
     }
   };
 
@@ -135,6 +153,10 @@ const ComponentSuggestionModal: React.FC<ComponentSuggestionModalProps> = ({
         return <HotelSuggestionPreview data={suggestion.data} language={language} direction={dir} />;
       case 'transport':
         return <TransportSuggestionPreview data={suggestion.data} language={language} direction={dir} />;
+      case 'extra_service':
+        return <ExtraServiceSuggestionPreview data={suggestion.data} language={language} direction={dir} />;
+      case 'total_price':
+        return <TotalPriceSuggestionPreview data={suggestion.data} language={language} direction={dir} />;
     }
   };
 
@@ -205,7 +227,9 @@ const ComponentSuggestionModal: React.FC<ComponentSuggestionModalProps> = ({
                       <div className={`p-2 rounded-lg ${
                         suggestion.type === 'airplane' ? 'bg-blue-100 text-blue-600' :
                         suggestion.type === 'hotel' ? 'bg-purple-100 text-purple-600' :
-                        'bg-red-100 text-red-600'
+                        suggestion.type === 'transport' ? 'bg-red-100 text-red-600' :
+                        suggestion.type === 'extra_service' ? 'bg-pink-100 text-pink-600' :
+                        'bg-green-100 text-green-600'
                       }`}>
                         {getTypeIcon(suggestion.type)}
                       </div>

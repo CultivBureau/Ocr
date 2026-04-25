@@ -201,10 +201,36 @@ export interface TransportSectionData {
   [key: string]: any;
 }
 
+export interface ExtraServiceSectionData {
+  rows?: Array<{
+    day: string;
+    date: string;
+    country: string;
+    service_name: string;
+    count: number;
+    [key: string]: any;
+  }>;
+  title?: string;
+  showTitle?: boolean;
+  direction?: "rtl" | "ltr";
+  language?: "ar" | "en";
+  [key: string]: any;
+}
+
+export interface TotalPriceSectionData {
+  title: string;
+  amount: string;
+  currency?: string;
+  formattedTotal?: string;
+  direction?: "rtl" | "ltr";
+  language?: "ar" | "en";
+  [key: string]: any;
+}
+
 export interface UserElement {
-  id: string;  // user_airplane_*, user_hotel_*, or user_transport_*
-  type: "airplane" | "hotel" | "transport";
-  data: AirplaneSectionData | HotelsSectionData | TransportSectionData;
+  id: string;  // user_airplane_*, user_hotel_*, user_transport_*, or user_extra_service_*
+  type: "airplane" | "hotel" | "transport" | "extra_service" | "total_price";
+  data: AirplaneSectionData | HotelsSectionData | TransportSectionData | ExtraServiceSectionData | TotalPriceSectionData;
   created_at?: string;
   order?: number;
   /**
@@ -217,13 +243,13 @@ export interface UserElement {
 }
 
 // Component Suggestion Types
-export type ComponentType = "airplane" | "hotel" | "transport";
+export type ComponentType = "airplane" | "hotel" | "transport" | "extra_service" | "total_price";
 
 export interface ComponentSuggestion {
   id: string;
   type: ComponentType;
   confidence: number; // 0.0 to 1.0
-  data: AirplaneSectionData | HotelsSectionData | TransportSectionData;
+  data: AirplaneSectionData | HotelsSectionData | TransportSectionData | ExtraServiceSectionData | TotalPriceSectionData;
   source_text?: string;
   reasoning?: string;
 }

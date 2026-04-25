@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useMemo } from "react";
-import type { Structure, Section, Table, SeparatedStructure, UserElement } from "../types/ExtractTypes";
+import type {
+  Structure,
+  Section,
+  Table,
+  SeparatedStructure,
+  UserElement,
+  ExtraServiceSectionData,
+  TotalPriceSectionData,
+} from "../types/ExtractTypes";
 import { useLanguage } from "@/app/modules/shared/contexts/LanguageContext";
 import SectionTemplate from "../templates/sectionTemplate";
 import DynamicTableTemplate from "../templates/dynamicTableTemplate";
@@ -326,6 +334,45 @@ export default function StructureRenderer({
                 editable={editable}
                 onEditSection={handleEdit}
               />
+            </div>
+          );
+        } else if (userElement.type === 'extra_service') {
+          const extraData = userElement.data as ExtraServiceSectionData;
+          const rows = Array.isArray(extraData.rows) ? extraData.rows : [];
+          const tableRows = rows.map((r) => [
+            r?.day ?? "",
+            r?.date ?? "",
+            r?.country ?? "",
+            r?.service_name ?? "",
+            String(r?.count ?? ""),
+          ]);
+          return (
+            <div className="w-full">
+              {restoreBar}
+              <DynamicTableTemplate
+                key={userElement.id}
+                title={extraData.title || "خدمات اخرى"}
+                columns={["يوم", "التاريخ", "البلد", "اسم الخدمة", "العدد"]}
+                rows={tableRows}
+                editable={false}
+                tableBackgroundColor="pink"
+              />
+            </div>
+          );
+        } else if (userElement.type === 'total_price') {
+          const totalData = userElement.data as TotalPriceSectionData;
+          const totalText = totalData.formattedTotal?.trim() || `${totalData.amount || ""} ${totalData.currency || ""}`.trim();
+          return (
+            <div className="w-full">
+              {restoreBar}
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-green-600 text-white text-center font-bold text-2xl py-2 px-3">
+                  {totalData.title || "الاجمالي كليا"}
+                </div>
+                <div className="border border-green-600 border-t-0 bg-white text-center font-bold text-5xl py-3 px-3 text-gray-800">
+                  {totalText || "-"}
+                </div>
+              </div>
             </div>
           );
         }
