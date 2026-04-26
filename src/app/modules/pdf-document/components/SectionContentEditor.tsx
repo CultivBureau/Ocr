@@ -41,6 +41,14 @@ import {
   LayoutGrid,
   Trash2,
   X,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  GripVertical,
+  Images,
+  Monitor,
+  Square,
+  Rows3,
 } from "lucide-react";
 import { undoDepth, redoDepth } from "@tiptap/pm/history";
 import { legacySectionContentToHtml } from "../utils/legacySectionContentToHtml";
@@ -224,20 +232,68 @@ const IMAGE_MIME_PREFIX = "image/";
 const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/jpg,image/webp,image/gif";
 const ACCEPTED_ATTACHMENT_TYPES =
   ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/zip,application/x-rar-compressed";
+const MAX_EDITOR_ASSET_SIZE_BYTES = 20 * 1024 * 1024;
 
 type GridLayoutOption = {
   id: string;
   label: string;
+  description: string;
   rows: number;
   cols: number;
 };
 
 const GRID_LAYOUT_OPTIONS: GridLayoutOption[] = [
-  { id: "1x2", label: "1 x 2", rows: 1, cols: 2 },
-  { id: "2x2", label: "2 x 2", rows: 2, cols: 2 },
-  { id: "2x3", label: "2 x 3", rows: 2, cols: 3 },
-  { id: "3x3", label: "3 x 3", rows: 3, cols: 3 },
+  { id: "1x2", label: "1 x 2", description: "Wide pair", rows: 1, cols: 2 },
+  { id: "2x2", label: "2 x 2", description: "Balanced grid", rows: 2, cols: 2 },
+  { id: "2x3", label: "2 x 3", description: "Story layout", rows: 2, cols: 3 },
+  { id: "3x3", label: "3 x 3", description: "Dense gallery", rows: 3, cols: 3 },
 ];
+
+type GridAspectOption = {
+  id: "16/9" | "4/3" | "1/1";
+  label: string;
+  description: string;
+};
+
+const GRID_ASPECT_OPTIONS: GridAspectOption[] = [
+  { id: "16/9", label: "Wide", description: "Best for landscape travel shots" },
+  { id: "4/3", label: "Classic", description: "Balanced photo frame" },
+  { id: "1/1", label: "Square", description: "Compact social-style cards" },
+];
+
+type GridFitOption = {
+  id: "contain" | "cover";
+  label: string;
+  description: string;
+};
+
+const GRID_FIT_OPTIONS: GridFitOption[] = [
+  { id: "cover", label: "Fill", description: "Edge-to-edge crop" },
+  { id: "contain", label: "Fit", description: "Show full image" },
+];
+
+type GridGapOption = {
+  id: "tight" | "normal" | "loose";
+  label: string;
+  px: number;
+};
+
+const GRID_GAP_OPTIONS: GridGapOption[] = [
+  { id: "tight", label: "Tight", px: 4 },
+  { id: "normal", label: "Normal", px: 8 },
+  { id: "loose", label: "Loose", px: 12 },
+];
+
+function suggestGridLayoutId(filesCount: number): string {
+  if (filesCount <= 2) return GRID_LAYOUT_OPTIONS[0].id;
+  if (filesCount <= 4) return GRID_LAYOUT_OPTIONS[1].id;
+  if (filesCount <= 6) return GRID_LAYOUT_OPTIONS[2].id;
+  return GRID_LAYOUT_OPTIONS[3].id;
+}
+
+function gapPxForOption(gapId: GridGapOption["id"]): number {
+  return GRID_GAP_OPTIONS.find((option) => option.id === gapId)?.px ?? GRID_GAP_OPTIONS[1].px;
+}
 
 /* ─────────────────────────────────────────
    Image Grid — custom TipTap node
@@ -255,6 +311,10 @@ interface ImageGridViewProps extends NodeViewRendererProps {
 
 function ImageGridView({ node, deleteNode, selected }: ImageGridViewProps) {
   const cols = node.attrs.cols as number;
+  const rows = node.attrs.rows as number;
+  const fit = (node.attrs.fit as "contain" | "cover") ?? "contain";
+  const aspectRatio = (node.attrs.aspectRatio as "16/9" | "4/3" | "1/1") ?? "16/9";
+  const gap = gapPxForOption((node.attrs.gap as GridGapOption["id"]) ?? "normal");
   const images = node.attrs.images as ImageGridImage[];
 
   return (
@@ -269,6 +329,7 @@ function ImageGridView({ node, deleteNode, selected }: ImageGridViewProps) {
         style={{
           background: "var(--section-grid-bg, rgba(148, 163, 184, 0.12))",
           border: "1px solid var(--section-grid-border, rgba(148, 163, 184, 0.35))",
+          padding: `${gap}px`,
         }}
       >
         <button
@@ -284,7 +345,8 @@ function ImageGridView({ node, deleteNode, selected }: ImageGridViewProps) {
           style={{
             display: "grid",
             gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-            gap: "6px",
+            gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+            gap: `${gap}px`,
           }}
         >
           {images.map((img, i) => (
@@ -292,7 +354,7 @@ function ImageGridView({ node, deleteNode, selected }: ImageGridViewProps) {
               key={i}
               className="overflow-hidden rounded-lg"
               style={{
-                aspectRatio: "16/9",
+                aspectRatio,
                 background: "var(--section-grid-cell-bg, rgba(241, 245, 249, 0.9))",
               }}
             >
@@ -304,7 +366,7 @@ function ImageGridView({ node, deleteNode, selected }: ImageGridViewProps) {
                 style={{
                   width: "100%",
                   height: "100%",
-                  objectFit: "contain",
+                  objectFit: fit,
                   objectPosition: "center",
                 }}
                 draggable={false}
@@ -331,6 +393,26 @@ const ImageGridNode = TiptapNode.create({
         parseHTML: (element) => parseInt(element.getAttribute("data-cols") ?? "2", 10),
         renderHTML: (attrs) => ({ "data-cols": String(attrs.cols) }),
       },
+      rows: {
+        default: 2,
+        parseHTML: (element) => parseInt(element.getAttribute("data-rows") ?? "2", 10),
+        renderHTML: (attrs) => ({ "data-rows": String(attrs.rows) }),
+      },
+      fit: {
+        default: "contain",
+        parseHTML: (element) => element.getAttribute("data-fit") ?? "contain",
+        renderHTML: (attrs) => ({ "data-fit": String(attrs.fit) }),
+      },
+      aspectRatio: {
+        default: "16/9",
+        parseHTML: (element) => element.getAttribute("data-aspect-ratio") ?? "16/9",
+        renderHTML: (attrs) => ({ "data-aspect-ratio": String(attrs.aspectRatio) }),
+      },
+      gap: {
+        default: "normal",
+        parseHTML: (element) => element.getAttribute("data-gap") ?? "normal",
+        renderHTML: (attrs) => ({ "data-gap": String(attrs.gap) }),
+      },
       images: {
         default: [],
         parseHTML: (element) => {
@@ -353,14 +435,18 @@ const ImageGridNode = TiptapNode.create({
 
   renderHTML({ node }) {
     const cols = node.attrs.cols as number;
+    const rows = node.attrs.rows as number;
+    const fit = (node.attrs.fit as "contain" | "cover") ?? "contain";
+    const aspectRatio = (node.attrs.aspectRatio as "16/9" | "4/3" | "1/1") ?? "16/9";
+    const gap = gapPxForOption((node.attrs.gap as GridGapOption["id"]) ?? "normal");
     const images = node.attrs.images as ImageGridImage[];
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cellNodes: any[] = images.map((img) => [
       "div",
       {
-        style:
-          "overflow:hidden;border-radius:8px;aspect-ratio:16/9;background:var(--section-grid-cell-bg, rgba(241,245,249,.9));",
+          style:
+          `overflow:hidden;border-radius:8px;aspect-ratio:${aspectRatio};background:var(--section-grid-cell-bg, rgba(241,245,249,.9));`,
       },
       [
         "img",
@@ -368,7 +454,7 @@ const ImageGridNode = TiptapNode.create({
           src: img.src,
           alt: img.alt,
           "data-grid-image": "true",
-          style: "display:block;width:100%;height:100%;object-fit:contain;object-position:center;",
+          style: `display:block;width:100%;height:100%;object-fit:${fit};object-position:center;`,
         },
       ],
     ]);
@@ -378,8 +464,12 @@ const ImageGridNode = TiptapNode.create({
       {
         "data-image-grid": "true",
         "data-cols": String(cols),
+        "data-rows": String(rows),
+        "data-fit": fit,
+        "data-aspect-ratio": aspectRatio,
+        "data-gap": String(node.attrs.gap ?? "normal"),
         "data-images": JSON.stringify(images),
-        style: `display:grid;grid-template-columns:repeat(${cols},minmax(0,1fr));gap:6px;margin:8px 0;background:var(--section-grid-bg, rgba(148,163,184,.12));border:1px solid var(--section-grid-border, rgba(148,163,184,.35));border-radius:12px;padding:6px;`,
+        style: `display:grid;grid-template-columns:repeat(${cols},minmax(0,1fr));grid-template-rows:repeat(${rows},minmax(0,1fr));gap:${gap}px;margin:8px 0;background:var(--section-grid-bg, rgba(148,163,184,.12));border:1px solid var(--section-grid-border, rgba(148,163,184,.35));border-radius:12px;padding:${gap}px;`,
       },
       ...cellNodes,
     ];
@@ -403,6 +493,16 @@ function createSafeAttachmentLabel(name: string): string {
 function isSupportedEditorAsset(file: File): boolean {
   if (file.type.startsWith(IMAGE_MIME_PREFIX)) return true;
   return file.size > 0;
+}
+
+function getEditorAssetValidationError(file: File): string | null {
+  if (file.size > MAX_EDITOR_ASSET_SIZE_BYTES) {
+    return `${file.name} is too large. Maximum upload size is 20MB.`;
+  }
+  if (!isSupportedEditorAsset(file)) {
+    return `${file.name} is not a supported file type.`;
+  }
+  return null;
 }
 
 export interface SectionContentEditorProps {
@@ -717,6 +817,7 @@ function Toolbar({
   onInsertImageGrid,
   isUploadingAsset,
   uploadPercent,
+  uploadError,
 }: {
   editor: Editor;
   onInsertImage: () => void;
@@ -724,6 +825,7 @@ function Toolbar({
   onInsertImageGrid: () => void;
   isUploadingAsset: boolean;
   uploadPercent: number | null;
+  uploadError: string | null;
 }) {
   const state = useEditorState({
     editor,
@@ -883,6 +985,11 @@ function Toolbar({
       {isUploadingAsset && (
         <span className="ml-1 text-[11px] font-medium text-blue-600">
           Uploading{uploadPercent != null ? ` ${uploadPercent}%` : "..."}
+        </span>
+      )}
+      {!isUploadingAsset && uploadError && (
+        <span className="ml-1 max-w-[360px] truncate text-[11px] font-medium text-red-600" title={uploadError}>
+          {uploadError}
         </span>
       )}
     </div>
@@ -1160,8 +1267,13 @@ export default function SectionContentEditor({
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [isGridModalOpen, setIsGridModalOpen] = useState(false);
   const [selectedGridLayoutId, setSelectedGridLayoutId] = useState<string>(GRID_LAYOUT_OPTIONS[1].id);
+  const [selectedGridAspectRatio, setSelectedGridAspectRatio] = useState<GridAspectOption["id"]>("16/9");
+  const [selectedGridFit, setSelectedGridFit] = useState<GridFitOption["id"]>("cover");
+  const [selectedGridGap, setSelectedGridGap] = useState<GridGapOption["id"]>("normal");
   const [gridFiles, setGridFiles] = useState<File[]>([]);
   const [gridFilePreviews, setGridFilePreviews] = useState<string[]>([]);
+  const [isGridDragActive, setIsGridDragActive] = useState(false);
+  const [assetUploadError, setAssetUploadError] = useState<string | null>(null);
 
   const initialBidi = useMemo(
     () => analyzeEditorPlainText(plainTextFromHtml(initialHtmlRef.current ?? "")),
@@ -1171,6 +1283,7 @@ export default function SectionContentEditor({
   const uploadAsset = async (file: File): Promise<{ url: string; fileName: string } | null> => {
     setIsUploadingAsset(true);
     setUploadPercent(null);
+    setAssetUploadError(null);
     try {
       const response = await uploadEditorAssetWithProgress(file, (_, __, percent) => {
         setUploadPercent(percent);
@@ -1182,7 +1295,8 @@ export default function SectionContentEditor({
         fileName: response.original_filename || file.name,
       };
     } catch (error) {
-      console.error("Failed to upload editor asset:", error);
+      const message = error instanceof Error ? error.message : "Failed to upload file.";
+      setAssetUploadError(message);
       return null;
     } finally {
       setIsUploadingAsset(false);
@@ -1192,7 +1306,11 @@ export default function SectionContentEditor({
 
   const insertUploadedFile = async (file: File) => {
     if (!editor || !editable) return;
-    if (!isSupportedEditorAsset(file)) return;
+    const validationError = getEditorAssetValidationError(file);
+    if (validationError) {
+      setAssetUploadError(validationError);
+      return;
+    }
     const uploaded = await uploadAsset(file);
     if (!uploaded) return;
     const isImage = file.type.startsWith(IMAGE_MIME_PREFIX);
@@ -1221,17 +1339,37 @@ export default function SectionContentEditor({
 
   const insertImageGrid = async () => {
     if (!editor || !editable || gridFiles.length === 0) return;
+    setAssetUploadError(null);
     const layout =
       GRID_LAYOUT_OPTIONS.find((option) => option.id === selectedGridLayoutId) ??
       GRID_LAYOUT_OPTIONS[1];
     const maxSlots = layout.rows * layout.cols;
-    const filesToUpload = gridFiles
+    const candidateFiles = gridFiles
       .filter((file) => file.type.startsWith(IMAGE_MIME_PREFIX))
       .slice(0, maxSlots);
-    if (filesToUpload.length === 0) return;
+    const validFiles: File[] = [];
+    const skippedFiles: string[] = [];
+    for (const file of candidateFiles) {
+      const validationError = getEditorAssetValidationError(file);
+      if (validationError) {
+        skippedFiles.push(file.name);
+        continue;
+      }
+      validFiles.push(file);
+    }
+    if (skippedFiles.length > 0) {
+      const maxVisible = 3;
+      const visibleNames = skippedFiles.slice(0, maxVisible);
+      const extraCount = skippedFiles.length - visibleNames.length;
+      const suffix = extraCount > 0 ? ` and ${extraCount} more` : "";
+      setAssetUploadError(
+        `Skipped oversized files: ${visibleNames.join(", ")}${suffix}. Maximum size is 20MB per file.`,
+      );
+    }
+    if (validFiles.length === 0) return;
 
     const uploadedImages: ImageGridImage[] = [];
-    for (const file of filesToUpload) {
+    for (const file of validFiles) {
       const uploaded = await uploadAsset(file);
       if (!uploaded) continue;
       uploadedImages.push({ src: uploaded.url, alt: uploaded.fileName });
@@ -1240,12 +1378,20 @@ export default function SectionContentEditor({
 
     editor.chain().focus().insertContent({
       type: "imageGrid",
-      attrs: { cols: layout.cols, images: uploadedImages },
+      attrs: {
+        cols: layout.cols,
+        rows: layout.rows,
+        fit: selectedGridFit,
+        aspectRatio: selectedGridAspectRatio,
+        gap: selectedGridGap,
+        images: uploadedImages,
+      },
     }).run();
 
     setIsGridModalOpen(false);
     setGridFiles([]);
     setGridFilePreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return []; });
+    setIsGridDragActive(false);
   };
 
   const extensions = useMemo(
@@ -1381,16 +1527,19 @@ export default function SectionContentEditor({
 
   const openImagePicker = () => {
     if (!editable || isUploadingAsset) return;
+    setAssetUploadError(null);
     imageInputRef.current?.click();
   };
 
   const openAttachmentPicker = () => {
     if (!editable || isUploadingAsset) return;
+    setAssetUploadError(null);
     attachmentInputRef.current?.click();
   };
 
   const openGridPickerModal = () => {
     if (!editable || isUploadingAsset) return;
+    setAssetUploadError(null);
     setIsGridModalOpen(true);
   };
 
@@ -1399,6 +1548,11 @@ export default function SectionContentEditor({
     setIsGridModalOpen(false);
     setGridFiles([]);
     setGridFilePreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return []; });
+    setSelectedGridLayoutId(GRID_LAYOUT_OPTIONS[1].id);
+    setSelectedGridAspectRatio("16/9");
+    setSelectedGridFit("cover");
+    setSelectedGridGap("normal");
+    setIsGridDragActive(false);
   };
 
   const handleImageInputChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -1419,11 +1573,7 @@ export default function SectionContentEditor({
     );
     setGridFilePreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return files.map((f) => URL.createObjectURL(f)); });
     setGridFiles(files);
-    // Auto-select best layout for the number of images
-    if (files.length <= 2) setSelectedGridLayoutId(GRID_LAYOUT_OPTIONS[0].id);
-    else if (files.length <= 4) setSelectedGridLayoutId(GRID_LAYOUT_OPTIONS[1].id);
-    else if (files.length <= 6) setSelectedGridLayoutId(GRID_LAYOUT_OPTIONS[2].id);
-    else setSelectedGridLayoutId(GRID_LAYOUT_OPTIONS[3].id);
+    setSelectedGridLayoutId(suggestGridLayoutId(files.length));
     event.target.value = "";
   };
 
@@ -1435,6 +1585,66 @@ export default function SectionContentEditor({
     setGridFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const moveGridFile = (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= gridFiles.length) return;
+    setGridFiles((prev) => {
+      const next = [...prev];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+    setGridFilePreviews((prev) => {
+      const next = [...prev];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+  };
+
+  const applyGridFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    setGridFilePreviews((prev) => {
+      prev.forEach((url) => URL.revokeObjectURL(url));
+      return files.map((file) => URL.createObjectURL(file));
+    });
+    setGridFiles(files);
+    setSelectedGridLayoutId(suggestGridLayoutId(files.length));
+  };
+
+  const handleGridDrop = (event: React.DragEvent<HTMLLabelElement | HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsGridDragActive(false);
+    const files = Array.from(event.dataTransfer.files ?? []).filter((file) =>
+      file.type.startsWith(IMAGE_MIME_PREFIX),
+    );
+    applyGridFiles(files);
+  };
+
+  const selectedGridLayout =
+    GRID_LAYOUT_OPTIONS.find((option) => option.id === selectedGridLayoutId) ??
+    GRID_LAYOUT_OPTIONS[1];
+  const selectedGridSlots = selectedGridLayout.rows * selectedGridLayout.cols;
+  const selectedGridGapPx = gapPxForOption(selectedGridGap);
+  const filesUsedInGrid = gridFiles.slice(0, selectedGridSlots);
+
+  useEffect(() => {
+    if (!isGridModalOpen || typeof document === "undefined") return;
+
+    const { body, documentElement } = document;
+    const previousBodyOverflow = body.style.overflow;
+    const previousHtmlOverflow = documentElement.style.overflow;
+
+    body.style.overflow = "hidden";
+    documentElement.style.overflow = "hidden";
+    body.dataset.gridModalOpen = "true";
+
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      documentElement.style.overflow = previousHtmlOverflow;
+      delete body.dataset.gridModalOpen;
+    };
+  }, [isGridModalOpen]);
+
   if (!editor) {
     return (
       <div
@@ -1443,6 +1653,402 @@ export default function SectionContentEditor({
       />
     );
   }
+
+  const gridModal = isGridModalOpen ? (
+    <div
+      className="fixed inset-0 z-[99999] bg-slate-950/55 backdrop-blur-[3px]"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) closeGridPickerModal(); }}
+    >
+      <div className="flex h-full w-full items-center justify-center p-2 sm:p-4 lg:p-6">
+        <div className="flex h-[min(960px,calc(100dvh-16px))] w-full max-w-[1380px] flex-col overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-2xl shadow-slate-950/25 sm:h-[min(960px,calc(100dvh-32px))] sm:rounded-[28px]">
+          <div className="relative shrink-0 overflow-hidden border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5">
+            <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(135deg,#E8F8FF 0%,#F5EEFF 50%,#FFF7ED 100%)", opacity: 0.8 }} />
+            <div className="relative flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/85 shadow-sm ring-1 ring-slate-200/70">
+                    <LayoutGrid className="h-5 w-5 text-violet-500" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xl font-semibold leading-tight text-slate-900 sm:text-[22px]">Insert image grid</p>
+                    <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                      Upload, reorder, tune the layout, then insert one polished gallery block.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-white/85 px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200/70">
+                    Full-screen workspace
+                  </span>
+                  <span className="rounded-full bg-white/85 px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200/70">
+                    {gridFiles.length} selected
+                  </span>
+                  <span className="rounded-full bg-white/85 px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200/70">
+                    {selectedGridLayout.label} layout
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeGridPickerModal}
+                disabled={isUploadingAsset}
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-white/70 hover:text-slate-600 disabled:opacity-40"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
+            <div className="min-h-0 overflow-y-auto">
+              <div className="space-y-6 px-4 py-4 sm:px-6 sm:py-6">
+                <section>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">1 · Photos</p>
+                    {gridFiles.length > 0 && (
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                        {gridFiles.length} selected
+                      </span>
+                    )}
+                  </div>
+                  <label
+                    className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-5 py-8 text-center transition sm:px-6 sm:py-10 ${
+                      isGridDragActive
+                        ? "border-violet-400 bg-violet-50/60"
+                        : "border-slate-200 bg-slate-50/60 hover:border-violet-300 hover:bg-violet-50/30"
+                    }`}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      setIsGridDragActive(true);
+                    }}
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      setIsGridDragActive(true);
+                    }}
+                    onDragLeave={(event) => {
+                      if (event.target === event.currentTarget) setIsGridDragActive(false);
+                    }}
+                    onDrop={handleGridDrop}
+                  >
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+                      <Images className="h-7 w-7 text-violet-500" />
+                    </div>
+                    <div>
+                      <div className="text-base font-semibold text-slate-700">Drop images here or click to browse</div>
+                      <div className="mt-1 text-sm text-slate-500">PNG, JPG, WEBP, GIF. Use multiple images at once.</div>
+                    </div>
+                    <div className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+                      Choose images
+                    </div>
+                    <input
+                      type="file"
+                      accept={ACCEPTED_IMAGE_TYPES}
+                      multiple
+                      onChange={handleGridFilesInputChange}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {gridFilePreviews.length > 0 && (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+                      {gridFilePreviews.map((previewUrl, index) => (
+                        <div
+                          key={index}
+                          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                        >
+                          <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                            <img
+                              src={previewUrl}
+                              alt={gridFiles[index]?.name}
+                              className="h-full w-full object-cover"
+                            />
+                            <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-1 text-[10px] font-semibold text-white">
+                              <GripVertical className="h-3 w-3" />
+                              {index + 1}
+                            </div>
+                          </div>
+                          <div className="space-y-3 p-3">
+                            <p className="truncate text-sm font-medium text-slate-700">{gridFiles[index]?.name}</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => moveGridFile(index, -1)}
+                                  disabled={index === 0}
+                                  className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 disabled:opacity-35"
+                                  title="Move earlier"
+                                >
+                                  <ArrowLeft className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveGridFile(index, 1)}
+                                  disabled={index === gridFilePreviews.length - 1}
+                                  className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 disabled:opacity-35"
+                                  title="Move later"
+                                >
+                                  <ArrowRight className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeGridFile(index)}
+                                className="rounded-lg border border-red-100 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                <section>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">2 · Layout</p>
+                    {gridFiles.length > 0 && (
+                      <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-600">
+                        Recommended automatically
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+                    {GRID_LAYOUT_OPTIONS.map((layout) => {
+                      const isSelected = selectedGridLayoutId === layout.id;
+                      const slots = layout.rows * layout.cols;
+                      const overLimit = gridFiles.length > slots;
+                      return (
+                        <button
+                          key={layout.id}
+                          type="button"
+                          onClick={() => setSelectedGridLayoutId(layout.id)}
+                          className={`rounded-2xl border p-3 text-left transition ${
+                            isSelected
+                              ? "border-violet-400 bg-violet-50 ring-2 ring-violet-100"
+                              : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span
+                            className="mb-3 grid h-14 w-14 overflow-hidden rounded-lg border border-slate-200 bg-white"
+                            style={{
+                              gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))`,
+                              gridTemplateRows: `repeat(${layout.rows}, minmax(0, 1fr))`,
+                              gap: "2px",
+                            }}
+                          >
+                            {Array.from({ length: slots }, (_, idx) => {
+                              const filled = idx < gridFiles.length;
+                              return (
+                                <span
+                                  key={`${layout.id}-${idx}`}
+                                  className={`rounded-[2px] ${filled ? "bg-violet-300" : "bg-slate-200"}`}
+                                />
+                              );
+                            })}
+                          </span>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-slate-800">{layout.label}</span>
+                            {isSelected && <Check className="h-4 w-4 text-violet-500" />}
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500">{layout.description}</p>
+                          {overLimit && <span className="mt-2 block text-[11px] font-medium text-amber-600">Only first {slots} images will be used</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-3">
+                  <div>
+                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400">3 · Crop style</p>
+                    <div className="grid gap-2">
+                      {GRID_FIT_OPTIONS.map((option) => {
+                        const active = selectedGridFit === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => setSelectedGridFit(option.id)}
+                            className={`rounded-2xl border px-4 py-3 text-left transition ${
+                              active ? "border-cyan-400 bg-cyan-50 ring-2 ring-cyan-100" : "border-slate-200 bg-white hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="text-sm font-semibold text-slate-800">{option.label}</div>
+                            <div className="mt-1 text-xs text-slate-500">{option.description}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400">4 · Frame ratio</p>
+                    <div className="grid gap-2">
+                      {GRID_ASPECT_OPTIONS.map((option) => {
+                        const active = selectedGridAspectRatio === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => setSelectedGridAspectRatio(option.id)}
+                            className={`rounded-2xl border px-4 py-3 text-left transition ${
+                              active ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100" : "border-slate-200 bg-white hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                              {option.id === "16/9" ? <Monitor className="h-4 w-4" /> : option.id === "1/1" ? <Square className="h-4 w-4" /> : <Rows3 className="h-4 w-4" />}
+                              {option.label}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">{option.description}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2 2xl:col-span-1">
+                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400">5 · Spacing</p>
+                    <div className="grid gap-2">
+                      {GRID_GAP_OPTIONS.map((option) => {
+                        const active = selectedGridGap === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => setSelectedGridGap(option.id)}
+                            className={`rounded-2xl border px-4 py-3 text-left transition ${
+                              active ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-100" : "border-slate-200 bg-white hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="text-sm font-semibold text-slate-800">{option.label}</div>
+                            <div className="mt-1 text-xs text-slate-500">{option.px}px gap between images</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <aside className="min-h-0 border-t border-slate-100 bg-slate-50/70 xl:border-l xl:border-t-0">
+              <div className="h-full overflow-y-auto p-4 sm:p-6">
+                <div className="rounded-[24px] border border-slate-200 bg-white shadow-sm">
+                  <div className="border-b border-slate-100 px-5 py-4">
+                    <p className="text-sm font-semibold text-slate-800">Live preview</p>
+                    <p className="mt-1 text-xs text-slate-500">This is how the gallery block will be inserted.</p>
+                  </div>
+                  <div className="space-y-4 p-5">
+                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
+                      <div className="rounded-xl bg-slate-50 px-3 py-2">
+                        <div className="font-semibold text-slate-700">Layout</div>
+                        <div>{selectedGridLayout.label}</div>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 px-3 py-2">
+                        <div className="font-semibold text-slate-700">Used</div>
+                        <div>{Math.min(gridFiles.length, selectedGridSlots)} / {selectedGridSlots}</div>
+                      </div>
+                    </div>
+                    <div
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: `repeat(${selectedGridLayout.cols}, minmax(0, 1fr))`,
+                        gridTemplateRows: `repeat(${selectedGridLayout.rows}, minmax(0, 1fr))`,
+                        gap: `${selectedGridGapPx}px`,
+                      }}
+                    >
+                      {Array.from({ length: selectedGridSlots }, (_, index) => {
+                        const previewUrl = gridFilePreviews[index];
+                        return (
+                          <div
+                            key={`preview-slot-${index}`}
+                            className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+                            style={{ aspectRatio: selectedGridAspectRatio }}
+                          >
+                            {previewUrl ? (
+                              <img
+                                src={previewUrl}
+                                alt={gridFiles[index]?.name}
+                                className="h-full w-full"
+                                style={{ objectFit: selectedGridFit, objectPosition: "center" }}
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[11px] font-medium text-slate-300">
+                                Empty
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
+                      {gridFiles.length > selectedGridSlots
+                        ? `The preview uses the first ${selectedGridSlots} images. Reorder selected photos to control which ones appear.`
+                        : "Your current image order defines the gallery reading order in the document."}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                {isUploadingAsset && uploadPercent != null ? (
+                  <>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-linear-to-r from-cyan-400 to-violet-500 transition-all duration-300"
+                        style={{ width: `${uploadPercent}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-medium text-slate-500">{uploadPercent}%</span>
+                  </>
+                ) : (
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-slate-500">
+                      {gridFiles.length === 0
+                        ? "Select images to unlock layout and preview options."
+                        : `Ready to insert ${Math.min(filesUsedInGrid.length, selectedGridSlots)} image${Math.min(filesUsedInGrid.length, selectedGridSlots) === 1 ? "" : "s"} as a ${selectedGridLayout.label} block.`}
+                    </p>
+                    {assetUploadError && (
+                      <p className="mt-1 truncate text-xs font-medium text-red-600" title={assetUploadError}>
+                        {assetUploadError}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeGridPickerModal}
+                  disabled={isUploadingAsset}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void insertImageGrid()}
+                  disabled={gridFiles.length === 0 || isUploadingAsset}
+                  className="rounded-xl bg-linear-to-r from-cyan-500 to-violet-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-200 transition-all hover:from-cyan-600 hover:to-violet-600 hover:shadow-violet-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                >
+                  {isUploadingAsset
+                    ? "Uploading…"
+                    : `Insert ${Math.min(filesUsedInGrid.length, selectedGridSlots) || ""} image${Math.min(filesUsedInGrid.length, selectedGridSlots) === 1 ? "" : "s"}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div
@@ -1478,6 +2084,7 @@ export default function SectionContentEditor({
               onInsertImageGrid={openGridPickerModal}
               isUploadingAsset={isUploadingAsset}
               uploadPercent={uploadPercent}
+              uploadError={assetUploadError}
             />
           </div>
 
@@ -1531,185 +2138,6 @@ export default function SectionContentEditor({
             onChange={handleAttachmentInputChange}
           />
 
-          {isGridModalOpen && (
-            <div
-              className="fixed inset-0 z-120 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-[1px]"
-              onMouseDown={(e) => { if (e.target === e.currentTarget) closeGridPickerModal(); }}
-            >
-              <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/25 overflow-hidden">
-
-                {/* Header */}
-                <div className="relative overflow-hidden border-b border-slate-100 px-5 py-4">
-                  <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(135deg,#E8F8FF 0%,#F5EEFF 50%,#FFF7ED 100%)", opacity: 0.7 }} />
-                  <div className="relative flex items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 shadow-sm ring-1 ring-slate-200/70">
-                      <LayoutGrid className="h-4 w-4 text-violet-500" />
-                    </span>
-                    <div>
-                      <p className="text-[15px] font-semibold leading-tight text-slate-800">Insert image grid</p>
-                      <p className="mt-0.5 text-xs text-slate-500">Pick photos · choose layout · insert as one block</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="max-h-[70vh] overflow-y-auto">
-                  <div className="space-y-5 px-5 py-5">
-
-                    {/* Step 1 — Photos */}
-                    <div>
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-                        1 · Photos
-                      </p>
-                      <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-4 py-5 transition hover:border-violet-300 hover:bg-violet-50/30">
-                        <ImagePlus className="h-6 w-6 text-slate-300" />
-                        <span className="text-sm font-medium text-slate-500">Click to select images</span>
-                        <span className="text-[11px] text-slate-400">PNG, JPG, WEBP, GIF</span>
-                        <input
-                          type="file"
-                          accept={ACCEPTED_IMAGE_TYPES}
-                          multiple
-                          onChange={handleGridFilesInputChange}
-                          className="hidden"
-                        />
-                      </label>
-
-                      {/* Thumbnails */}
-                      {gridFilePreviews.length > 0 && (
-                        <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
-                          {gridFilePreviews.map((previewUrl, index) => (
-                            <div
-                              key={index}
-                              className="group/thumb relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
-                            >
-                              <img
-                                src={previewUrl}
-                                alt={gridFiles[index]?.name}
-                                className="h-full w-full object-cover"
-                              />
-                              {/* Remove button */}
-                              <button
-                                type="button"
-                                onClick={() => removeGridFile(index)}
-                                className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-red-500 opacity-0 shadow transition-opacity group-hover/thumb:opacity-100 hover:bg-red-50"
-                                title="Remove"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                              {/* Order badge */}
-                              <span className="absolute bottom-0.5 left-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/50 text-[9px] font-bold text-white">
-                                {index + 1}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {gridFiles.length > 0 && (
-                        <p className="mt-1.5 text-[11px] text-slate-400">
-                          {gridFiles.length} image{gridFiles.length === 1 ? "" : "s"} selected
-                          {(() => {
-                            const layout = GRID_LAYOUT_OPTIONS.find((o) => o.id === selectedGridLayoutId) ?? GRID_LAYOUT_OPTIONS[1];
-                            const maxSlots = layout.rows * layout.cols;
-                            return gridFiles.length > maxSlots ? ` · only first ${maxSlots} will be used` : "";
-                          })()}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Step 2 — Layout */}
-                    <div>
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-                        2 · Layout
-                        {gridFiles.length > 0 && (
-                          <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-600">
-                            auto-selected
-                          </span>
-                        )}
-                      </p>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                        {GRID_LAYOUT_OPTIONS.map((layout) => {
-                          const isSelected = selectedGridLayoutId === layout.id;
-                          const slots = layout.rows * layout.cols;
-                          const overLimit = gridFiles.length > slots;
-                          return (
-                            <button
-                              key={layout.id}
-                              type="button"
-                              onClick={() => setSelectedGridLayoutId(layout.id)}
-                              className={`rounded-xl border p-2.5 text-center transition ${
-                                isSelected
-                                  ? "border-violet-400 bg-violet-50 ring-2 ring-violet-100"
-                                  : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                              }`}
-                            >
-                              <span
-                                className="mx-auto mb-2 grid h-12 w-12 overflow-hidden rounded-md border border-slate-200 bg-white"
-                                style={{
-                                  gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))`,
-                                  gridTemplateRows: `repeat(${layout.rows}, minmax(0, 1fr))`,
-                                  gap: "2px",
-                                }}
-                              >
-                                {Array.from({ length: slots }, (_, idx) => {
-                                  const filled = idx < gridFiles.length;
-                                  return (
-                                    <span
-                                      key={`${layout.id}-${idx}`}
-                                      className={`rounded-xs transition-colors ${filled ? "bg-violet-300" : "bg-slate-200"}`}
-                                    />
-                                  );
-                                })}
-                              </span>
-                              <span className="text-xs font-medium text-slate-700">{layout.label}</span>
-                              {overLimit && (
-                                <span className="mt-0.5 block text-[10px] text-amber-500">clips to {slots}</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-5 py-3">
-                  {isUploadingAsset && uploadPercent != null && (
-                    <div className="flex flex-1 items-center gap-2">
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className="h-full rounded-full bg-linear-to-r from-cyan-400 to-violet-500 transition-all duration-300"
-                          style={{ width: `${uploadPercent}%` }}
-                        />
-                      </div>
-                      <span className="text-[11px] font-medium text-slate-500">{uploadPercent}%</span>
-                    </div>
-                  )}
-                  {!isUploadingAsset && <span />}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={closeGridPickerModal}
-                      disabled={isUploadingAsset}
-                      className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-40"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void insertImageGrid()}
-                      disabled={gridFiles.length === 0 || isUploadingAsset}
-                      className="rounded-xl bg-linear-to-r from-cyan-500 to-violet-500 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-violet-200 transition-all hover:from-cyan-600 hover:to-violet-600 hover:shadow-violet-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-                    >
-                      {isUploadingAsset ? "Uploading…" : `Insert ${gridFiles.length > 0 ? gridFiles.length : ""} image${gridFiles.length === 1 ? "" : "s"}`}
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
-
           {/* Character hint at bottom when focused */}
           {showFooterHint && isFocused && (
             <div className="border-t border-slate-100/80 px-4 py-1.5">
@@ -1724,6 +2152,7 @@ export default function SectionContentEditor({
         /* ── Read-only: no wrapper styling needed, editor handles it ── */
         <EditorContent editor={editor} />
       )}
+      {gridModal && typeof document !== "undefined" ? createPortal(gridModal, document.body) : null}
     </div>
   );
 }
