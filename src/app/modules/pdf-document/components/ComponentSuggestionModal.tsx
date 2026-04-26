@@ -2,7 +2,14 @@
 
 import React, { useState } from 'react';
 import { useLanguage } from "@/app/modules/shared/contexts/LanguageContext";
-import type { ComponentSuggestion } from '../types/ExtractTypes';
+import type {
+  ComponentSuggestion,
+  AirplaneSectionData,
+  HotelsSectionData,
+  TransportSectionData,
+  ExtraServiceSectionData,
+  TotalPriceSectionData,
+} from '../types/ExtractTypes';
 import AirplaneSuggestionPreview from './suggestions/AirplaneSuggestionPreview';
 import HotelSuggestionPreview from './suggestions/HotelSuggestionPreview';
 import TransportSuggestionPreview from './suggestions/TransportSuggestionPreview';
@@ -148,15 +155,15 @@ const ComponentSuggestionModal: React.FC<ComponentSuggestionModalProps> = ({
   const renderPreview = (suggestion: ComponentSuggestion) => {
     switch (suggestion.type) {
       case 'airplane':
-        return <AirplaneSuggestionPreview data={suggestion.data} language={language} direction={dir} />;
+        return <AirplaneSuggestionPreview data={suggestion.data as AirplaneSectionData} language={language} direction={dir} />;
       case 'hotel':
-        return <HotelSuggestionPreview data={suggestion.data} language={language} direction={dir} />;
+        return <HotelSuggestionPreview data={suggestion.data as HotelsSectionData} language={language} direction={dir} />;
       case 'transport':
-        return <TransportSuggestionPreview data={suggestion.data} language={language} direction={dir} />;
+        return <TransportSuggestionPreview data={suggestion.data as TransportSectionData} language={language} direction={dir} />;
       case 'extra_service':
-        return <ExtraServiceSuggestionPreview data={suggestion.data} language={language} direction={dir} />;
+        return <ExtraServiceSuggestionPreview data={suggestion.data as ExtraServiceSectionData} language={language} direction={dir} />;
       case 'total_price':
-        return <TotalPriceSuggestionPreview data={suggestion.data} language={language} direction={dir} />;
+        return <TotalPriceSuggestionPreview data={suggestion.data as TotalPriceSectionData} language={language} direction={dir} />;
     }
   };
 
