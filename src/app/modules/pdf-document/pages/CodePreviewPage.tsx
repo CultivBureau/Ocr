@@ -58,6 +58,7 @@ import {
   repairTransportSupersedes,
 } from "../utils/aiSuggestionSupersedes";
 import { useDocumentStructureHistory } from "../hooks/useDocumentStructureHistory";
+import { useHistory } from "@/app/modules/history/contexts/HistoryContext";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
@@ -115,6 +116,7 @@ const deduplicateStructure = (structure: SeparatedStructure): SeparatedStructure
 function CodePageContent() {
   const { t, isRTL, dir } = useLanguage();
   const { user } = useAuth();
+  const { setSidebarTemporarilyHidden } = useHistory();
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -203,6 +205,11 @@ function CodePageContent() {
       setPendingSuggestions([]);
     }
   }, [structure.suggestions]);
+
+  useEffect(() => {
+    setSidebarTemporarilyHidden(showSuggestionModal);
+    return () => setSidebarTemporarilyHidden(false);
+  }, [showSuggestionModal, setSidebarTemporarilyHidden]);
   
   // Event delegation for airplane section actions
   useEffect(() => {
@@ -2810,7 +2817,7 @@ function CodePageContent() {
     });
   }, [documentId, pendingSuggestions, sourceMetadata]);
 
-  const handleApproveAllSuggestions = useCallback(async () => {
+  const handleApproveAllSuggestions = useCallback(async (suggestionsToApprove: ComponentSuggestion[]) => {
     // Build new structure
     let newStructure: SeparatedStructure | null = null;
     
@@ -2825,7 +2832,7 @@ function CodePageContent() {
       const newElements: UserElement[] = [];
       const newLayoutIds: string[] = [];
 
-      pendingSuggestions.forEach(suggestion => {
+      suggestionsToApprove.forEach(suggestion => {
         const key = keyFor(suggestion.type, suggestion.data);
         if (existingKeys.has(key) || newKeys.has(key)) return;
         newKeys.add(key);
@@ -3558,6 +3565,7 @@ function CodePageContent() {
 
       {/* Component Suggestion Modal */}
       <ComponentSuggestionModal
+        key={pendingSuggestions.map((suggestion) => suggestion.id).join("|") || "no-suggestions"}
         isOpen={showSuggestionModal}
         onClose={handleCloseSuggestionModal}
         suggestions={pendingSuggestions}
@@ -3593,4 +3601,3 @@ export default function CodePage() {
     </ProtectedRoute>
   );
 }
-

@@ -49,8 +49,10 @@ interface HistoryContextType {
   pageSize: number;
 
   isSidebarOpen: boolean;
+  isSidebarTemporarilyHidden: boolean;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+  setSidebarTemporarilyHidden: (hidden: boolean) => void;
 
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -83,6 +85,7 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
   const [totalPages, setTotalPages] = useState(1);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarTemporarilyHidden, setIsSidebarTemporarilyHidden] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
@@ -259,8 +262,10 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
     totalPages,
     pageSize: HISTORY_PAGE_SIZE,
     isSidebarOpen,
+    isSidebarTemporarilyHidden,
     toggleSidebar,
     setSidebarOpen,
+    setSidebarTemporarilyHidden: setIsSidebarTemporarilyHidden,
     searchQuery,
     setSearchQuery,
     companyFilter,

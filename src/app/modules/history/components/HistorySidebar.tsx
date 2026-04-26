@@ -13,6 +13,7 @@ export default function HistorySidebar() {
   const { isAuthenticated } = useAuth();
   const {
     isSidebarOpen,
+    isSidebarTemporarilyHidden,
     toggleSidebar,
     documents,
     total,
@@ -33,7 +34,7 @@ export default function HistorySidebar() {
   // Hide sidebar on login page
   const isLoginPage = pathname?.includes("/Login");
   const isPdfPage = pathname?.startsWith("/pdf/");
-  const shouldShow = isAuthenticated && !isLoginPage && !isPdfPage;
+  const shouldShow = isAuthenticated && !isLoginPage && !isPdfPage && !isSidebarTemporarilyHidden;
   
   // Debounce search
   useEffect(() => {
