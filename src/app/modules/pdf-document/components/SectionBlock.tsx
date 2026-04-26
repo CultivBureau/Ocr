@@ -61,7 +61,7 @@ export default function SectionBlock({
           {editable && onEdit && (
             <button
               onClick={() => onEdit(section)}
-              className="ml-4 p-2 text-gray-600 hover:text-[#A4C639] hover:bg-gray-100 rounded transition-colors"
+              className="ml-4 p-2 text-gray-600 hover:text-[#4A7766] hover:bg-gray-100 rounded transition-colors"
               title="تعديل القسم"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

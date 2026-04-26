@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HappyLife Travel - PDF Template Generator",
-  description: "Convert PDF to editable Next.js templates - HappyLife Travel & Tourism",
+  title: "True Quotation",
+  description: "True Quotation - PDF Template Generator",
 };
 
 // Configure viewport for mobile responsiveness

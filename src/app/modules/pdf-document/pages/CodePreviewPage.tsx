@@ -2904,8 +2904,8 @@ function CodePageContent() {
           {/* Logo and Title */}
           <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
             <Image
-              src="/logo.png"
-              alt="Buearau logo"
+              src="/true-quotation-logo.png"
+              alt="True Quotation logo"
               width={140}
               height={50}
               className="object-contain"
@@ -3100,7 +3100,7 @@ function CodePageContent() {
                       }}
                       className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
                     >
-                      <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-[#4A7766]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
                       <span>{t.modals.createNewTable}</span>
@@ -3135,7 +3135,7 @@ function CodePageContent() {
                       >
                         {isExportingPlaywright ? (
                           <>
-                            <svg className="animate-spin h-4 w-4 text-[#A4C639]" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin h-4 w-4 text-[#4A7766]" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -3143,7 +3143,7 @@ function CodePageContent() {
                           </>
                         ) : (
                           <>
-                            <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 text-[#4A7766]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             <span>{t.modals.exportToPDF}</span>
@@ -3163,7 +3163,7 @@ function CodePageContent() {
                       title={linkCopied ? (isRTL ? 'تم نسخ الرابط!' : 'Link copied!') : (isRTL ? 'نسخ الرابط العام' : 'Copy public link')}
                     >
                       {isCopyingLink ? (
-                        <svg className="animate-spin h-4 w-4 text-[#A4C639]" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin h-4 w-4 text-[#4A7766]" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -3172,7 +3172,7 @@ function CodePageContent() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       ) : (
-                        <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-[#4A7766]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                         </svg>
                       )}

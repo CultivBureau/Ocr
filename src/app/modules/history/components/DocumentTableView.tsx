@@ -40,8 +40,8 @@ export default function DocumentTableView({
   if (documents.length === 0) {
     return (
       <div className="text-center py-12 bg-white rounded-2xl shadow-lg border border-gray-200">
-        <div className="w-16 h-16 bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <FileText className="w-8 h-8 text-[#B8A040]" />
+        <div className="w-16 h-16 bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <FileText className="w-8 h-8 text-[#3D6558]" />
         </div>
         <h3 className="text-lg font-bold text-gray-900 mb-2">No documents found</h3>
         <p className="text-gray-600">No documents match your current filters</p>
@@ -53,7 +53,7 @@ export default function DocumentTableView({
     <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1200px]">
-          <thead className="bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/5 border-b-2 border-gray-200">
+          <thead className="bg-gradient-to-r from-[#4A7766]/10 to-[#3D6558]/5 border-b-2 border-gray-200">
             <tr>
               <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                 Document
@@ -95,7 +95,7 @@ export default function DocumentTableView({
                   key={doc.id}
                   className={`transition-all duration-200 ${
                     isHovered
-                      ? "bg-gradient-to-r from-[#C4B454]/5 to-[#B8A040]/10 shadow-sm"
+                      ? "bg-gradient-to-r from-[#4A7766]/5 to-[#3D6558]/10 shadow-sm"
                       : "hover:bg-gray-50"
                   }`}
                   onMouseEnter={() => setHoveredRow(doc.id)}
@@ -105,8 +105,8 @@ export default function DocumentTableView({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/20 rounded-lg flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-[#B8A040]" />
+                        <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/20 rounded-lg flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-[#3D6558]" />
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
@@ -166,7 +166,7 @@ export default function DocumentTableView({
                           const company = companies.find(c => c.id === doc.company_id);
                           return company ? (
                             <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-lg flex items-center justify-center">
+                              <div className="w-8 h-8 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-lg flex items-center justify-center">
                                 <Building2 className="w-4 h-4 text-white" />
                               </div>
                               <p className="text-sm font-semibold text-gray-900">{company.name}</p>
@@ -193,7 +193,7 @@ export default function DocumentTableView({
                     {doc.current_version && doc.total_versions ? (
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${
                         doc.total_versions > 1
-                          ? "bg-[#C4B454]/10 text-[#B8A040]"
+                          ? "bg-[#4A7766]/10 text-[#3D6558]"
                           : "bg-gray-100 text-gray-600"
                       }`}>
                         v{doc.current_version}/{doc.total_versions}
@@ -224,7 +224,7 @@ export default function DocumentTableView({
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => onOpen(doc.id, doc.matched_version_number ?? undefined)}
-                        className="px-3 py-1.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-bold rounded-lg hover:shadow-md transition-all duration-200"
+                        className="px-3 py-1.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white text-xs font-bold rounded-lg hover:shadow-md transition-all duration-200"
                         title="Open document"
                       >
                         Open
@@ -235,7 +235,7 @@ export default function DocumentTableView({
                             e.stopPropagation();
                             onViewVersions(doc.id);
                           }}
-                          className="px-2 py-1.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-semibold rounded-lg hover:shadow-md transition-all duration-200"
+                          className="px-2 py-1.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white text-xs font-semibold rounded-lg hover:shadow-md transition-all duration-200"
                           title="View versions"
                         >
                           <HistoryIcon className="w-4 h-4" />

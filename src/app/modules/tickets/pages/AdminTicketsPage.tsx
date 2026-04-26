@@ -185,7 +185,7 @@ function AdminTicketsPageContent() {
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 ${dir === "rtl" ? "rtl" : "ltr"}`} dir={dir}>
+    <div className={`min-h-screen bg-[#ECE7E2] ${dir === "rtl" ? "rtl" : "ltr"}`} dir={dir}>
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md shadow-lg border-b-2 border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
@@ -226,7 +226,7 @@ function AdminTicketsPageContent() {
               <button
                 onClick={handleExport}
                 disabled={isExporting}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white px-5 py-2.5 rounded-xl hover:from-[#B8A040] hover:to-[#A69035] transition-all shadow-md hover:shadow-lg text-sm font-semibold disabled:opacity-50"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white px-5 py-2.5 rounded-xl hover:from-[#3D6558] hover:to-[#3D6558] transition-all shadow-md hover:shadow-lg text-sm font-semibold disabled:opacity-50"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -261,13 +261,13 @@ function AdminTicketsPageContent() {
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
             <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-5 hover:shadow-xl transition-all">
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-lg">
+                <div className="p-2 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-lg">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
               </div>
-              <div className="text-3xl font-bold bg-gradient-to-r from-[#C4B454] to-[#B8A040] bg-clip-text text-transparent">{stats.total}</div>
+              <div className="text-3xl font-bold bg-gradient-to-r from-[#4A7766] to-[#3D6558] bg-clip-text text-transparent">{stats.total}</div>
               <div className="text-sm font-semibold text-gray-600">
                 {language === "ar" ? "إجمالي" : "Total"}
               </div>
@@ -364,7 +364,7 @@ function AdminTicketsPageContent() {
                   setCompanyFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C4B454] focus:border-[#C4B454] transition-all"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-[#4A7766] transition-all"
               >
                 <option value="">{language === "ar" ? "الكل" : "All"}</option>
                 {companies.map((company) => (
@@ -386,7 +386,7 @@ function AdminTicketsPageContent() {
                   setStatusFilter(e.target.value as TicketStatus | "");
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C4B454] focus:border-[#C4B454] transition-all"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-[#4A7766] transition-all"
               >
                 <option value="">{language === "ar" ? "الكل" : "All"}</option>
                 {Object.keys(TICKET_STATUS_LABELS).map((status) => (
@@ -408,7 +408,7 @@ function AdminTicketsPageContent() {
                   setCategoryFilter(e.target.value as TicketCategory | "");
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C4B454] focus:border-[#C4B454] transition-all"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-[#4A7766] transition-all"
               >
                 <option value="">{language === "ar" ? "الكل" : "All"}</option>
                 {Object.keys(TICKET_CATEGORY_LABELS).map((category) => (
@@ -430,7 +430,7 @@ function AdminTicketsPageContent() {
                   setPriorityFilter(e.target.value as TicketPriority | "");
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C4B454] focus:border-[#C4B454] transition-all"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-[#4A7766] transition-all"
               >
                 <option value="">{language === "ar" ? "الكل" : "All"}</option>
                 {Object.keys(TICKET_PRIORITY_LABELS).map((priority) => (
@@ -454,7 +454,7 @@ function AdminTicketsPageContent() {
                   setPage(1);
                 }}
                 placeholder={language === "ar" ? "بحث..." : "Search..."}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C4B454] focus:border-[#C4B454] transition-all"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-[#4A7766] transition-all"
               />
             </div>
 
@@ -469,7 +469,7 @@ function AdminTicketsPageContent() {
                   setUserEmailFilter("");
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 text-sm font-medium bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl hover:from-[#B8A040] hover:to-[#A69035] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-3 py-2 text-sm font-medium bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl hover:from-[#3D6558] hover:to-[#3D6558] transition-all shadow-sm hover:shadow-md"
               >
                 {language === "ar" ? "مسح الفلاتر" : "Clear Filters"}
               </button>
@@ -607,7 +607,7 @@ function AdminTicketsPageContent() {
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="px-4 py-2 text-sm font-medium border-2 border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gradient-to-r hover:from-[#C4B454] hover:to-[#B8A040] hover:text-white hover:border-[#C4B454] transition-all"
+                    className="px-4 py-2 text-sm font-medium border-2 border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gradient-to-r hover:from-[#4A7766] hover:to-[#3D6558] hover:text-white hover:border-[#4A7766] transition-all"
                   >
                     {language === "ar" ? "السابق" : "Previous"}
                   </button>
@@ -617,7 +617,7 @@ function AdminTicketsPageContent() {
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="px-4 py-2 text-sm font-medium border-2 border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gradient-to-r hover:from-[#C4B454] hover:to-[#B8A040] hover:text-white hover:border-[#C4B454] transition-all"
+                    className="px-4 py-2 text-sm font-medium border-2 border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gradient-to-r hover:from-[#4A7766] hover:to-[#3D6558] hover:text-white hover:border-[#4A7766] transition-all"
                   >
                     {language === "ar" ? "التالي" : "Next"}
                   </button>

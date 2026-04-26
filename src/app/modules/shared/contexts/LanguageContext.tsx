@@ -83,7 +83,7 @@ export const translations = {
     // Home Page
     home: {
       welcomeTo: "Welcome to",
-      bureauOCR: "Bureau OCR",
+      bureauOCR: "True Quotation",
       professionalTemplateStudio: "Professional Template Studio",
       subtitle: "Transform your documents with AI-powered OCR technology. Extract, edit, and export professional templates with ease.",
       history: "History",
@@ -1068,7 +1068,7 @@ export const translations = {
     // Home Page
     home: {
       welcomeTo: "مرحباً بك في",
-      bureauOCR: "BUREAU OCR",
+      bureauOCR: "TRUE QUOTATION",
       professionalTemplateStudio: "استوديو القوالب الاحترافية",
       subtitle: "حوّل مستنداتك باستخدام تقنية التعرف الضوئي على الحروف المدعومة بالذكاء الاصطناعي. استخرج وحرر وصدر القوالب الاحترافية بسهولة.",
       history: "السجل",

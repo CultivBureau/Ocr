@@ -23,7 +23,7 @@ const Loading: React.FC<LoadingProps> = ({
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#ECE7E2]">
         <div className="flex flex-col items-center justify-center gap-8">
           {/* Typewriter Animation */}
           <div 

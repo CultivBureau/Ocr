@@ -40,7 +40,7 @@ export default function AuthCallbackPage() {
   }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen flex items-center justify-center bg-[#ECE7E2]">
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
         {error ? (
           <>

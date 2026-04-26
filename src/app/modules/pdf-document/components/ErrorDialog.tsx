@@ -96,7 +96,7 @@ const ErrorDialog: React.FC<ErrorDialogProps> = ({
                   actionButton.onClick();
                   onClose();
                 }}
-                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-lg font-medium hover:from-[#B8A040] hover:to-[#A69035] transition-all shadow-md hover:shadow-lg"
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-lg font-medium hover:from-[#3D6558] hover:to-[#3D6558] transition-all shadow-md hover:shadow-lg"
               >
                 {actionButton.label}
               </button>

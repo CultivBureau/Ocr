@@ -27,7 +27,7 @@ export default function RegisterPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-50 via-blue-50 to-lime-50">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#A4C639]"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#4A7766]"></div>
           <p className="mt-4 text-gray-600">Redirecting...</p>
         </div>
       </div>
@@ -41,8 +41,8 @@ export default function RegisterPage() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
             <Image
-         src="/logo.png"
-              alt="Buearau logo"
+         src="/true-quotation-logo.png"
+              alt="True Quotation logo"
               width={140}
               height={50}
               className="object-contain"
@@ -82,7 +82,7 @@ export default function RegisterPage() {
               </p>
                 <Link
                   href="/pages/Login"
-                className="inline-block bg-gradient-to-r from-[#A4C639] to-[#8FB02E] text-white font-semibold py-2 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all"
+                className="inline-block bg-gradient-to-r from-[#4A7766] to-[#8FB02E] text-white font-semibold py-2 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all"
                 >
                 Go to Login
                 </Link>

@@ -206,7 +206,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onRemove }) => {
                 toast.action?.onClick();
                 handleClose();
               }}
-              className="mt-2 text-sm font-medium text-[#A4C639] hover:text-[#8FB02E] transition-colors"
+              className="mt-2 text-sm font-medium text-[#4A7766] hover:text-[#8FB02E] transition-colors"
             >
               {toast.action.label}
             </button>

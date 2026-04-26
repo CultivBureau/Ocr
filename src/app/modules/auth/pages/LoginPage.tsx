@@ -72,14 +72,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-[#ECE7E2]">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
             <Image
-             src="/logo.png"
-              alt="Buearau logo"
+             src="/true-quotation-logo.png"
+              alt="True Quotation logo"
               width={140}
               height={50}
               className="object-contain"
@@ -94,10 +94,10 @@ export default function LoginPage() {
           {/* Login Card */}
           <div className="bg-white rounded-3xl shadow-2xl p-10 border border-gray-100 relative overflow-hidden">
             {/* Decorative gradient background */}
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
             
             <div className="text-center mb-8 mt-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <Sparkles className="w-8 h-8 text-white" />
               </div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
@@ -126,7 +126,7 @@ export default function LoginPage() {
                   htmlFor="email"
                   className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2"
                 >
-                  <Mail className="w-4 h-4 text-[#B8A040]" />
+                  <Mail className="w-4 h-4 text-[#3D6558]" />
                   Email Address
                 </label>
                 <input
@@ -135,7 +135,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#B8A040] focus:bg-white transition-all duration-200 text-gray-900 placeholder:text-gray-400"
+                  className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#3D6558] focus:bg-white transition-all duration-200 text-gray-900 placeholder:text-gray-400"
                   placeholder="you@example.com"
                 />
               </div>
@@ -145,7 +145,7 @@ export default function LoginPage() {
                   htmlFor="password"
                   className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2"
                 >
-                  <Lock className="w-4 h-4 text-[#B8A040]" />
+                  <Lock className="w-4 h-4 text-[#3D6558]" />
                   Password
                 </label>
                 <input
@@ -154,7 +154,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#B8A040] focus:bg-white transition-all duration-200 text-gray-900 placeholder:text-gray-400"
+                  className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#3D6558] focus:bg-white transition-all duration-200 text-gray-900 placeholder:text-gray-400"
                   placeholder="••••••••"
                 />
               </div>
@@ -162,7 +162,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-2xl hover:from-[#B8A040] hover:to-[#A69035] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 hover:scale-[1.02] active:scale-95"
+                className="w-full bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-2xl hover:from-[#3D6558] hover:to-[#3D6558] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 hover:scale-[1.02] active:scale-95"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -176,7 +176,7 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-8 text-center">
-              <div className="bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/5 rounded-xl p-4 border border-[#C4B454]/20">
+              <div className="bg-gradient-to-r from-[#4A7766]/10 to-[#3D6558]/5 rounded-xl p-4 border border-[#4A7766]/20">
                 <p className="text-sm text-gray-700 font-medium mb-1">
                   Need an account?
                 </p>

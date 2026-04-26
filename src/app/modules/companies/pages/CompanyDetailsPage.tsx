@@ -297,15 +297,15 @@ function CompanyDetailsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50">
+    <div className="min-h-screen bg-[#ECE7E2]">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/">
               <Image
-             src="/logo.png"
-              alt="Buearau logo"
+             src="/true-quotation-logo.png"
+              alt="True Quotation logo"
                 width={140}
                 height={50}
                 className="object-contain cursor-pointer"
@@ -369,9 +369,9 @@ function CompanyDetailsContent() {
         </div>
 
         {/* Company Filter */}
-        <div className="mb-8 bg-white rounded-2xl shadow-xl p-6 border-2 border-[#C4B454]">
+        <div className="mb-8 bg-white rounded-2xl shadow-xl p-6 border-2 border-[#4A7766]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -383,7 +383,7 @@ function CompanyDetailsContent() {
           <select
             value={selectedCompanyId || ""}
             onChange={(e) => setSelectedCompanyId(e.target.value || null)}
-            className="w-full px-5 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#C4B454]/30 focus:border-[#C4B454] font-medium text-base transition-all"
+            className="w-full px-5 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#4A7766]/30 focus:border-[#4A7766] font-medium text-base transition-all"
           >
             <option value="" className="text-gray-500">-- Choose a company to view details --</option>
             {companies.map((company) => (
@@ -409,8 +409,8 @@ function CompanyDetailsContent() {
         {!selectedCompanyId ? (
           <div className="text-center py-20 bg-white rounded-2xl shadow-xl border-2 border-dashed border-gray-300">
             <div className="flex flex-col items-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-[#C4B454]/20 to-[#B8A040]/20 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-10 h-10 text-[#C4B454]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-20 h-20 bg-gradient-to-br from-[#4A7766]/20 to-[#3D6558]/20 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-10 h-10 text-[#4A7766]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
@@ -420,7 +420,7 @@ function CompanyDetailsContent() {
           </div>
         ) : isLoading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C4B454]"></div>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#4A7766]"></div>
             <p className="mt-2 text-gray-600">Loading company details...</p>
           </div>
         ) : (
@@ -428,7 +428,7 @@ function CompanyDetailsContent() {
             {/* Company Info */}
             <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-200 hover:shadow-2xl transition-shadow">
               <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center shadow-lg">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
@@ -536,7 +536,7 @@ function CompanyDetailsContent() {
             {/* Plan Details */}
             <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-200 hover:shadow-2xl transition-shadow">
               <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center shadow-lg">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
@@ -568,7 +568,7 @@ function CompanyDetailsContent() {
                       <span className={`inline-block px-4 py-2 rounded-full text-sm font-bold shadow-sm ${
                         plan.plan.is_trial
                           ? "bg-yellow-100 text-yellow-800 border-2 border-yellow-300"
-                          : "bg-[#C4B454]/20 text-[#B8A040] border-2 border-[#C4B454]"
+                          : "bg-[#4A7766]/20 text-[#3D6558] border-2 border-[#4A7766]"
                       }`}>
                         {plan.plan.is_trial ? "🎯 Trial" : "💎 Paid"}
                       </span>
@@ -577,19 +577,19 @@ function CompanyDetailsContent() {
                     <div className="pt-6 border-t-2 border-gray-200 mt-6">
                       <h3 className="text-lg font-bold text-black mb-4">Plan Limits</h3>
                       <div className="space-y-3">
-                        <div className="flex justify-between items-center bg-[#C4B454]/10 p-3 rounded-lg border border-[#C4B454]/30">
+                        <div className="flex justify-between items-center bg-[#4A7766]/10 p-3 rounded-lg border border-[#4A7766]/30">
                           <span className="text-black font-medium">Uploads per month:</span>
                           <span className="font-bold text-black text-lg">{plan.plan.limits.uploads_per_month}</span>
                         </div>
-                        <div className="flex justify-between items-center bg-[#C4B454]/10 p-3 rounded-lg border border-[#C4B454]/30">
+                        <div className="flex justify-between items-center bg-[#4A7766]/10 p-3 rounded-lg border border-[#4A7766]/30">
                           <span className="text-black font-medium">Users limit:</span>
                           <span className="font-bold text-black text-lg">{plan.plan.limits.users_limit}</span>
                         </div>
-                        <div className="flex justify-between items-center bg-[#C4B454]/10 p-3 rounded-lg border border-[#C4B454]/30">
+                        <div className="flex justify-between items-center bg-[#4A7766]/10 p-3 rounded-lg border border-[#4A7766]/30">
                           <span className="text-black font-medium">Pages per month:</span>
                           <span className="font-bold text-black text-lg">{plan.plan.limits.pages_per_month}</span>
                         </div>
-                        <div className="flex justify-between items-center bg-[#C4B454]/10 p-3 rounded-lg border border-[#C4B454]/30">
+                        <div className="flex justify-between items-center bg-[#4A7766]/10 p-3 rounded-lg border border-[#4A7766]/30">
                           <span className="text-black font-medium">PDF exports:</span>
                           <span className="font-bold text-black text-lg">{plan.plan.limits.pdf_exports}</span>
                         </div>
@@ -608,7 +608,7 @@ function CompanyDetailsContent() {
             <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-200 hover:shadow-2xl transition-shadow">
               <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
                 <h2 className="text-2xl font-bold text-black flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center shadow-lg">
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center shadow-lg">
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
@@ -625,7 +625,7 @@ function CompanyDetailsContent() {
                         onChange={(e) => setShowCurrentPeriodOnly(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#C4B454]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C4B454]"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#4A7766]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#4A7766]"></div>
                       <span className="ml-2 text-sm font-medium text-gray-700">
                         {showCurrentPeriodOnly ? "Current Period" : "All History"}
                       </span>
@@ -634,7 +634,7 @@ function CompanyDetailsContent() {
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    className="px-4 py-2 border-2 border-gray-300 rounded-lg text-sm font-semibold text-black focus:ring-2 focus:ring-[#C4B454]/30 focus:border-[#C4B454]"
+                    className="px-4 py-2 border-2 border-gray-300 rounded-lg text-sm font-semibold text-black focus:ring-2 focus:ring-[#4A7766]/30 focus:border-[#4A7766]"
                   >
                     {months.map((month, index) => (
                       <option key={index + 1} value={index + 1}>
@@ -648,7 +648,7 @@ function CompanyDetailsContent() {
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
                     min="2000"
                     max="2100"
-                    className="w-28 px-4 py-2 border-2 border-gray-300 rounded-lg text-sm font-semibold text-black focus:ring-2 focus:ring-[#C4B454]/30 focus:border-[#C4B454]"
+                    className="w-28 px-4 py-2 border-2 border-gray-300 rounded-lg text-sm font-semibold text-black focus:ring-2 focus:ring-[#4A7766]/30 focus:border-[#4A7766]"
                   />
                 </div>
               </div>
@@ -668,7 +668,7 @@ function CompanyDetailsContent() {
                       usage.total_uploads,
                       plan.plan.limits.uploads_per_month,
                       "📤",
-                      "#C4B454"
+                      "#4A7766"
                     )}
 
                     {/* OCR Pages */}
@@ -677,7 +677,7 @@ function CompanyDetailsContent() {
                       usage.total_ocr_pages,
                       plan.plan.limits.pages_per_month,
                       "📄",
-                      "#B8A040"
+                      "#3D6558"
                     )}
 
                     {/* PDF Exports */}
@@ -686,7 +686,7 @@ function CompanyDetailsContent() {
                       usage.total_pdf_exports,
                       plan.plan.limits.pdf_exports,
                       "📑",
-                      "#A69035"
+                      "#3D6558"
                     )}
 
                     {/* Active Users */}
@@ -734,17 +734,17 @@ function CompanyDetailsContent() {
                     📅 Period: {format(new Date(usage.period_start), "MMM dd, yyyy")} - {format(new Date(usage.period_end), "MMM dd, yyyy")}
                   </div>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 rounded-xl p-5 border-2 border-[#C4B454]/30 shadow-md">
+                    <div className="bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 rounded-xl p-5 border-2 border-[#4A7766]/30 shadow-md">
                       <p className="text-sm text-black font-bold mb-2">Total Uploads</p>
-                      <p className="text-3xl font-bold text-[#C4B454]">{usage.total_uploads}</p>
+                      <p className="text-3xl font-bold text-[#4A7766]">{usage.total_uploads}</p>
                     </div>
-                    <div className="bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 rounded-xl p-5 border-2 border-[#C4B454]/30 shadow-md">
+                    <div className="bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 rounded-xl p-5 border-2 border-[#4A7766]/30 shadow-md">
                       <p className="text-sm text-black font-bold mb-2">OCR Pages</p>
-                      <p className="text-3xl font-bold text-[#B8A040]">{usage.total_ocr_pages}</p>
+                      <p className="text-3xl font-bold text-[#3D6558]">{usage.total_ocr_pages}</p>
                     </div>
-                    <div className="bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 rounded-xl p-5 border-2 border-[#C4B454]/30 shadow-md">
+                    <div className="bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 rounded-xl p-5 border-2 border-[#4A7766]/30 shadow-md">
                       <p className="text-sm text-black font-bold mb-2">PDF Exports</p>
-                      <p className="text-3xl font-bold text-[#A69035]">{usage.total_pdf_exports}</p>
+                      <p className="text-3xl font-bold text-[#3D6558]">{usage.total_pdf_exports}</p>
                     </div>
                   </div>
                   <p className="text-sm text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
@@ -818,7 +818,7 @@ function CompanyDetailsContent() {
             {/* Company Users */}
             <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-200 hover:shadow-2xl transition-shadow">
               <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center shadow-lg">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>

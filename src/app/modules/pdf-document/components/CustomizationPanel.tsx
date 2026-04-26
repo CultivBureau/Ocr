@@ -95,7 +95,7 @@ export default function CustomizationPanel({
   return (
     <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 border-l border-gray-200 flex flex-col">
       {/* Header */}
-      <div className="bg-linear-to-r from-[#A4C639] to-[#8FB02E] px-6 py-4 flex items-center justify-between">
+      <div className="bg-linear-to-r from-[#4A7766] to-[#8FB02E] px-6 py-4 flex items-center justify-between">
         <h2 className="text-lg font-bold text-white">Customize</h2>
         <button
           onClick={onClose}
@@ -120,7 +120,7 @@ export default function CustomizationPanel({
                 type="text"
                 value={currentSection.title || ''}
                 onChange={(e) => handleUpdateSectionTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A4C639] focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A7766] focus:border-transparent"
                 placeholder="Section title"
               />
             </div>
@@ -142,7 +142,7 @@ export default function CustomizationPanel({
           <div className="space-y-4">
             <div className="bg-linear-to-r from-green-50 to-lime-50 p-4 rounded-lg border border-green-200">
               <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                <svg className="w-5 h-5 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-[#4A7766]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
                 {currentTable.title || `Table ${context.index + 1}`}

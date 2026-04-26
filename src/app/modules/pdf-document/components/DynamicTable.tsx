@@ -90,7 +90,7 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
           {editable && onEdit && table && (
             <button
               onClick={() => onEdit(table)}
-              className="ml-4 p-2 text-gray-600 hover:text-[#A4C639] hover:bg-gray-100 rounded transition-colors"
+              className="ml-4 p-2 text-gray-600 hover:text-[#4A7766] hover:bg-gray-100 rounded transition-colors"
               title="تعديل الجدول"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,7 +108,7 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
             <table className="w-full max-w-full border-collapse border border-gray-400 table-auto min-w-[640px] sm:min-w-0">
           {displayHeaders && displayHeaders.length > 0 && (
             <thead>
-              <tr className="bg-[#A4C639]">
+              <tr className="bg-[#4A7766]">
                 {displayHeaders.map((header, index) => (
                   <th
                     key={index}

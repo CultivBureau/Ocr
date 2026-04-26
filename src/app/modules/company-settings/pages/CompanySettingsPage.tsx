@@ -356,15 +356,15 @@ function CompanySettingsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50" dir={dir}>
+    <div className="min-h-screen bg-[#ECE7E2]" dir={dir}>
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm sticky top-0 z-50">
         <div className={`max-w-7xl mx-auto px-6 py-4 flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="flex items-center gap-4">
             <Link href="/">
               <Image
-               src="/logo.png"
-              alt="Buearau logo"
+               src="/true-quotation-logo.png"
+              alt="True Quotation logo"
                 width={140}
                 height={50}
                 className="object-contain cursor-pointer"
@@ -382,7 +382,7 @@ function CompanySettingsContent() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className={`flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-full flex items-center justify-center text-white font-semibold">
+                  <div className="w-8 h-8 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-full flex items-center justify-center text-white font-semibold">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <span className="text-sm font-medium text-black">{user.name}</span>
@@ -433,7 +433,7 @@ function CompanySettingsContent() {
 
         {isLoading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C4B454]"></div>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#4A7766]"></div>
             <p className="mt-2 text-black font-medium">{t.companySettings.loading}</p>
           </div>
         ) : (
@@ -441,7 +441,7 @@ function CompanySettingsContent() {
             {/* Company Info */}
             <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200">
               <h2 className={`text-2xl font-bold text-black mb-6 flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
@@ -460,12 +460,12 @@ function CompanySettingsContent() {
                         type="text"
                         value={formName}
                         onChange={(e) => setFormName(e.target.value)}
-                        className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#C4B454] text-black font-medium"
+                        className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] text-black font-medium"
                       />
                       <button
                         onClick={handleUpdateName}
                         disabled={isUpdating}
-                        className="px-4 py-3 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50"
+                        className="px-4 py-3 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50"
                       >
                         {isUpdating ? "Saving..." : "Save"}
                       </button>
@@ -484,7 +484,7 @@ function CompanySettingsContent() {
                       <span className="text-lg font-semibold text-black">{settings?.name}</span>
                       <button
                         onClick={() => setEditingName(true)}
-                        className="px-3 py-2 text-sm bg-[#C4B454] text-white rounded-lg hover:bg-[#B8A040] font-medium"
+                        className="px-3 py-2 text-sm bg-[#4A7766] text-white rounded-lg hover:bg-[#3D6558] font-medium"
                       >
                         Edit
                       </button>
@@ -522,7 +522,7 @@ function CompanySettingsContent() {
                   <label className="block text-sm font-semibold text-black mb-2">
                     {t.companySettings.headerImage}
                   </label>
-                  <div className="mb-2 p-1.5 bg-[#C4B454]/10 border border-[#C4B454]/30 rounded text-xs max-h-16 overflow-y-auto">
+                  <div className="mb-2 p-1.5 bg-[#4A7766]/10 border border-[#4A7766]/30 rounded text-xs max-h-16 overflow-y-auto">
                     <p className="text-black font-semibold text-xs leading-tight mb-0.5">{t.companySettings.recommendedSizeHeader}</p>
                     <p className="text-black text-xs leading-tight">{t.companySettings.headerSizeDesc}</p>
                   </div>
@@ -538,7 +538,7 @@ function CompanySettingsContent() {
                         }}
                       />
                       <div className="flex gap-2">
-                        <label className="flex-1 px-3 py-2 text-sm bg-[#C4B454] text-white rounded-lg hover:bg-[#B8A040] font-medium text-center cursor-pointer">
+                        <label className="flex-1 px-3 py-2 text-sm bg-[#4A7766] text-white rounded-lg hover:bg-[#3D6558] font-medium text-center cursor-pointer">
                           Change
                           <input
                             type="file"
@@ -559,7 +559,7 @@ function CompanySettingsContent() {
                         <button
                           onClick={handleUploadHeaderImage}
                           disabled={isUploadingImages}
-                          className="w-full px-4 py-2 text-sm bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-lg hover:shadow-lg font-medium disabled:opacity-50"
+                          className="w-full px-4 py-2 text-sm bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-lg hover:shadow-lg font-medium disabled:opacity-50"
                         >
                           {isUploadingImages ? "Uploading..." : "Upload New Header Image"}
                         </button>
@@ -567,7 +567,7 @@ function CompanySettingsContent() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <label className="block w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#C4B454] transition-colors text-center">
+                      <label className="block w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#4A7766] transition-colors text-center">
                         <span className="text-sm text-black">Click to upload header image</span>
                         <input
                           type="file"
@@ -580,7 +580,7 @@ function CompanySettingsContent() {
                         <button
                           onClick={handleUploadHeaderImage}
                           disabled={isUploadingImages}
-                          className="w-full px-4 py-2 text-sm bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-lg hover:shadow-lg font-medium disabled:opacity-50"
+                          className="w-full px-4 py-2 text-sm bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-lg hover:shadow-lg font-medium disabled:opacity-50"
                         >
                           {isUploadingImages ? "Uploading..." : "Upload Header Image"}
                         </button>
@@ -595,7 +595,7 @@ function CompanySettingsContent() {
                   <label className="block text-sm font-semibold text-black mb-2">
                     {t.companySettings.footerImage}
                   </label>
-                  <div className="mb-2 p-1.5 bg-[#C4B454]/10 border border-[#C4B454]/30 rounded text-xs max-h-16 overflow-y-auto">
+                  <div className="mb-2 p-1.5 bg-[#4A7766]/10 border border-[#4A7766]/30 rounded text-xs max-h-16 overflow-y-auto">
                     <p className="text-black font-semibold text-xs leading-tight mb-0.5">{t.companySettings.recommendedSizeHeader}</p>
                     <p className="text-black text-xs leading-tight">{t.companySettings.footerSizeDesc}</p>
                   </div>
@@ -611,7 +611,7 @@ function CompanySettingsContent() {
                         }}
                       />
                       <div className="flex gap-2">
-                        <label className="flex-1 px-3 py-2 text-sm bg-[#C4B454] text-white rounded-lg hover:bg-[#B8A040] font-medium text-center cursor-pointer">
+                        <label className="flex-1 px-3 py-2 text-sm bg-[#4A7766] text-white rounded-lg hover:bg-[#3D6558] font-medium text-center cursor-pointer">
                           Change
                           <input
                             type="file"
@@ -632,7 +632,7 @@ function CompanySettingsContent() {
                         <button
                           onClick={handleUploadFooterImage}
                           disabled={isUploadingImages}
-                          className="w-full px-4 py-2 text-sm bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-lg hover:shadow-lg font-medium disabled:opacity-50"
+                          className="w-full px-4 py-2 text-sm bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-lg hover:shadow-lg font-medium disabled:opacity-50"
                         >
                           {isUploadingImages ? "Uploading..." : "Upload New Footer Image"}
                         </button>
@@ -640,7 +640,7 @@ function CompanySettingsContent() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <label className="block w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#C4B454] transition-colors text-center">
+                      <label className="block w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#4A7766] transition-colors text-center">
                         <span className="text-sm text-black">Click to upload footer image</span>
                         <input
                           type="file"
@@ -653,7 +653,7 @@ function CompanySettingsContent() {
                         <button
                           onClick={handleUploadFooterImage}
                           disabled={isUploadingImages}
-                          className="w-full px-4 py-2 text-sm bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-lg hover:shadow-lg font-medium disabled:opacity-50"
+                          className="w-full px-4 py-2 text-sm bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-lg hover:shadow-lg font-medium disabled:opacity-50"
                         >
                           {isUploadingImages ? "Uploading..." : "Upload Footer Image"}
                         </button>
@@ -670,7 +670,7 @@ function CompanySettingsContent() {
                   <h3 className="text-lg font-bold text-black">{t.companySettings.airlineCompanies}</h3>
                   <button
                     onClick={() => setIsManagingAirlineCompanies(!isManagingAirlineCompanies)}
-                    className="px-3 py-1.5 text-sm bg-[#C4B454] text-white rounded-lg hover:bg-[#B8A040] font-medium"
+                    className="px-3 py-1.5 text-sm bg-[#4A7766] text-white rounded-lg hover:bg-[#3D6558] font-medium"
                   >
                     {isManagingAirlineCompanies ? t.companySettings.hide : t.companySettings.manage}
                   </button>
@@ -686,7 +686,7 @@ function CompanySettingsContent() {
                         value={newAirlineCompany}
                         onChange={(e) => setNewAirlineCompany(e.target.value)}
                         placeholder={t.companySettings.enterAirlineName}
-                        className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#C4B454]/20 focus:border-[#C4B454] text-black"
+                        className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4A7766]/20 focus:border-[#4A7766] text-black"
                         onKeyPress={(e) => {
                           if (e.key === "Enter") {
                             handleAddAirlineCompany();
@@ -695,7 +695,7 @@ function CompanySettingsContent() {
                       />
                       <button
                         onClick={handleAddAirlineCompany}
-                        className="px-4 py-2 bg-[#C4B454] text-white rounded-lg hover:bg-[#B8A040] font-medium"
+                        className="px-4 py-2 bg-[#4A7766] text-white rounded-lg hover:bg-[#3D6558] font-medium"
                       >
                         {t.companySettings.add}
                       </button>
@@ -728,7 +728,7 @@ function CompanySettingsContent() {
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className={`flex items-center justify-between mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <h3 className="text-lg font-bold text-black flex items-center gap-2">
-                    <svg className="w-5 h-5 text-[#C4B454]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-[#4A7766]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     {isRTL ? "الشروط والأحكام" : "Terms & Conditions"}
@@ -739,7 +739,7 @@ function CompanySettingsContent() {
                         setTermsDraft(termsText);
                         setIsEditingTerms(true);
                       }}
-                      className="px-3 py-1.5 text-sm bg-[#C4B454] text-white rounded-lg hover:bg-[#B8A040] font-medium"
+                      className="px-3 py-1.5 text-sm bg-[#4A7766] text-white rounded-lg hover:bg-[#3D6558] font-medium"
                     >
                       {isRTL ? "تعديل" : "Edit"}
                     </button>
@@ -763,7 +763,7 @@ function CompanySettingsContent() {
                           ? "أدخل الشروط والأحكام هنا...\n\nمثال:\n- يُعتمد في المطار قبل الطيران بـ ثلاث ساعات\n- لاستئجار السيارة يجب توفر الرخصة الدولية – الرخصة السعودية – كريديت كارد"
                           : "Enter your terms and conditions here...\n\nExample:\n- Arrive at the airport 3 hours before departure\n- Car rental requires International License – Saudi License – Credit Card"
                       }
-                      className="w-full px-4 py-3 border-2 border-[#C4B454] rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 text-black font-medium resize-y text-sm leading-relaxed"
+                      className="w-full px-4 py-3 border-2 border-[#4A7766] rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 text-black font-medium resize-y text-sm leading-relaxed"
                       style={{ fontFamily: "'Cairo', 'Arial', sans-serif" }}
                       autoFocus
                     />
@@ -784,7 +784,7 @@ function CompanySettingsContent() {
                         <button
                           onClick={handleSaveTerms}
                           disabled={isSavingTerms}
-                          className="px-5 py-2 text-sm bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-lg hover:shadow-lg font-semibold disabled:opacity-50 transition-all"
+                          className="px-5 py-2 text-sm bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-lg hover:shadow-lg font-semibold disabled:opacity-50 transition-all"
                         >
                           {isSavingTerms
                             ? (isRTL ? "جاري الحفظ..." : "Saving...")
@@ -816,7 +816,7 @@ function CompanySettingsContent() {
                   <h3 className="text-lg font-bold text-black">{t.companySettings.includesAllOptions}</h3>
                   <button
                     onClick={() => setIsManagingIncludesAll(!isManagingIncludesAll)}
-                    className="px-3 py-1.5 text-sm bg-[#C4B454] text-white rounded-lg hover:bg-[#B8A040] font-medium"
+                    className="px-3 py-1.5 text-sm bg-[#4A7766] text-white rounded-lg hover:bg-[#3D6558] font-medium"
                   >
                     {isManagingIncludesAll ? t.companySettings.hide : t.companySettings.manage}
                   </button>
@@ -832,7 +832,7 @@ function CompanySettingsContent() {
                         value={newIncludesAllOption}
                         onChange={(e) => setNewIncludesAllOption(e.target.value)}
                         placeholder={t.companySettings.enterOptionText}
-                        className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#C4B454]/20 focus:border-[#C4B454] text-black"
+                        className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4A7766]/20 focus:border-[#4A7766] text-black"
                         onKeyPress={(e) => {
                           if (e.key === "Enter") {
                             handleAddIncludesAllOption();
@@ -841,7 +841,7 @@ function CompanySettingsContent() {
                       />
                       <button
                         onClick={handleAddIncludesAllOption}
-                        className="px-4 py-2 bg-[#C4B454] text-white rounded-lg hover:bg-[#B8A040] font-medium"
+                        className="px-4 py-2 bg-[#4A7766] text-white rounded-lg hover:bg-[#3D6558] font-medium"
                       >
                         {t.companySettings.add}
                       </button>
@@ -878,7 +878,7 @@ function CompanySettingsContent() {
             {/* Plan Information */}
             <div className="bg-white rounded-2xl text-black shadow-lg p-6 border-2 border-gray-200">
               <h2 className={`text-2xl font-bold text-black mb-6 flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
@@ -888,7 +888,7 @@ function CompanySettingsContent() {
 
               {plan?.plan ? (
                 <div className="space-y-4">
-                  <div className="p-4 bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/10 rounded-xl border border-[#C4B454]/30">
+                  <div className="p-4 bg-gradient-to-r from-[#4A7766]/10 to-[#3D6558]/10 rounded-xl border border-[#4A7766]/30">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-lg font-bold text-black">{plan.plan.name}</h3>
                       {plan.plan.is_trial && (
@@ -897,7 +897,7 @@ function CompanySettingsContent() {
                         </span>
                       )}
                     </div>
-                    <p className="text-2xl font-bold text-[#C4B454] mb-4">
+                    <p className="text-2xl font-bold text-[#4A7766] mb-4">
                       ${plan.plan.price_monthly.toFixed(2)}<span className="text-sm text-black">/month</span>
                     </p>
                     <div className="grid grid-cols-2 gap-3 text-sm">
@@ -953,7 +953,7 @@ function CompanySettingsContent() {
             <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200 lg:col-span-2">
               <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
                 <h2 className={`text-2xl font-bold text-black flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
@@ -969,7 +969,7 @@ function CompanySettingsContent() {
                       onChange={(e) => setShowCurrentPeriodOnly(e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#C4B454]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C4B454]"></div>
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#4A7766]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#4A7766]"></div>
                     <span className={`${isRTL ? 'mr-2' : 'ml-2'} text-sm font-medium text-gray-700`}>
                       {showCurrentPeriodOnly ? (isRTL ? "الفترة الحالية" : "Current Period") : (isRTL ? "كل السجلات" : "All History")}
                     </span>
@@ -980,21 +980,21 @@ function CompanySettingsContent() {
               {usage && plan?.plan && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Total Uploads */}
-                  <div className="p-4 bg-[#C4B454]/10 rounded-xl border border-[#C4B454]/30">
+                  <div className="p-4 bg-[#4A7766]/10 rounded-xl border border-[#4A7766]/30">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm text-black font-semibold">Total Uploads</p>
                       {plan.plan.limits.uploads_per_month > 0 && (
-                        <span className="text-xs font-bold text-[#C4B454] bg-white px-2 py-1 rounded">
+                        <span className="text-xs font-bold text-[#4A7766] bg-white px-2 py-1 rounded">
                           {usage.total_uploads} / {plan.plan.limits.uploads_per_month}
                         </span>
                       )}
                     </div>
-                    <p className="text-2xl font-bold text-[#C4B454] mb-2">{usage.total_uploads}</p>
+                    <p className="text-2xl font-bold text-[#4A7766] mb-2">{usage.total_uploads}</p>
                     {plan.plan.limits.uploads_per_month > 0 ? (
                       <>
                         <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                           <div
-                            className="bg-[#C4B454] h-2 rounded-full transition-all"
+                            className="bg-[#4A7766] h-2 rounded-full transition-all"
                             style={{
                               width: `${Math.min((usage.total_uploads / plan.plan.limits.uploads_per_month) * 100, 100)}%`
                             }}
@@ -1012,21 +1012,21 @@ function CompanySettingsContent() {
                   </div>
 
                   {/* OCR Pages */}
-                  <div className="p-4 bg-[#B8A040]/10 rounded-xl border border-[#B8A040]/30">
+                  <div className="p-4 bg-[#3D6558]/10 rounded-xl border border-[#3D6558]/30">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm text-black font-semibold">OCR Pages</p>
                       {plan.plan.limits.pages_per_month > 0 && (
-                        <span className="text-xs font-bold text-[#B8A040] bg-white px-2 py-1 rounded">
+                        <span className="text-xs font-bold text-[#3D6558] bg-white px-2 py-1 rounded">
                           {usage.total_ocr_pages} / {plan.plan.limits.pages_per_month}
                         </span>
                       )}
                     </div>
-                    <p className="text-2xl font-bold text-[#B8A040] mb-2">{usage.total_ocr_pages}</p>
+                    <p className="text-2xl font-bold text-[#3D6558] mb-2">{usage.total_ocr_pages}</p>
                     {plan.plan.limits.pages_per_month > 0 ? (
                       <>
                         <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                           <div
-                            className="bg-[#B8A040] h-2 rounded-full transition-all"
+                            className="bg-[#3D6558] h-2 rounded-full transition-all"
                             style={{
                               width: `${Math.min((usage.total_ocr_pages / plan.plan.limits.pages_per_month) * 100, 100)}%`
                             }}
@@ -1044,21 +1044,21 @@ function CompanySettingsContent() {
                   </div>
 
                   {/* PDF Exports */}
-                  <div className="p-4 bg-[#A69035]/10 rounded-xl border border-[#A69035]/30">
+                  <div className="p-4 bg-[#3D6558]/10 rounded-xl border border-[#3D6558]/30">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm text-black font-semibold">PDF Exports</p>
                       {plan.plan.limits.pdf_exports > 0 && (
-                        <span className="text-xs font-bold text-[#A69035] bg-white px-2 py-1 rounded">
+                        <span className="text-xs font-bold text-[#3D6558] bg-white px-2 py-1 rounded">
                           {usage.total_pdf_exports} / {plan.plan.limits.pdf_exports}
                         </span>
                       )}
                     </div>
-                    <p className="text-2xl font-bold text-[#A69035] mb-2">{usage.total_pdf_exports}</p>
+                    <p className="text-2xl font-bold text-[#3D6558] mb-2">{usage.total_pdf_exports}</p>
                     {plan.plan.limits.pdf_exports > 0 ? (
                       <>
                         <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                           <div
-                            className="bg-[#A69035] h-2 rounded-full transition-all"
+                            className="bg-[#3D6558] h-2 rounded-full transition-all"
                             style={{
                               width: `${Math.min((usage.total_pdf_exports / plan.plan.limits.pdf_exports) * 100, 100)}%`
                             }}
@@ -1111,19 +1111,19 @@ function CompanySettingsContent() {
               
               {usage && !plan?.plan && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="p-4 bg-[#C4B454]/10 rounded-xl border border-[#C4B454]/30">
+                  <div className="p-4 bg-[#4A7766]/10 rounded-xl border border-[#4A7766]/30">
                     <p className="text-sm text-black mb-1">Total Uploads</p>
-                    <p className="text-2xl font-bold text-[#C4B454]">{usage.total_uploads}</p>
+                    <p className="text-2xl font-bold text-[#4A7766]">{usage.total_uploads}</p>
                     <p className="text-xs text-gray-600 mt-1">No plan limits</p>
                   </div>
-                  <div className="p-4 bg-[#B8A040]/10 rounded-xl border border-[#B8A040]/30">
+                  <div className="p-4 bg-[#3D6558]/10 rounded-xl border border-[#3D6558]/30">
                     <p className="text-sm text-black mb-1">OCR Pages</p>
-                    <p className="text-2xl font-bold text-[#B8A040]">{usage.total_ocr_pages}</p>
+                    <p className="text-2xl font-bold text-[#3D6558]">{usage.total_ocr_pages}</p>
                     <p className="text-xs text-gray-600 mt-1">No plan limits</p>
                   </div>
-                  <div className="p-4 bg-[#A69035]/10 rounded-xl border border-[#A69035]/30">
+                  <div className="p-4 bg-[#3D6558]/10 rounded-xl border border-[#3D6558]/30">
                     <p className="text-sm text-black mb-1">PDF Exports</p>
-                    <p className="text-2xl font-bold text-[#A69035]">{usage.total_pdf_exports}</p>
+                    <p className="text-2xl font-bold text-[#3D6558]">{usage.total_pdf_exports}</p>
                     <p className="text-xs text-gray-600 mt-1">No plan limits</p>
                   </div>
                   <div className="p-4 bg-[#9B7E2A]/10 rounded-xl border border-[#9B7E2A]/30">
@@ -1203,7 +1203,7 @@ function CompanySettingsContent() {
             {/* Company Users */}
             <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200 lg:col-span-2">
               <h2 className={`text-2xl font-bold text-black mb-6 flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
@@ -1220,10 +1220,10 @@ function CompanySettingsContent() {
                   {companyUsers.map((companyUser) => (
                     <div
                       key={companyUser.id}
-                      className="p-4 bg-gray-50 rounded-xl border-2 border-gray-200 hover:border-[#C4B454]/40 transition-all"
+                      className="p-4 bg-gray-50 rounded-xl border-2 border-gray-200 hover:border-[#4A7766]/40 transition-all"
                     >
                       <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-full flex items-center justify-center text-white font-semibold">
+                        <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-full flex items-center justify-center text-white font-semibold">
                           {companyUser.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1">
@@ -1232,7 +1232,7 @@ function CompanySettingsContent() {
                         </div>
                       </div>
                       <div className="mt-2">
-                        <span className="text-xs px-2 py-1 bg-[#C4B454] text-white rounded-full font-bold">
+                        <span className="text-xs px-2 py-1 bg-[#4A7766] text-white rounded-full font-bold">
                           {companyUser.role === "company_admin" ? "Company Admin" : companyUser.role === "user" ? "User" : companyUser.role}
                         </span>
                       </div>

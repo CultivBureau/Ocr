@@ -25,7 +25,7 @@ export interface LoaderProps {
 const Loader: React.FC<LoaderProps> = ({
   variant = "spinner",
   size = "md",
-  color = "#A4C639",
+  color = "#4A7766",
   text,
   progress,
   fullScreen = false,

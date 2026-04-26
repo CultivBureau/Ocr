@@ -174,7 +174,7 @@ function WhatsNewAdminContent() {
               </svg>
             </button>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#A4C639] to-emerald-500 flex items-center justify-center shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4A7766] to-emerald-500 flex items-center justify-center shadow-md">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
@@ -188,7 +188,7 @@ function WhatsNewAdminContent() {
 
           <button
             onClick={() => { setEditTarget(null); setShowForm(true); }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#A4C639] to-emerald-500 text-white text-sm font-semibold shadow-md hover:shadow-lg hover:from-[#93b230] hover:to-emerald-600 transition-all duration-200"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#4A7766] to-emerald-500 text-white text-sm font-semibold shadow-md hover:shadow-lg hover:from-[#93b230] hover:to-emerald-600 transition-all duration-200"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -258,7 +258,7 @@ function WhatsNewAdminContent() {
       {toast && (
         <div
           className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl shadow-lg text-sm font-semibold text-white
-            ${toast.ok ? "bg-[#A4C639]" : "bg-red-500"} animate-[slideInUp_0.3s_ease-out]`}
+            ${toast.ok ? "bg-[#4A7766]" : "bg-red-500"} animate-[slideInUp_0.3s_ease-out]`}
         >
           {toast.msg}
         </div>
@@ -345,7 +345,7 @@ function AdminAnnouncementCard({
           <button
             onClick={onEdit}
             title="Edit"
-            className="p-2 rounded-xl text-gray-400 hover:text-[#A4C639] hover:bg-[#A4C639]/10 transition-colors"
+            className="p-2 rounded-xl text-gray-400 hover:text-[#4A7766] hover:bg-[#4A7766]/10 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -367,7 +367,7 @@ function AdminAnnouncementCard({
             <button
               onClick={onPublish}
               title="Publish"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#A4C639] text-white text-xs font-bold hover:bg-[#93b230] transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#4A7766] text-white text-xs font-bold hover:bg-[#93b230] transition-colors shadow-sm"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -433,7 +433,7 @@ function AnnouncementFormModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#A4C639] to-emerald-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#4A7766] to-emerald-500 flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d={initial ? "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" : "M12 4v16m8-8H4"} />
               </svg>
@@ -464,7 +464,7 @@ function AnnouncementFormModal({
                     onClick={() => setType(t)}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all
                       ${type === t
-                        ? `${colors.bg} ${colors.text} ${colors.border} ring-2 ring-offset-1 ring-[#A4C639]`
+                        ? `${colors.bg} ${colors.text} ${colors.border} ring-2 ring-offset-1 ring-[#4A7766]`
                         : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100"
                       }`}
                   >
@@ -488,7 +488,7 @@ function AnnouncementFormModal({
               placeholder="e.g. Improved OCR accuracy for Arabic text"
               maxLength={200}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-[#A4C639] focus:border-transparent transition"
+                focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-transparent transition"
             />
           </div>
 
@@ -505,7 +505,7 @@ function AnnouncementFormModal({
               placeholder="Describe the update in detail…"
               maxLength={5000}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-[#A4C639] focus:border-transparent transition resize-none"
+                focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-transparent transition resize-none"
             />
             <p className="text-right text-[10px] text-gray-400 mt-0.5">{content.length}/5000</p>
           </div>
@@ -529,7 +529,7 @@ function AnnouncementFormModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#A4C639] to-emerald-500 text-white text-sm font-bold shadow-sm hover:from-[#93b230] hover:to-emerald-600 transition disabled:opacity-60"
+              className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#4A7766] to-emerald-500 text-white text-sm font-bold shadow-sm hover:from-[#93b230] hover:to-emerald-600 transition disabled:opacity-60"
             >
               {isSubmitting ? "Saving…" : initial ? "Save Changes" : "Create Draft"}
             </button>
@@ -583,8 +583,8 @@ function DeleteConfirmModal({
 function EmptyState({ onNew }: { onNew: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#A4C639]/20 to-emerald-100 flex items-center justify-center mb-5">
-        <svg className="w-10 h-10 text-[#A4C639]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#4A7766]/20 to-emerald-100 flex items-center justify-center mb-5">
+        <svg className="w-10 h-10 text-[#4A7766]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       </div>
@@ -594,7 +594,7 @@ function EmptyState({ onNew }: { onNew: () => void }) {
       </p>
       <button
         onClick={onNew}
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#A4C639] to-emerald-500 text-white text-sm font-bold shadow-md hover:shadow-lg transition"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#4A7766] to-emerald-500 text-white text-sm font-bold shadow-md hover:shadow-lg transition"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

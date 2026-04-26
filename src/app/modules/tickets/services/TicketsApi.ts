@@ -1,4 +1,4 @@
-// Tickets API client - Bureau issue tracking system
+// Tickets API client - True Quotation issue tracking system
 import { getToken } from "@/app/modules/auth/services/AuthApi";
 
 const API_BASE_URL =

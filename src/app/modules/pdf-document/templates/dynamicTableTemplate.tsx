@@ -167,7 +167,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
   // Header
   headerBackgroundColor,
   headerGradient = {
-    from: "#A4C639",
+    from: "#4A7766",
     to: "#8FB02E",
   },
   headerTextColor = "text-white",
@@ -244,7 +244,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
         return { bg: 'bg-[#EC4899]', border: 'border-[#EC4899]', from: '#EC4899', to: '#F472B6', accent: '#F9A8D4' };
       case 'green':
       default:
-        return { bg: 'bg-[#A4C639]', border: 'border-[#A4C639]', from: '#A4C639', to: '#8FB02E', accent: '#BEF264' };
+        return { bg: 'bg-[#4A7766]', border: 'border-[#4A7766]', from: '#4A7766', to: '#8FB02E', accent: '#BEF264' };
     }
   };
   
@@ -482,7 +482,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { value: 'green', label: 'Nature Green', bg: 'bg-[#A4C639]', accent: '#BEF264' },
+                      { value: 'green', label: 'Nature Green', bg: 'bg-[#4A7766]', accent: '#BEF264' },
                       { value: 'dark-blue', label: 'Ocean Blue', bg: 'bg-[#1E3A8A]', accent: '#3B82F6' },
                       { value: 'dark-red', label: 'Ruby Red', bg: 'bg-[#991B1B]', accent: '#EF4444' },
                       { value: 'black', label: 'Carbon Black', bg: 'bg-[#1F2937]', accent: '#6B7280' },

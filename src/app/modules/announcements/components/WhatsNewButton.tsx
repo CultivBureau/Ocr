@@ -79,9 +79,9 @@ export default function WhatsNewButton() {
         aria-label={`What's New${unreadCount > 0 ? ` — ${unreadCount} unread` : ""}`}
         title="What's New"
         className={`relative inline-flex items-center justify-center w-9 h-9 rounded-xl
-          transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A4C639]
+          transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4A7766]
           ${isOpen
-            ? "bg-[#A4C639]/20 text-[#6b8a1e]"
+            ? "bg-[#4A7766]/20 text-[#6b8a1e]"
             : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
           }`}
       >
@@ -106,7 +106,7 @@ export default function WhatsNewButton() {
             aria-hidden="true"
             className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1
               flex items-center justify-center
-              bg-[#A4C639] text-white text-[10px] font-bold rounded-full
+              bg-[#4A7766] text-white text-[10px] font-bold rounded-full
               shadow-sm ring-2 ring-white
               animate-[scaleIn_0.3s_ease-out]"
           >
