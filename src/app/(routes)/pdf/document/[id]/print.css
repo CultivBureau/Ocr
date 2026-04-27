@@ -210,7 +210,7 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
 }
 
 /* Individual hotel cards — try to avoid break but allow if needed */
-.hotels-section > .space-y-6 > div {
+.hotels-section > .space-y-5 > div {
   break-inside: avoid;
   page-break-inside: avoid;
 }
@@ -458,77 +458,78 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
 .hotels-section .bg-\[\#3B5998\] h2 {
   font-size: 15px !important;
 }
-.hotels-section .space-y-6 > * + * {
-  margin-top: 10px !important;
+
+/* Card list spacing (space-y-5) */
+.hotels-section .space-y-5 > * + * {
+  margin-top: 8px !important;
 }
-.hotels-section .border-2.border-blue-300 {
-  padding: 12px 14px !important;
-  padding-top: 20px !important;
-  border-radius: 10px !important;
-  border-width: 1.5px !important;
-  margin-top: 14px !important;
+
+/* Individual hotel card wrapper */
+.hotels-section > .space-y-5 > div {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  border-width: 1px !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
-.hotels-section .absolute.-top-4 {
-  top: -12px !important;
+
+/* Card header bar: city + nights + day info strip (full-width, no rounded-xl) */
+.hotels-section .bg-\[\#1E88E5\]:not(.rounded-xl) {
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
-.hotels-section .bg-\[\#FF6B35\] {
-  padding: 2px 10px !important;
-  font-size: 11px !important;
+
+/* Hotel name bar + room detail boxes (have rounded-xl) */
+.hotels-section .bg-\[\#1E88E5\].rounded-xl {
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
-.hotels-section .bg-\[\#1E88E5\] {
-  padding: 4px 12px !important;
-  font-size: 13px !important;
-}
-.hotels-section .bg-\[\#1E88E5\] .bg-white {
+
+/* Details link button inside name bar */
+.hotels-section .bg-\[\#1E88E5\].rounded-xl .bg-white {
   padding: 1px 8px !important;
   font-size: 11px !important;
 }
-.hotels-section .absolute.top-2 {
-  font-size: 12px !important;
+
+/* Orange badges (city badge + dates bar) */
+.hotels-section .bg-\[\#FF6B35\] {
+  padding: 2px 10px !important;
+  font-size: 11px !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
-.hotels-section .absolute.top-2 .bg-\[\#1E88E5\].rounded-full {
-  padding: 3px !important;
-}
-.hotels-section .absolute.top-2 svg {
-  width: 12px !important;
-  height: 12px !important;
-}
-.hotels-section .mt-8.w-1\/2 {
-  margin-top: 10px !important;
-  padding: 6px 10px !important;
-  border-radius: 8px !important;
-  width: 65% !important;
-}
-.hotels-section .mt-8.w-1\/2 span {
-  font-size: 12px !important;
-  width: auto !important;
-}
+
+/* Room details grid */
 .hotels-section .mt-4.grid {
   margin-top: 6px !important;
   gap: 6px !important;
 }
-.hotels-section .mt-4.grid .bg-\[\#1E88E5\] {
-  padding: 4px 10px !important;
-  border-radius: 6px !important;
-  font-size: 11px !important;
-}
-.hotels-section .mt-3 .bg-\[\#1E88E5\] {
-  padding: 4px 10px !important;
-  border-radius: 6px !important;
-  font-size: 11px !important;
-}
 .hotels-section .mt-3 {
   margin-top: 6px !important;
 }
+
+/* Check-in / Check-out date bar */
 .hotels-section .mt-4.bg-\[\#FF6B35\] {
   margin-top: 6px !important;
   padding: 6px 12px !important;
   border-radius: 6px !important;
   font-size: 12px !important;
 }
+
 /* Add hotel dashed card — hide in PDF */
 .hotels-section .border-dashed {
   display: none !important;
+}
+
+/* Individual hotel card — avoid breaking across pages */
+.hotels-section > .space-y-5 > div {
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 /* ── Airplane Section ───────────────────────────────────────────────────────*/
@@ -554,6 +555,20 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   padding: 4px 5px !important;
   font-size: 11px !important;
   word-break: break-word !important;
+}
+
+/* Alternating row backgrounds and note rows must print with correct color */
+[data-airplane-section-id] tbody tr,
+[data-transport-section-id] tbody tr {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+/* Notice bar: left/right accent border must print in crimson */
+[data-airplane-section-id] .border-l-4,
+[data-airplane-section-id] .border-r-4 {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
 /* ── Transport Section ──────────────────────────────────────────────────────*/
@@ -680,6 +695,9 @@ img {
 }
 .space-y-6 > * + * {
   margin-top: 10px !important;
+}
+.space-y-5 > * + * {
+  margin-top: 8px !important;
 }
 .space-y-2 > * + * {
   margin-top: 3px !important;
