@@ -43,7 +43,8 @@ interface EditAirplaneSectionModalProps {
     columnConfig?: AirplaneColumnConfigItem[];
     columnLabels?: {
       date?: string;
-      time?: string;
+      arrivalTime?: string;
+      departureTime?: string;
       airlineCompany?: string;
       fromAirport?: string;
       toAirport?: string;

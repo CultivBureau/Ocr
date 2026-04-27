@@ -24,7 +24,8 @@ import type { AirplaneColumnConfigItem } from "@/app/modules/pdf-document/types/
 
 export interface FlightData {
   date: string;
-  time?: string;
+  arrivalTime?: string;
+  departureTime?: string;
   airlineCompany?: string;
   airlineCompanyLink?: string;
   fromAirport: string;
@@ -76,7 +77,8 @@ export default function AddAirplaneModal({
   const [flights, setFlights] = useState<FlightData[]>([
     {
       date: new Date().toISOString().split('T')[0],
-      time: "",
+      arrivalTime: "",
+      departureTime: "",
       airlineCompany: "",
       airlineCompanyLink: "",
       fromAirport: "",
@@ -167,7 +169,8 @@ export default function AddAirplaneModal({
       setFlights([
         {
           date: new Date().toISOString().split('T')[0],
-          time: "",
+          arrivalTime: "",
+          departureTime: "",
           airlineCompany: "",
           airlineCompanyLink: "",
           fromAirport: "",
@@ -387,7 +390,8 @@ export default function AddAirplaneModal({
     });
     const newFlight: FlightData = {
       date: new Date().toISOString().split("T")[0],
-      time: "",
+      arrivalTime: "",
+      departureTime: "",
       airlineCompany: "",
       airlineCompanyLink: "",
       fromAirport: "",
@@ -738,7 +742,7 @@ export default function AddAirplaneModal({
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         {t.modals.date}
@@ -758,12 +762,24 @@ export default function AddAirplaneModal({
                     
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        {t.modals.time}
+                        {language === "ar" ? "وقت الوصول" : "Arrival Time"}
                       </label>
                       <input
                         type="time"
-                        value={flight.time || ""}
-                        onChange={(e) => updateFlight(index, 'time', e.target.value)}
+                        value={flight.arrivalTime || ""}
+                        onChange={(e) => updateFlight(index, 'arrivalTime', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5568] focus:border-transparent text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        {language === "ar" ? "وقت الاقلاع" : "Departure Time"}
+                      </label>
+                      <input
+                        type="time"
+                        value={flight.departureTime || ""}
+                        onChange={(e) => updateFlight(index, 'departureTime', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5568] focus:border-transparent text-sm"
                       />
                     </div>

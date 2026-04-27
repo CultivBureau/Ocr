@@ -26,7 +26,8 @@ export default function EditFlightModal({
 }: EditFlightModalProps) {
   const { t, isRTL, dir } = useLanguage();
   const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [arrivalTime, setArrivalTime] = useState("");
+  const [departureTime, setDepartureTime] = useState("");
   const [airlineCompany, setAirlineCompany] = useState("");
   const [airlineCompanyLink, setAirlineCompanyLink] = useState("");
   const [fromAirport, setFromAirport] = useState("");
@@ -82,7 +83,8 @@ export default function EditFlightModal({
   useEffect(() => {
     if (isOpen && initialFlight) {
       setDate(initialFlight.date);
-      setTime(initialFlight.time || "");
+      setArrivalTime(initialFlight.arrivalTime || "");
+      setDepartureTime(initialFlight.departureTime || "");
       setAirlineCompany(initialFlight.airlineCompany || "");
       setAirlineCompanyLink(initialFlight.airlineCompanyLink || "");
       setFromAirport(initialFlight.fromAirport);
@@ -137,7 +139,8 @@ export default function EditFlightModal({
 
     onSubmit({
       date,
-      time: time.trim() || undefined,
+      arrivalTime: arrivalTime.trim() || undefined,
+      departureTime: departureTime.trim() || undefined,
       airlineCompany: airlineCompany.trim() || undefined,
       airlineCompanyLink: airlineCompanyLink.trim() || undefined,
       fromAirport: fromAirport.trim(),
@@ -212,15 +215,28 @@ export default function EditFlightModal({
             )}
           </div>
 
-          {/* Time */}
+          {/* Arrival Time */}
           <div>
             <label className={`block text-sm font-semibold text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-              {t.modals.time}
+              {language === "ar" ? "وقت الوصول" : "Arrival Time"}
             </label>
             <input
               type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
+              value={arrivalTime}
+              onChange={(e) => setArrivalTime(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5568] focus:border-transparent"
+            />
+          </div>
+
+          {/* Departure Time */}
+          <div>
+            <label className={`block text-sm font-semibold text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {language === "ar" ? "وقت الاقلاع" : "Departure Time"}
+            </label>
+            <input
+              type="time"
+              value={departureTime}
+              onChange={(e) => setDepartureTime(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5568] focus:border-transparent"
             />
           </div>

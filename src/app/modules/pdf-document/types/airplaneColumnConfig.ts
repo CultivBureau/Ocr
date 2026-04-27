@@ -4,7 +4,8 @@
 
 export type AirplaneBuiltinColumnKey =
   | "date"
-  | "time"
+  | "arrivalTime"
+  | "departureTime"
   | "airlineCompany"
   | "fromAirport"
   | "toAirport"
@@ -29,7 +30,8 @@ export type AirplaneColumnConfigItem =
 export function getDefaultAirplaneColumnConfig(): AirplaneColumnConfigItem[] {
   return [
     { kind: "builtin", key: "date", labelAr: "التاريخ", labelEn: "Date" },
-    { kind: "builtin", key: "time", labelAr: "الوقت", labelEn: "Time" },
+    { kind: "builtin", key: "arrivalTime", labelAr: "وقت الوصول", labelEn: "Arrival Time" },
+    { kind: "builtin", key: "departureTime", labelAr: "وقت الاقلاع", labelEn: "Departure Time" },
     {
       kind: "builtin",
       key: "airlineCompany",
@@ -45,7 +47,8 @@ export function getDefaultAirplaneColumnConfig(): AirplaneColumnConfigItem[] {
 
 export const ALL_BUILTIN_KEYS: AirplaneBuiltinColumnKey[] = [
   "date",
-  "time",
+  "arrivalTime",
+  "departureTime",
   "airlineCompany",
   "fromAirport",
   "toAirport",
@@ -65,7 +68,8 @@ export function resolveAirplaneColumnConfig(
   columnConfig: AirplaneColumnConfigItem[] | undefined | null,
   legacyColumnLabels?: {
     date?: string;
-    time?: string;
+    arrivalTime?: string;
+    departureTime?: string;
     airlineCompany?: string;
     fromAirport?: string;
     toAirport?: string;

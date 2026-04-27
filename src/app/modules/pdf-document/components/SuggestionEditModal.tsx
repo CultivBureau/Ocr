@@ -155,7 +155,8 @@ export default function SuggestionEditModal({
       addRow: isArabic ? "إضافة صف" : "Add row",
       remove: isArabic ? "حذف" : "Remove",
       date: isArabic ? "التاريخ" : "Date",
-      time: isArabic ? "الوقت" : "Time",
+      arrivalTime: isArabic ? "وقت الوصول" : "Arrival Time",
+      departureTime: isArabic ? "وقت الاقلاع" : "Departure Time",
       airline: isArabic ? "شركة الطيران" : "Airline",
       from: isArabic ? "من" : "From",
       to: isArabic ? "إلى" : "To",
@@ -241,7 +242,8 @@ export default function SuggestionEditModal({
           >
             <div className="grid gap-4 lg:grid-cols-3">
               <Field label={copy.date}><Input type="date" value={flight.date ?? ""} onChange={(e) => updateDraftData((prev) => { const next = [...(((prev as AirplaneSectionData).flights ?? []))]; next[index] = { ...next[index], date: e.target.value }; return { ...prev, flights: next }; })} /></Field>
-              <Field label={copy.time}><Input type="time" value={flight.time ?? ""} onChange={(e) => updateDraftData((prev) => { const next = [...(((prev as AirplaneSectionData).flights ?? []))]; next[index] = { ...next[index], time: e.target.value }; return { ...prev, flights: next }; })} /></Field>
+              <Field label={copy.arrivalTime}><Input type="time" value={flight.arrivalTime ?? ""} onChange={(e) => updateDraftData((prev) => { const next = [...(((prev as AirplaneSectionData).flights ?? []))]; next[index] = { ...next[index], arrivalTime: e.target.value }; return { ...prev, flights: next }; })} /></Field>
+              <Field label={copy.departureTime}><Input type="time" value={flight.departureTime ?? ""} onChange={(e) => updateDraftData((prev) => { const next = [...(((prev as AirplaneSectionData).flights ?? []))]; next[index] = { ...next[index], departureTime: e.target.value }; return { ...prev, flights: next }; })} /></Field>
               <Field label={copy.airline}><Input value={flight.airlineCompany ?? ""} onChange={(e) => updateDraftData((prev) => { const next = [...(((prev as AirplaneSectionData).flights ?? []))]; next[index] = { ...next[index], airlineCompany: e.target.value }; return { ...prev, flights: next }; })} dir={dir} /></Field>
               <Field label={copy.from}><Input value={flight.fromAirport ?? ""} onChange={(e) => updateDraftData((prev) => { const next = [...(((prev as AirplaneSectionData).flights ?? []))]; next[index] = { ...next[index], fromAirport: e.target.value }; return { ...prev, flights: next }; })} dir={dir} /></Field>
               <Field label={copy.to}><Input value={flight.toAirport ?? ""} onChange={(e) => updateDraftData((prev) => { const next = [...(((prev as AirplaneSectionData).flights ?? []))]; next[index] = { ...next[index], toAirport: e.target.value }; return { ...prev, flights: next }; })} dir={dir} /></Field>
@@ -265,7 +267,7 @@ export default function SuggestionEditModal({
               ...prev,
               flights: [
                 ...(((prev as AirplaneSectionData).flights ?? [])),
-                { date: "", time: "", airlineCompany: "", fromAirport: "", toAirport: "", travelers: { adults: 1, children: 0, infants: 0 }, luggage: "", note: "" },
+                { date: "", arrivalTime: "", departureTime: "", airlineCompany: "", fromAirport: "", toAirport: "", travelers: { adults: 1, children: 0, infants: 0 }, luggage: "", note: "" },
               ],
             }))
           }

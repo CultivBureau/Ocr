@@ -25,7 +25,8 @@ export interface AirplaneSectionProps {
   // Data
   flights?: {
     date: string;
-    time?: string;
+    arrivalTime?: string;
+    departureTime?: string;
     airlineCompany?: string;
     airlineCompanyLink?: string;
     fromAirport: string;
@@ -58,7 +59,8 @@ export interface AirplaneSectionProps {
   columnConfig?: AirplaneColumnConfigItem[];
   columnLabels?: {
     date: string;
-    time?: string;
+    arrivalTime?: string;
+    departureTime?: string;
     airlineCompany?: string;
     fromAirport: string;
     toAirport: string;
@@ -212,10 +214,16 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
             <span className="text-[#4A5568] font-bold">{formatDate(flight.date)}</span>
           </div>
         );
-      case "time":
+      case "arrivalTime":
         return (
           <div className="flex flex-col items-center">
-            <span className="text-[#4A5568] font-bold">{flight.time || "-"}</span>
+            <span className="text-[#4A5568] font-bold">{flight.arrivalTime || "-"}</span>
+          </div>
+        );
+      case "departureTime":
+        return (
+          <div className="flex flex-col items-center">
+            <span className="text-[#4A5568] font-bold">{flight.departureTime || "-"}</span>
           </div>
         );
       case "airlineCompany":

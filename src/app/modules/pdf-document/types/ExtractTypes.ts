@@ -105,7 +105,8 @@ export interface FixJSXResponse {
 export interface AirplaneSectionData {
   flights?: {
     date: string;
-    time?: string;
+    arrivalTime?: string;
+    departureTime?: string;
     airlineCompany?: string;
     airlineCompanyLink?: string;
     fromAirport: string;
