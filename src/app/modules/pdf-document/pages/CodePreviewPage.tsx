@@ -30,7 +30,7 @@ import EditTransportTableModal from "../components/EditTransportTableModal";
 import EditTransportSectionModal from "../components/EditTransportSectionModal";
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
 import ComponentSuggestionModal from "../components/ComponentSuggestionModal";
-import { Hotel } from "../templates/HotelsSection";
+import type { Hotel } from "../templates/HotelsSection";
 import { isAuthenticated } from "@/app/modules/auth/services/AuthApi";
 import {
   saveDocument,
