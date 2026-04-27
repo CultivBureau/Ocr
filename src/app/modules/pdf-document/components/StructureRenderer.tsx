@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import type {
   Structure,
   Section,
@@ -17,10 +17,10 @@ import BaseTemplate from "../templates/baseTemplate";
 import AirplaneSection from "../templates/airplaneSection";
 import HotelsSection from "../templates/HotelsSection";
 import TransportSection from "../templates/TransportSection";
-import { sortSectionsByOrder, getSectionHierarchy } from "../utils/formatSections";
+import { sortSectionsByOrder } from "../utils/formatSections";
 import { sortTablesByOrder, groupTablesBySection } from "../utils/formatTables";
 import { isSeparatedStructure, isLegacyStructure, migrateToSeparatedStructure } from "../utils/structureMigration";
-import { isGeneratedId } from "../utils/contentGuards";
+import { isEmptySectionContent } from "../utils/contentGuards";
 
 interface StructureRendererProps {
   structure: Structure | SeparatedStructure;
@@ -117,24 +117,20 @@ export default function StructureRenderer({
     elementMap.set(element.id, { type: 'user', data: element });
   });
 
-  const suppressedGeneratedLayoutIds = useMemo(() => {
-    const s = new Set<string>();
-    separatedStructure.user.elements.forEach((el) => {
-      (el.supersedesGeneratedIds ?? []).forEach((id) => s.add(id));
-    });
-    return s;
-  }, [separatedStructure.user.elements]);
+  const shouldRenderSection = (section: Section) => !isEmptySectionContent(section.content);
+
+  const suppressedGeneratedLayoutIds = new Set<string>();
+  separatedStructure.user.elements.forEach((el) => {
+    (el.supersedesGeneratedIds ?? []).forEach((id) => suppressedGeneratedLayoutIds.add(id));
+  });
 
   // Sort sections and tables for legacy rendering (when not using layout order)
-  const sortedSections = sortSectionsByOrder(separatedStructure.generated.sections);
+  const sortedSections = sortSectionsByOrder(separatedStructure.generated.sections).filter(shouldRenderSection);
   const sortedTables = sortTablesByOrder(separatedStructure.generated.tables);
   
   // Group tables by section for better organization
   const tablesBySection = groupTablesBySection(sortedTables);
   
-  // Get section hierarchy
-  const sectionHierarchy = getSectionHierarchy(sortedSections);
-
   // Render element by ID
   const renderElement = (id: string) => {
     const element = elementMap.get(id);
@@ -143,6 +139,7 @@ export default function StructureRenderer({
     switch (element.type) {
       case 'section': {
         const section = element.data as Section;
+        if (!shouldRenderSection(section)) return null;
         return (
           <SectionTemplate
             key={section.id}
@@ -458,16 +455,21 @@ export default function StructureRenderer({
             if (element.type === 'section') {
               const section = element.data as Section;
               // Check if this section has children
-              const children = separatedStructure.generated.sections.filter(s => s.parent_id === section.id);
+              const children = separatedStructure.generated.sections.filter(s => s.parent_id === section.id && shouldRenderSection(s));
+              if (!shouldRenderSection(section) && children.length === 0) {
+                return null;
+              }
               if (children.length > 0) {
                 return (
                   <React.Fragment key={uniqueKey}>
-                    <SectionTemplate
-                      title={section.title}
-                      content={section.content}
-                      type={section.type || 'section'}
-                      editable={false}
-                    />
+                    {shouldRenderSection(section) && (
+                      <SectionTemplate
+                        title={section.title}
+                        content={section.content}
+                        type={section.type || 'section'}
+                        editable={false}
+                      />
+                    )}
                     {children.map((child, childIndex) => (
                       <SectionTemplate
                         key={`${child.id}-${childIndex}`}
@@ -647,4 +649,3 @@ export default function StructureRenderer({
     </BaseTemplate>
   );
 }
-
