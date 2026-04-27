@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Link as LinkIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, Link as LinkIcon } from 'lucide-react';
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
 import type { TransportSectionProps, TransportTable, TransportRow } from '../types/TransportTypes';
 
@@ -577,6 +577,34 @@ const TransportSection: React.FC<TransportSectionProps> = ({
                               {editable && (
                                 <td className="px-3 py-4 border-r border-gray-100">
                                   <div className="flex flex-col gap-2 items-center">
+                                    {table.rows.length > 1 && (
+                                      <div className="flex gap-1">
+                                        <button
+                                          data-action="move-row-up"
+                                          data-transport-section-id={sectionIdValue}
+                                          data-table-index={tableIndex}
+                                          data-row-index={rowIndex}
+                                          disabled={rowIndex === 0}
+                                          className="p-1.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 disabled:opacity-35 disabled:hover:bg-slate-500 disabled:hover:scale-100 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                                          title={language === 'ar' ? 'تحريك للأعلى' : 'Move up'}
+                                          type="button"
+                                        >
+                                          <ArrowUp className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          data-action="move-row-down"
+                                          data-transport-section-id={sectionIdValue}
+                                          data-table-index={tableIndex}
+                                          data-row-index={rowIndex}
+                                          disabled={rowIndex === table.rows.length - 1}
+                                          className="p-1.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 disabled:opacity-35 disabled:hover:bg-slate-500 disabled:hover:scale-100 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                                          title={language === 'ar' ? 'تحريك للأسفل' : 'Move down'}
+                                          type="button"
+                                        >
+                                          <ArrowDown className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    )}
                                     <button
                                       onClick={(e) => {
                                         e.preventDefault();

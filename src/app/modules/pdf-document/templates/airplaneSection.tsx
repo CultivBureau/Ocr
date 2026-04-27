@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { AlertTriangle, Link as LinkIcon } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, Link as LinkIcon } from 'lucide-react';
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
 import {
   columnLabel,
@@ -395,6 +395,32 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                 {editable && (
                     <td className="px-3 py-4 border-r border-gray-100">
                       <div className="flex flex-col gap-2 items-center">
+                      {flights.length > 1 && (
+                        <div className="flex gap-1">
+                          <button
+                            data-action="move-flight-up"
+                            data-airplane-section-id={sectionIdValue}
+                            data-flight-index={index}
+                            disabled={index === 0}
+                            className="p-1.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 disabled:opacity-35 disabled:hover:bg-slate-500 disabled:hover:scale-100 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                            title={language === 'ar' ? 'تحريك للأعلى' : 'Move up'}
+                            type="button"
+                          >
+                            <ArrowUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            data-action="move-flight-down"
+                            data-airplane-section-id={sectionIdValue}
+                            data-flight-index={index}
+                            disabled={index === flights.length - 1}
+                            className="p-1.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 disabled:opacity-35 disabled:hover:bg-slate-500 disabled:hover:scale-100 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                            title={language === 'ar' ? 'تحريك للأسفل' : 'Move down'}
+                            type="button"
+                          >
+                            <ArrowDown className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                       <button
                         onClick={(e) => {
                           // Support prop handler if provided (for backward compatibility)

@@ -268,6 +268,16 @@ function CodePageContent() {
           handleRemoveFlight(sectionId, flightIndex);
           break;
         }
+        case 'move-flight-up':
+        case 'move-flight-down': {
+          const flightIndex = flightIndexStr ? parseInt(flightIndexStr, 10) : null;
+          if (flightIndex === null || isNaN(flightIndex)) {
+            console.error(`Invalid flight index for ${action} action`);
+            return;
+          }
+          handleMoveFlight(sectionId, flightIndex, action === 'move-flight-up' ? 'up' : 'down');
+          break;
+        }
         case 'add-flight': {
           handleAddFlight(sectionId);
           break;
@@ -448,6 +458,17 @@ function CodePageContent() {
           handleRemoveTransportRow(sectionIdString, tableIndex, rowIndex);
           break;
         }
+        case 'move-row-up':
+        case 'move-row-down': {
+          const tableIndex = tableIndexStr ? parseInt(tableIndexStr, 10) : null;
+          const rowIndex = rowIndexStr ? parseInt(rowIndexStr, 10) : null;
+          if (tableIndex === null || isNaN(tableIndex) || rowIndex === null || isNaN(rowIndex)) {
+            console.error(`Invalid table/row index for ${action} action`);
+            return;
+          }
+          handleMoveTransportRow(sectionIdString, tableIndex, rowIndex, action === 'move-row-up' ? 'up' : 'down');
+          break;
+        }
         case 'add-row': {
           const tableIndex = tableIndexStr ? parseInt(tableIndexStr, 10) : null;
           if (tableIndex === null || isNaN(tableIndex)) {
@@ -609,6 +630,57 @@ function CodePageContent() {
       } else {
         alert(error instanceof Error ? error.message : 'Failed to add flight');
       }
+    }
+  }, []);
+
+  const handleMoveFlight = useCallback((id: string, flightIndex: number, direction: 'up' | 'down') => {
+    try {
+      if (!id.startsWith('user_airplane_')) {
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'airplane');
+        if (userElementIndex === -1) {
+          alert('Airplane section not found');
+          return prev;
+        }
+
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const flights = [...(element.data.flights || [])];
+        const targetIndex = direction === 'up' ? flightIndex - 1 : flightIndex + 1;
+
+        if (
+          flightIndex < 0 ||
+          flightIndex >= flights.length ||
+          targetIndex < 0 ||
+          targetIndex >= flights.length
+        ) {
+          return prev;
+        }
+
+        [flights[flightIndex], flights[targetIndex]] = [flights[targetIndex], flights[flightIndex]];
+
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            flights
+          }
+        };
+
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Error moving flight:', error);
+      alert(error instanceof Error ? error.message : 'Failed to move flight');
     }
   }, []);
   
@@ -1226,6 +1298,65 @@ function CodePageContent() {
     } catch (error) {
       console.error('Error adding transport row:', error);
       alert(error instanceof Error ? error.message : 'Failed to add row');
+    }
+  }, []);
+
+  const handleMoveTransportRow = useCallback((id: string, tableIndex: number, rowIndex: number, direction: 'up' | 'down') => {
+    try {
+      if (!id.startsWith('user_transport_')) {
+        alert('Cannot modify generated content. Only user-created transport sections can be edited.');
+        return;
+      }
+
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
+        if (userElementIndex === -1) {
+          alert('Transport section not found');
+          return prev;
+        }
+
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+
+        if (tableIndex < 0 || tableIndex >= tables.length) {
+          return prev;
+        }
+
+        const table = tables[tableIndex];
+        const rows = [...(table.rows || [])];
+        const targetIndex = direction === 'up' ? rowIndex - 1 : rowIndex + 1;
+
+        if (
+          rowIndex < 0 ||
+          rowIndex >= rows.length ||
+          targetIndex < 0 ||
+          targetIndex >= rows.length
+        ) {
+          return prev;
+        }
+
+        [rows[rowIndex], rows[targetIndex]] = [rows[targetIndex], rows[rowIndex]];
+        tables[tableIndex] = { ...table, rows };
+
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Error moving transport row:', error);
+      alert(error instanceof Error ? error.message : 'Failed to move row');
     }
   }, []);
 
