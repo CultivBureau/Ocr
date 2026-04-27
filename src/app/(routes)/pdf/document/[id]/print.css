@@ -1,6 +1,6 @@
 /* ==========================================================================
    PDF Export Stylesheet — Optimized for Playwright/Chromium PDF generation
-   Targets: A4 page size, clean layout, smart page breaks, no interactive UI
+   Targets: A4 page size, clean professional layout, smart page breaks
    ========================================================================== */
 
 /* ── Force light color-scheme & CSS variables for Docker headless Chromium ── */
@@ -10,19 +10,12 @@
   --foreground: #171717 !important;
 }
 
-/* ── Force light background on PDF document page (this file is only loaded here) ── */
-/* Prevents dark theme from globals.css (prefers-color-scheme: dark) causing
-   a shadow/gray overlay when PDF is generated in production headless browser. */
-
-/* ── THE ROOT FIX: color-scheme: light ────────────────────────────────────
-   Tailwind v4 (@import "tailwindcss") injects  color-scheme: light dark  on
-   :root in its preflight. That single declaration tells headless Chromium
-   "this page supports dark mode", so when production Docker has no explicit
-   light preference, Chromium activates dark UA styles and paints every
-   transparent/semi-transparent container with a gray overlay.
-   Setting  color-scheme: light  here overrides Tailwind's preflight and locks
-   the UA to light rendering — this is the real fix for the gray overlay.
-   ─────────────────────────────────────────────────────────────────────── */
+/* ── THE ROOT FIX: color-scheme: light ──────────────────────────────────────
+   Tailwind v4 preflight sets  color-scheme: light dark  on :root, which
+   allows headless Chromium in Docker to activate dark UA styles and paint
+   every transparent/semi-transparent container with a gray overlay.
+   Overriding to  light  here is the definitive fix.
+   ─────────────────────────────────────────────────────────────────────────── */
 :root {
   color-scheme: light !important;
   --background: #ffffff !important;
@@ -69,13 +62,26 @@ body,
   background: #ffffff !important;
 }
 
-/* ── Page Setup ───────────────────────────────────────────────────────────── */
+/* ── Page Setup ─────────────────────────────────────────────────────────────
+   CSS @page is honored by Playwright when prefer_css_page_size=True.
+   The @bottom-center margin box provides professional page numbering.
+   ─────────────────────────────────────────────────────────────────────────── */
 @page {
   size: A4;
-  margin: 10mm 10mm 12mm 10mm;
+  margin: 10mm 12mm 14mm 12mm;
+
+  @bottom-center {
+    content: "— " counter(page) " / " counter(pages) " —";
+    font-size: 8.5px;
+    color: #94a3b8;
+    font-family: 'Cairo', system-ui, sans-serif;
+    letter-spacing: 0.06em;
+  }
 }
 
-/* ── Global Resets for Print ──────────────────────────────────────────────── */
+/* ── Global Resets for Print ────────────────────────────────────────────────
+   Remove all interactive effects that would look wrong frozen in a PDF.
+   ─────────────────────────────────────────────────────────────────────────── */
 * {
   animation: none !important;
   animation-duration: 0s !important;
@@ -88,7 +94,9 @@ body,
   filter: none !important;
 }
 
-/* ── Base Document Styles ─────────────────────────────────────────────────── */
+/* ── Base Document Styles ───────────────────────────────────────────────────
+   Cairo supports both Arabic (RTL) and Latin glyphs cleanly.
+   ─────────────────────────────────────────────────────────────────────────── */
 body {
   margin: 0;
   padding: 0;
@@ -96,20 +104,17 @@ body {
   color: #1a1a1a;
   font-family: 'Cairo', 'IBM Plex Arabic', system-ui, -apple-system, sans-serif;
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.6;
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
 }
 
-/* NOTE: .pdf-document-body is a <div>, NOT the <body> element.
-   The old selector  body.pdf-document-body  never matched anything.
-   This is the corrected rule that actually targets the div. */
 .pdf-document-body {
   background: #ffffff !important;
   color: #1a1a1a !important;
 }
 
-/* ── Layout Containers ────────────────────────────────────────────────────── */
+/* ── Layout Containers ──────────────────────────────────────────────────────*/
 .pdf-container {
   width: 100%;
   max-width: 100%;
@@ -125,15 +130,15 @@ body {
 
 /* BaseTemplate content area — tighter padding for PDF */
 .base-template .px-6 {
-  padding-left: 4mm !important;
-  padding-right: 4mm !important;
+  padding-left: 2mm !important;
+  padding-right: 2mm !important;
 }
 .base-template .py-5 {
-  padding-top: 3mm !important;
-  padding-bottom: 3mm !important;
+  padding-top: 2mm !important;
+  padding-bottom: 2mm !important;
 }
 
-/* ── Hide ALL Interactive / Non-Print Elements ────────────────────────────── */
+/* ── Hide ALL Interactive / Non-Print Elements ──────────────────────────────*/
 .no-print,
 .no-pdf-export,
 button,
@@ -149,7 +154,7 @@ aside,
   display: none !important;
 }
 
-/* Hide edit/delete buttons even if they don't have the above classes */
+/* Hide edit/delete buttons even if they lack the above classes */
 .section-template button,
 .hotels-section button,
 [class*="Section"] button,
@@ -157,7 +162,13 @@ aside,
   display: none !important;
 }
 
-/* ── RTL/LTR Text Alignment ──────────────────────────────────────────────── */
+/* Hide the decorative glow blob (blurred circle behind title).
+   Without blur the filter is removed, leaving a hard-edged opaque circle. */
+.section-template .absolute.top-0 {
+  display: none !important;
+}
+
+/* ── RTL/LTR Text Alignment ─────────────────────────────────────────────────*/
 [dir="rtl"] {
   text-align: right;
 }
@@ -165,7 +176,7 @@ aside,
   text-align: left;
 }
 
-/* ── Typography ───────────────────────────────────────────────────────────── */
+/* ── Typography ─────────────────────────────────────────────────────────────*/
 p, li, td, th, span, div {
   orphans: 3;
   widows: 3;
@@ -178,19 +189,19 @@ h1, h2, h3, h4, h5, h6 {
   page-break-after: avoid;
 }
 
-/* Keep headings with following content */
+/* Keep headings with their following content */
 h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   break-before: avoid;
   page-break-before: avoid;
 }
 
-/* ── Page Break Control ───────────────────────────────────────────────────── */
+/* ── Page Break Control ─────────────────────────────────────────────────────*/
 .page-break {
   break-after: page;
   page-break-after: always;
 }
 
-/* IMPORTANT: Allow content to break inside sections and hotel wrappers.
+/* Allow content to break inside sections and hotel wrappers.
    Without this, large blocks push to the next page leaving blank space. */
 .no-break,
 .hotels-section {
@@ -204,21 +215,63 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   page-break-inside: avoid;
 }
 
-/* ── Section Template Overrides ───────────────────────────────────────────── */
-.section-template {
-  /* Override Tailwind interactive classes */
-  border-radius: 10px !important;
-  padding: 14px 16px !important;
-  margin-bottom: 10px !important;
-  border: 1px solid #e5e7eb !important;
-  background: #ffffff !important;
-  position: relative;
-  /* Allow page breaks inside long sections */
-  break-inside: auto !important;
-  page-break-inside: auto !important;
+/* ── Document Version / ID Badge ────────────────────────────────────────────
+   Renders as a clean document-header strip with a subtle gradient background.
+   Uses semantic BEM classes added in baseTemplate.tsx.
+   ─────────────────────────────────────────────────────────────────────────── */
+.pdf-version-badge {
+  padding: 3mm 2mm 2mm !important;
 }
 
-/* Remove gradient/tinted backgrounds from sections — force white for PDF */
+.pdf-version-badge__inner {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  max-width: 100% !important;
+  padding: 7px 16px !important;
+  gap: 10px !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.pdf-version-badge__pill {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 20px !important;
+  padding: 3px 12px !important;
+}
+
+.pdf-version-badge__label {
+  color: #64748b !important;
+  font-size: 9.5px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
+}
+
+.pdf-version-badge__value {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+}
+
+/* ── Section Template — Base ────────────────────────────────────────────────
+   Compact, clean white base. Type-specific overrides follow below.
+   ─────────────────────────────────────────────────────────────────────────── */
+.section-template {
+  border-radius: 8px !important;
+  padding: 12px 16px 12px 20px !important;
+  margin-bottom: 10px !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  position: relative;
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+/* Force white background — overridden per-type below with higher specificity */
 .section-template,
 .section-template[class*="bg-gradient"],
 .section-template[class*="bg-"],
@@ -229,65 +282,58 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   background-color: #ffffff !important;
 }
 
-/* Section title — keep with content */
+/* Section title container */
 .section-template .mb-6.text-center {
-  margin-bottom: 6px !important;
+  margin-bottom: 8px !important;
   break-after: avoid;
   page-break-after: avoid;
 }
 
 /* Section title text */
 .section-template h2 {
-  font-size: 16px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
   margin-bottom: 4px !important;
-  color: #1a1a1a !important;
+  color: #1e293b !important;
+  letter-spacing: -0.01em !important;
 }
 
-/* Section title decorative bar */
+/* Decorative gradient bar under title — preserve inline-style colors */
 .section-template .mb-6.text-center .flex.items-center.justify-center {
-  margin-top: 2px !important;
+  margin-top: 4px !important;
 }
 
 /* Section content text */
+.section-template .section-html-content,
 .section-template .content {
   font-size: 13px !important;
-  line-height: 1.55 !important;
+  line-height: 1.65 !important;
+  color: #374151 !important;
 }
 
-/* Bullet list items — compact for PDF */
-.section-template .content ul {
-  margin: 0 !important;
+/* Bullet list items */
+.section-template ul {
+  margin: 2px 0 !important;
   padding: 0 !important;
 }
-
-.section-template .content ul li {
-  padding: 3px 6px !important;
+.section-template ul li {
+  padding: 2px 6px !important;
   margin: 0 !important;
   border: none !important;
   border-radius: 0 !important;
   background: transparent !important;
   font-size: 13px !important;
-  line-height: 1.55 !important;
+  line-height: 1.6 !important;
 }
-
-/* Remove hover background on list items */
-.section-template .content ul li:hover {
+.section-template ul li:hover {
   background: transparent !important;
-}
-
-/* Bullet dots — keep them clean */
-.section-template .content ul li .flex-shrink-0 .w-2\.5 {
-  width: 6px !important;
-  height: 6px !important;
-  box-shadow: none !important;
-  ring: none !important;
 }
 
 /* Paragraphs in sections */
 .section-template p {
   margin-bottom: 3px !important;
   font-size: 13px !important;
-  line-height: 1.55 !important;
+  line-height: 1.6 !important;
 }
 
 /* Section dividers */
@@ -296,43 +342,125 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   margin-bottom: 6px !important;
 }
 
-/* Add Section button - hide */
+/* Add Section button — hide */
 .section-template .flex.justify-center.mt-6.mb-2 {
   display: none !important;
 }
 
-/* ── StructureRenderer Element Gaps ───────────────────────────────────────── */
-/* Reduce the mb-6 gap between layout elements */
+/* ── StructureRenderer Element Gaps ─────────────────────────────────────────*/
 .pdf-structure-renderer .relative.group.mb-6,
 .pdf-structure-renderer > div > .relative.group.mb-6 {
   margin-bottom: 10px !important;
 }
 
-/* ── Hotels Section Overrides ─────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROFESSIONAL TYPE-AWARE SECTION ACCENTS
+   ───────────────────────────────────────────────────────────────────────────
+   These rules have specificity (0,2,0) — higher than the plain
+   .section-template (0,1,0) and the [class*="..."] compound rules above —
+   so they correctly override the white background with a tasteful tint.
+
+   Left border + subtle background tint gives each section type instant visual
+   identity while keeping the PDF readable and print-safe.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Default / generic section — brand green */
+.section-template[data-section-type="section"] {
+  border-left: 4px solid #4A7766 !important;
+  background: #f7faf9 !important;
+  background-color: #f7faf9 !important;
+}
+.section-template[data-section-type="section"] h2 {
+  color: #1a3a2f !important;
+}
+
+/* Day section — sky blue */
+.section-template[data-section-type="day"] {
+  border-left: 4px solid #0ea5e9 !important;
+  background: #f0f9ff !important;
+  background-color: #f0f9ff !important;
+}
+.section-template[data-section-type="day"] h2 {
+  color: #0369a1 !important;
+}
+
+/* Included — emerald green */
+.section-template[data-section-type="included"] {
+  border-left: 4px solid #10b981 !important;
+  background: #f0fdf4 !important;
+  background-color: #f0fdf4 !important;
+}
+.section-template[data-section-type="included"] h2 {
+  color: #065f46 !important;
+}
+
+/* Excluded — rose red */
+.section-template[data-section-type="excluded"] {
+  border-left: 4px solid #f43f5e !important;
+  background: #fff1f2 !important;
+  background-color: #fff1f2 !important;
+}
+.section-template[data-section-type="excluded"] h2 {
+  color: #9f1239 !important;
+}
+
+/* Notes — amber */
+.section-template[data-section-type="notes"] {
+  border-left: 4px solid #f59e0b !important;
+  background: #fffbeb !important;
+  background-color: #fffbeb !important;
+}
+.section-template[data-section-type="notes"] h2 {
+  color: #92400e !important;
+}
+
+/* ── RTL: Flip left border accent to the right side ─────────────────────────
+   Specificity (0,3,0) beats all type-specific rules above (0,2,0),
+   so this flips correctly for Arabic documents.
+   ─────────────────────────────────────────────────────────────────────────── */
+[dir="rtl"] .section-template[data-section-type="section"] {
+  border-left: none !important;
+  border-right: 4px solid #4A7766 !important;
+  padding: 12px 20px 12px 16px !important;
+}
+[dir="rtl"] .section-template[data-section-type="day"] {
+  border-left: none !important;
+  border-right: 4px solid #0ea5e9 !important;
+  padding: 12px 20px 12px 16px !important;
+}
+[dir="rtl"] .section-template[data-section-type="included"] {
+  border-left: none !important;
+  border-right: 4px solid #10b981 !important;
+  padding: 12px 20px 12px 16px !important;
+}
+[dir="rtl"] .section-template[data-section-type="excluded"] {
+  border-left: none !important;
+  border-right: 4px solid #f43f5e !important;
+  padding: 12px 20px 12px 16px !important;
+}
+[dir="rtl"] .section-template[data-section-type="notes"] {
+  border-left: none !important;
+  border-right: 4px solid #f59e0b !important;
+  padding: 12px 20px 12px 16px !important;
+}
+
+/* ── Hotels Section ─────────────────────────────────────────────────────────*/
 .hotels-section {
   margin-bottom: 10px !important;
 }
-
-/* Hotel title bar */
 .hotels-section .flex.items-center.justify-center.mb-6 {
   margin-bottom: 8px !important;
 }
-
 .hotels-section .bg-\[\#3B5998\] {
   padding: 6px 20px !important;
   border-radius: 20px !important;
 }
-
 .hotels-section .bg-\[\#3B5998\] h2 {
-  font-size: 16px !important;
+  font-size: 15px !important;
 }
-
-/* Space between hotel cards */
 .hotels-section .space-y-6 > * + * {
   margin-top: 10px !important;
 }
-
-/* Hotel card */
 .hotels-section .border-2.border-blue-300 {
   padding: 12px 14px !important;
   padding-top: 20px !important;
@@ -340,90 +468,70 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   border-width: 1.5px !important;
   margin-top: 14px !important;
 }
-
-/* City badge adjustments */
 .hotels-section .absolute.-top-4 {
   top: -12px !important;
 }
-
 .hotels-section .bg-\[\#FF6B35\] {
   padding: 2px 10px !important;
   font-size: 11px !important;
 }
-
 .hotels-section .bg-\[\#1E88E5\] {
   padding: 4px 12px !important;
   font-size: 13px !important;
 }
-
 .hotels-section .bg-\[\#1E88E5\] .bg-white {
   padding: 1px 8px !important;
   font-size: 11px !important;
 }
-
-/* Day info badges on hotel cards */
 .hotels-section .absolute.top-2 {
   font-size: 12px !important;
 }
-
 .hotels-section .absolute.top-2 .bg-\[\#1E88E5\].rounded-full {
   padding: 3px !important;
 }
-
 .hotels-section .absolute.top-2 svg {
   width: 12px !important;
   height: 12px !important;
 }
-
-/* Hotel name bar */
 .hotels-section .mt-8.w-1\/2 {
   margin-top: 10px !important;
   padding: 6px 10px !important;
   border-radius: 8px !important;
   width: 65% !important;
 }
-
 .hotels-section .mt-8.w-1\/2 span {
   font-size: 12px !important;
   width: auto !important;
 }
-
-/* Room details grid */
 .hotels-section .mt-4.grid {
   margin-top: 6px !important;
   gap: 6px !important;
 }
-
 .hotels-section .mt-4.grid .bg-\[\#1E88E5\] {
   padding: 4px 10px !important;
   border-radius: 6px !important;
   font-size: 11px !important;
 }
-
 .hotels-section .mt-3 .bg-\[\#1E88E5\] {
   padding: 4px 10px !important;
   border-radius: 6px !important;
   font-size: 11px !important;
 }
-
 .hotels-section .mt-3 {
   margin-top: 6px !important;
 }
-
-/* Date row */
 .hotels-section .mt-4.bg-\[\#FF6B35\] {
   margin-top: 6px !important;
   padding: 6px 12px !important;
   border-radius: 6px !important;
   font-size: 12px !important;
 }
-
-/* Add hotel dashed card — hide */
+/* Add hotel dashed card — hide in PDF */
 .hotels-section .border-dashed {
   display: none !important;
 }
 
-/* ── Airplane Section Overrides ───────────────────────────────────────────── */
+/* ── Airplane Section ───────────────────────────────────────────────────────*/
 [class*="airplane-section"],
 [data-airplane-section-id] {
   break-inside: auto !important;
@@ -431,19 +539,15 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   margin-bottom: 10px !important;
 }
 
-/* Fix: overflow-x-auto clips the table in PDF/print mode (no scrollbar available).
-   Remove overflow clipping and drop min-width constraints so all columns (including
-   المسافرين/Travelers and الأمتعة/Luggage) fit within the A4 content width (~714px). */
+/* Remove overflow clipping — all columns must fit A4 width (~690px usable) */
 [data-airplane-section-id] .overflow-x-auto {
   overflow: visible !important;
 }
-
 [data-airplane-section-id] table {
   min-width: unset !important;
   width: 100% !important;
   table-layout: fixed !important;
 }
-
 [data-airplane-section-id] th,
 [data-airplane-section-id] td {
   min-width: unset !important;
@@ -452,10 +556,7 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   word-break: break-word !important;
 }
 
-
-
-
-/* ── Transport Section Overrides ──────────────────────────────────────────── */
+/* ── Transport Section ──────────────────────────────────────────────────────*/
 [class*="transport-section"],
 [data-transport-section-id] {
   break-inside: auto !important;
@@ -463,8 +564,22 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
   margin-bottom: 10px !important;
 }
 
-/* ── Dynamic Table Overrides ──────────────────────────────────────────────── */
-/* Tables should try not to break, but allow it for large tables */
+/* ═══════════════════════════════════════════════════════════════════════════
+   DYNAMIC TABLE — Professional PDF styling
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Table title — underlined with brand color */
+.dynamic-table-wrapper h3 {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  padding-bottom: 5px !important;
+  border-bottom: 2px solid #4A7766 !important;
+  margin-bottom: 8px !important;
+  display: inline-block !important;
+}
+
+/* Tables should try not to break; allow it only for large tables */
 table {
   break-inside: auto !important;
   page-break-inside: auto !important;
@@ -472,7 +587,7 @@ table {
   width: 100%;
 }
 
-/* Individual rows should not break */
+/* Individual rows must not break mid-row */
 tr {
   break-inside: avoid;
   page-break-inside: avoid;
@@ -481,28 +596,21 @@ tr {
 thead {
   display: table-header-group;
 }
-
 tfoot {
   display: table-footer-group;
 }
 
-/* Table container styling */
-.mb-10 {
-  margin-bottom: 10px !important;
+/* Ensure gradient header colors print */
+thead tr {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
 /* Table cells */
 td, th {
-  padding: 5px 8px !important;
+  padding: 6px 9px !important;
   font-size: 12px !important;
-  line-height: 1.4 !important;
-}
-
-/* Table title */
-[class*="dynamicTable"] h3,
-[class*="table"] h3 {
-  font-size: 15px !important;
-  margin-bottom: 6px !important;
+  line-height: 1.45 !important;
 }
 
 /* Table wrapper shadow removal */
@@ -514,21 +622,31 @@ td, th {
   box-shadow: none !important;
 }
 
-/* ── Images ───────────────────────────────────────────────────────────────── */
+/* Margin resets */
+.mb-10 {
+  margin-bottom: 10px !important;
+}
+.mb-8 {
+  margin-bottom: 10px !important;
+}
+.mb-6 {
+  margin-bottom: 8px !important;
+}
+
+/* ── Images ─────────────────────────────────────────────────────────────────*/
 img {
   max-width: 100% !important;
   height: auto !important;
   break-inside: avoid;
   page-break-inside: avoid;
 }
-
-/* Header/Footer images in BaseTemplate */
+/* Header/Footer images span full width */
 .base-template img {
   display: block;
   width: 100%;
 }
 
-/* ── Global Tailwind Class Overrides for Print ────────────────────────────── */
+/* ── Tailwind Utility Overrides for PDF ─────────────────────────────────────*/
 /* Remove hover effects that may linger */
 [class*="hover\:shadow"],
 [class*="hover\:bg"],
@@ -539,56 +657,45 @@ img {
 [class*="hover\:scale"] {
   transform: none !important;
 }
-
 /* Remove backdrop blur */
 [class*="backdrop-blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
-
-/* Ensure background colors are printed */
+/* Ensure colored backgrounds print */
 [class*="bg-gradient"],
 [class*="bg-\["] {
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
 }
-
-/* Override rounded-2xl to smaller radius for print */
+/* Override rounded corners for compact PDF feel */
 .rounded-2xl {
-  border-radius: 10px !important;
+  border-radius: 8px !important;
 }
-
-/* Override excessive padding */
 .p-8 {
-  padding: 14px 16px !important;
+  padding: 12px 16px !important;
 }
-
 .p-5, .md\:p-6 {
-  padding: 12px 14px !important;
+  padding: 10px 14px !important;
 }
-
-/* Override spacing classes */
-.mb-8 {
-  margin-bottom: 10px !important;
-}
-
-.mb-6 {
-  margin-bottom: 8px !important;
-}
-
 .space-y-6 > * + * {
   margin-top: 10px !important;
 }
-
 .space-y-2 > * + * {
   margin-top: 3px !important;
 }
 
-/* ── Print Media Query (Safety net) ───────────────────────────────────────── */
+/* ── Fixed Overlay Removal ───────────────────────────────────────────────── */
+/* Hide any full-screen fixed overlay (modals, sidebars) in PDF */
+[class*="fixed"][class*="inset-0"] {
+  display: none !important;
+}
+
+/* ── Print Media Safety-Net ─────────────────────────────────────────────────*/
 @media print {
   @page {
     size: A4;
-    margin: 10mm 10mm 12mm 10mm;
+    margin: 10mm 12mm 14mm 12mm;
   }
 
   body {
@@ -596,22 +703,11 @@ img {
     color: #1a1a1a !important;
   }
 
-  /* Links — keep readable colors */
   a {
     color: inherit !important;
     text-decoration: none !important;
   }
-
   a[href*="http"] {
     color: #1E88E5 !important;
   }
 }
-
-
-/* ── Hide fixed overlays (sidebar mobile overlay, modals, etc.) ──────────── */
-/* Belt-and-suspenders: even if the component renders, hide any full-screen
-   fixed overlay with a semi-transparent background in print/PDF mode */
-[class*="fixed"][class*="inset-0"] {
-  display: none !important;
-}
-

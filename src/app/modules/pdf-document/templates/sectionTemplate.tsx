@@ -351,7 +351,7 @@ const SectionTemplate: React.FC<SectionTemplateProps> = ({
   };
 
   return (
-    <section className={containerClasses} style={containerStyle}>
+    <section className={containerClasses} style={containerStyle} data-section-type={type}>
       {editable && onColorPaletteChange && (
         <button
           onClick={(e) => {
