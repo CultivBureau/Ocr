@@ -63,7 +63,9 @@ export function legacySectionContentToHtml(content: string): string {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    const bulletMatch = trimmed.match(/^([\s]*[•\-\*]\s*|\d+\.\s*)(.*)$/);
+    // Treat numbered-list markers as "N. " (dot followed by whitespace) so decimals like
+    // "1.222" remain plain text instead of being split as list marker + body.
+    const bulletMatch = trimmed.match(/^([\s]*[•\-\*]\s*|\d+\.\s+)(.*)$/);
     if (bulletMatch) {
       const body = (bulletMatch[2] ?? "").trim();
       listItems.push(lineToInnerHtml(body));
