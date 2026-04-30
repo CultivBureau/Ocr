@@ -475,7 +475,7 @@ function UserManagementContent() {
           {/* Users List */}
           <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-gray-200 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#4A7766] via-[#3D6558] to-[#3D6558]"></div>
-            <div className={`flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-6 mt-2 ${isRTL ? 'xl:flex-row-reverse' : ''}`}>
+            <div className="flex flex-col gap-4 mb-6 mt-2">
               <h2 className={`text-2xl font-bold text-black flex items-center gap-3 shrink-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center shadow-md">
                   <Users className="w-5 h-5 text-white" />
@@ -485,9 +485,9 @@ function UserManagementContent() {
                   <span className="text-[#4A7766]"> ({usersTotal})</span>
                 </span>
               </h2>
-              <div className={`flex flex-wrap items-center gap-3 ${isRTL ? 'flex-row-reverse xl:justify-start' : 'xl:justify-end'}`}>
+              <div className={`w-full flex flex-wrap items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 {(isSuperAdmin || isCompanyAdmin) && (
-                  <div className="relative w-full sm:w-80">
+                  <div className="relative flex-1 min-w-[220px]">
                     <Search className={`w-4 h-4 text-gray-500 absolute top-1/2 -translate-y-1/2 ${isRTL ? 'right-3' : 'left-3'}`} />
                     <input
                       type="text"
@@ -510,7 +510,7 @@ function UserManagementContent() {
                       setCompanyFilter(e.target.value || null);
                       setUsersPage(1);
                     }}
-                    className="w-full sm:w-auto px-4 py-2 text-sm bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] transition-all duration-200 text-black font-medium cursor-pointer"
+                    className="flex-1 min-w-[180px] sm:flex-none sm:min-w-0 px-4 py-2 text-sm bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] transition-all duration-200 text-black font-medium cursor-pointer"
                     dir={dir}
                   >
                     <option value="">{t.userManagement.allCompanies}</option>
@@ -524,7 +524,7 @@ function UserManagementContent() {
                 <button
                   onClick={fetchUsers}
                   disabled={isLoadingUsers}
-                  className={`flex items-center gap-2 px-4 py-2 text-sm bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white font-bold rounded-xl hover:shadow-lg disabled:opacity-50 transition-all duration-200 transform hover:scale-105 active:scale-95 ${isRTL ? 'flex-row-reverse' : ''}`}
+                  className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-sm bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white font-bold rounded-xl hover:shadow-lg disabled:opacity-50 transition-all duration-200 transform hover:scale-105 active:scale-95 ${isRTL ? 'flex-row-reverse' : ''}`}
                 >
                   <RefreshCw className="w-4 h-4" />
                   {t.userManagement.refresh}
