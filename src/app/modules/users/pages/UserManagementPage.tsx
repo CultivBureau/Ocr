@@ -29,7 +29,8 @@ import {
   Building,
   Crown,
   Star,
-  User as UserIcon
+  User as UserIcon,
+  Search
 } from "lucide-react";
 
 export default function UserManagementPage() {
@@ -41,7 +42,7 @@ export default function UserManagementPage() {
 }
 
 function UserManagementContent() {
-  const { user: currentUser, isSuperAdmin, logout } = useAuth();
+  const { user: currentUser, isSuperAdmin, isCompanyAdmin, logout } = useAuth();
   const { t, isRTL, dir } = useLanguage();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -68,6 +69,7 @@ function UserManagementContent() {
   const [usersError, setUsersError] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [usersSearch, setUsersSearch] = useState("");
   
   // Companies list (for Super Admin)
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -102,7 +104,7 @@ function UserManagementContent() {
   useEffect(() => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyFilter, usersPage]);
+  }, [companyFilter, usersPage, usersSearch]);
 
   const fetchUsers = async () => {
     try {
@@ -110,7 +112,7 @@ function UserManagementContent() {
       setUsersError("");
       const companyIdForApi =
         isSuperAdmin && companyFilter ? companyFilter : undefined;
-      const response = await getAllUsers(usersPage, USERS_PAGE_SIZE, companyIdForApi);
+      const response = await getAllUsers(usersPage, USERS_PAGE_SIZE, companyIdForApi, usersSearch);
       setUsers(response.users);
       setUsersTotal(response.total);
       setUsersTotalPages(response.total_pages ?? Math.max(1, Math.ceil(response.total / USERS_PAGE_SIZE)));
@@ -473,8 +475,8 @@ function UserManagementContent() {
           {/* Users List */}
           <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-gray-200 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#4A7766] via-[#3D6558] to-[#3D6558]"></div>
-            <div className={`flex items-center justify-between mb-6 mt-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <h2 className={`text-2xl font-bold text-black flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={`flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-6 mt-2 ${isRTL ? 'xl:flex-row-reverse' : ''}`}>
+              <h2 className={`text-2xl font-bold text-black flex items-center gap-3 shrink-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center shadow-md">
                   <Users className="w-5 h-5 text-white" />
                 </div>
@@ -483,7 +485,23 @@ function UserManagementContent() {
                   <span className="text-[#4A7766]"> ({usersTotal})</span>
                 </span>
               </h2>
-              <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className={`flex flex-wrap items-center gap-3 ${isRTL ? 'flex-row-reverse xl:justify-start' : 'xl:justify-end'}`}>
+                {(isSuperAdmin || isCompanyAdmin) && (
+                  <div className="relative w-full sm:w-80">
+                    <Search className={`w-4 h-4 text-gray-500 absolute top-1/2 -translate-y-1/2 ${isRTL ? 'right-3' : 'left-3'}`} />
+                    <input
+                      type="text"
+                      value={usersSearch}
+                      onChange={(e) => {
+                        setUsersSearch(e.target.value);
+                        setUsersPage(1);
+                      }}
+                      placeholder="Search by name or email"
+                      className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 text-sm bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] transition-all duration-200 text-black font-medium`}
+                      dir={dir}
+                    />
+                  </div>
+                )}
                 {/* Company Filter (Super Admin only) */}
                 {isSuperAdmin && (
                   <select
@@ -492,7 +510,7 @@ function UserManagementContent() {
                       setCompanyFilter(e.target.value || null);
                       setUsersPage(1);
                     }}
-                    className="px-4 py-2 text-sm bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] transition-all duration-200 text-black font-medium cursor-pointer"
+                    className="w-full sm:w-auto px-4 py-2 text-sm bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] transition-all duration-200 text-black font-medium cursor-pointer"
                     dir={dir}
                   >
                     <option value="">{t.userManagement.allCompanies}</option>

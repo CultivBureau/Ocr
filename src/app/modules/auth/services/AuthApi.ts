@@ -173,7 +173,8 @@ export async function register(data: RegisterRequest): Promise<UserResponse> {
 export async function getAllUsers(
   page: number = 1,
   pageSize: number = 10,
-  companyId?: string | null
+  companyId?: string | null,
+  search?: string
 ): Promise<UserListResponse> {
   const params = new URLSearchParams({
     page: String(page),
@@ -181,6 +182,10 @@ export async function getAllUsers(
   });
   if (companyId) {
     params.set("company_id", companyId);
+  }
+  const searchValue = search?.trim();
+  if (searchValue) {
+    params.set("search", searchValue);
   }
   return authRequest(`/auth/users?${params.toString()}`, {
     method: "GET",
