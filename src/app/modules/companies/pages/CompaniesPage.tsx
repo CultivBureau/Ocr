@@ -467,8 +467,8 @@ function CompaniesContent() {
           <div className="flex items-center gap-4">
             <Link href="/">
               <Image
-               src="/logo.png"
-              alt="Buearau logo"
+               src="/true-quotation-logo.png"
+              alt="True Quotation logo"
                 width={140}
                 height={50}
                 className="object-contain cursor-pointer"
@@ -484,21 +484,21 @@ function CompaniesContent() {
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className={`flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/10 rounded-xl hover:from-[#C4B454]/20 hover:to-[#B8A040]/20 border border-[#C4B454]/20 transition-all group ${isRTL ? 'flex-row-reverse' : ''}`}
+                  className={`flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-[#4A7766]/10 to-[#3D6558]/10 rounded-xl hover:from-[#4A7766]/20 hover:to-[#3D6558]/20 border border-[#4A7766]/20 transition-all group ${isRTL ? 'flex-row-reverse' : ''}`}
                 >
-                  <div className="w-9 h-9 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-full flex items-center justify-center text-white font-bold shadow-md group-hover:shadow-lg transition-shadow">
+                  <div className="w-9 h-9 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-full flex items-center justify-center text-white font-bold shadow-md group-hover:shadow-lg transition-shadow">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <span className="text-sm font-semibold text-gray-700">{user.name}</span>
-                  <ChevronDown className="w-4 h-4 text-[#B8A040] group-hover:text-[#C4B454] transition-colors" />
+                  <ChevronDown className="w-4 h-4 text-[#3D6558] group-hover:text-[#4A7766] transition-colors" />
                 </button>
                 {showUserMenu && (
                   <div className={`absolute ${isRTL ? 'left-0' : 'right-0'} mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-10 overflow-hidden`}>
                     <Link 
                       href="/" 
-                      className={`flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#C4B454]/10 hover:to-[#B8A040]/10 transition-all group ${isRTL ? 'flex-row-reverse' : ''}`}
+                      className={`flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#4A7766]/10 hover:to-[#3D6558]/10 transition-all group ${isRTL ? 'flex-row-reverse' : ''}`}
                     >
-                      <Sparkles className="w-4 h-4 text-[#B8A040] group-hover:text-[#C4B454] transition-colors" />
+                      <Sparkles className="w-4 h-4 text-[#3D6558] group-hover:text-[#4A7766] transition-colors" />
                       <span className="font-medium">{t.home.welcomeTo}</span>
                     </Link>
                     <button
@@ -521,17 +521,17 @@ function CompaniesContent() {
         {/* Page Header */}
         <div className={`mb-8 flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className={isRTL ? 'text-right' : 'text-left'}>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-[#C4B454] to-[#B8A040] bg-clip-text text-transparent mb-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-[#4A7766] to-[#3D6558] bg-clip-text text-transparent mb-2">
               {t.companies.title}
             </h1>
             <p className={`text-gray-600 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <Building2 className="w-4 h-4 text-[#B8A040]" />
+              <Building2 className="w-4 h-4 text-[#3D6558]" />
               {t.companies.subtitle}
             </p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl font-bold hover:from-[#B8A040] hover:to-[#A69035] hover:shadow-xl transition-all transform hover:scale-105 active:scale-95 shadow-lg ${isRTL ? 'flex-row-reverse' : ''}`}
+            className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl font-bold hover:from-[#3D6558] hover:to-[#3D6558] hover:shadow-xl transition-all transform hover:scale-105 active:scale-95 shadow-lg ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <Plus className="w-5 h-5" />
             {t.companies.addCompany}
@@ -560,19 +560,19 @@ function CompaniesContent() {
         {isLoading ? (
           <div className="text-center py-16">
             <div className="flex justify-center mb-4">
-              <Loader2 className="w-10 h-10 text-[#B8A040] animate-spin" />
+              <Loader2 className="w-10 h-10 text-[#3D6558] animate-spin" />
             </div>
             <p className="text-gray-600 font-medium">Loading companies...</p>
           </div>
         ) : companies.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl shadow-lg border border-gray-100">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#C4B454]/20 to-[#B8A040]/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Building2 className="w-10 h-10 text-[#B8A040]" />
+            <div className="w-20 h-20 bg-gradient-to-br from-[#4A7766]/20 to-[#3D6558]/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Building2 className="w-10 h-10 text-[#3D6558]" />
             </div>
             <p className="text-gray-600 font-medium mb-4">No companies found</p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl font-bold hover:shadow-lg transition-all transform hover:scale-105"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl font-bold hover:shadow-lg transition-all transform hover:scale-105"
             >
               <Plus className="w-5 h-5" />
               Create First Company
@@ -593,7 +593,7 @@ function CompaniesContent() {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center shadow-md">
+                        <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center shadow-md">
                           <Building2 className="w-5 h-5 text-white" />
                         </div>
                         <h3 className="text-xl font-bold text-gray-900">{company.name}</h3>
@@ -622,15 +622,15 @@ function CompaniesContent() {
 
                   {/* Plan Info */}
                   {plan && (
-                    <div className="mb-4 p-3 bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/10 rounded-xl border border-[#C4B454]/20">
+                    <div className="mb-4 p-3 bg-gradient-to-r from-[#4A7766]/10 to-[#3D6558]/10 rounded-xl border border-[#4A7766]/20">
                       <p className="text-xs text-gray-600 mb-1 font-medium">Plan</p>
-                      <p className="text-sm font-bold text-[#B8A040]">{plan.name}</p>
+                      <p className="text-sm font-bold text-[#3D6558]">{plan.name}</p>
                     </div>
                   )}
 
                   {/* Created Date */}
                   <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
-                    <Calendar className="w-3.5 h-3.5 text-[#B8A040]" />
+                    <Calendar className="w-3.5 h-3.5 text-[#3D6558]" />
                     <span>Created {format(new Date(company.created_at), "MMM d, yyyy")}</span>
                   </div>
 
@@ -673,7 +673,7 @@ function CompaniesContent() {
                               handleAssignPlan(company.id, e.target.value);
                             }
                           }}
-                          className="w-full px-3 py-2.5 text-black text-sm bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#B8A040] transition-all font-medium appearance-none cursor-pointer hover:border-[#C4B454]"
+                          className="w-full px-3 py-2.5 text-black text-sm bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#3D6558] transition-all font-medium appearance-none cursor-pointer hover:border-[#4A7766]"
                         >
                           <option value="">No Plan</option>
                           {plans.map((p) => (
@@ -709,7 +709,7 @@ function CompaniesContent() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="sticky top-0 bg-gradient-to-r from-[#C4B454] to-[#B8A040] p-6 rounded-t-2xl">
+            <div className="sticky top-0 bg-gradient-to-r from-[#4A7766] to-[#3D6558] p-6 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
@@ -740,7 +740,7 @@ function CompaniesContent() {
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#B8A040] transition-all text-black placeholder:text-gray-400"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#3D6558] transition-all text-black placeholder:text-gray-400"
                   placeholder="Enter company name"
                 />
               </div>
@@ -753,7 +753,7 @@ function CompaniesContent() {
                   <select
                     value={formPlanId || ""}
                     onChange={(e) => setFormPlanId(e.target.value || null)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#B8A040] transition-all appearance-none cursor-pointer text-black"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#3D6558] transition-all appearance-none cursor-pointer text-black"
                   >
                     <option value="">No Plan</option>
                     {plans.map((plan) => (
@@ -772,7 +772,7 @@ function CompaniesContent() {
                   id="isActive"
                   checked={formIsActive}
                   onChange={(e) => setFormIsActive(e.target.checked)}
-                  className="w-5 h-5 text-[#B8A040] border-gray-300 rounded focus:ring-[#C4B454] cursor-pointer"
+                  className="w-5 h-5 text-[#3D6558] border-gray-300 rounded focus:ring-[#4A7766] cursor-pointer"
                 />
                 <label htmlFor="isActive" className="text-sm font-semibold text-gray-700 cursor-pointer">
                   Active Company
@@ -782,7 +782,7 @@ function CompaniesContent() {
               {/* Header Image Upload */}
               <div>
                 <label className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-[#B8A040]" />
+                  <Upload className="w-4 h-4 text-[#3D6558]" />
                   Header Image (Optional)
                 </label>
                 <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-xl">
@@ -825,9 +825,9 @@ function CompaniesContent() {
                     </div>
                   </div>
                 ) : (
-                  <label className="block w-full px-6 py-8 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#B8A040] hover:bg-[#C4B454]/5 transition-all text-center group">
-                    <Upload className="w-8 h-8 text-gray-400 group-hover:text-[#B8A040] mx-auto mb-2 transition-colors" />
-                    <span className="text-sm text-gray-600 group-hover:text-[#B8A040] font-medium transition-colors">Click to upload header image</span>
+                  <label className="block w-full px-6 py-8 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#3D6558] hover:bg-[#4A7766]/5 transition-all text-center group">
+                    <Upload className="w-8 h-8 text-gray-400 group-hover:text-[#3D6558] mx-auto mb-2 transition-colors" />
+                    <span className="text-sm text-gray-600 group-hover:text-[#3D6558] font-medium transition-colors">Click to upload header image</span>
                     <input
                       type="file"
                       accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
@@ -845,7 +845,7 @@ function CompaniesContent() {
               {/* Footer Image Upload */}
               <div>
                 <label className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-[#B8A040]" />
+                  <Upload className="w-4 h-4 text-[#3D6558]" />
                   Footer Image (Optional)
                 </label>
                 <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-xl">
@@ -888,9 +888,9 @@ function CompaniesContent() {
                     </div>
                   </div>
                 ) : (
-                  <label className="block w-full px-6 py-8 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#B8A040] hover:bg-[#C4B454]/5 transition-all text-center group">
-                    <Upload className="w-8 h-8 text-gray-400 group-hover:text-[#B8A040] mx-auto mb-2 transition-colors" />
-                    <span className="text-sm text-gray-600 group-hover:text-[#B8A040] font-medium transition-colors">Click to upload footer image</span>
+                  <label className="block w-full px-6 py-8 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#3D6558] hover:bg-[#4A7766]/5 transition-all text-center group">
+                    <Upload className="w-8 h-8 text-gray-400 group-hover:text-[#3D6558] mx-auto mb-2 transition-colors" />
+                    <span className="text-sm text-gray-600 group-hover:text-[#3D6558] font-medium transition-colors">Click to upload footer image</span>
                     <input
                       type="file"
                       accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
@@ -961,7 +961,7 @@ function CompaniesContent() {
                 <button
                   onClick={editingCompany ? handleUpdate : handleCreate}
                   disabled={isSubmitting || isUploadingImages}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl font-bold hover:from-[#B8A040] hover:to-[#A69035] hover:shadow-xl disabled:opacity-50 transition-all transform hover:scale-105 active:scale-95 shadow-lg"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl font-bold hover:from-[#3D6558] hover:to-[#3D6558] hover:shadow-xl disabled:opacity-50 transition-all transform hover:scale-105 active:scale-95 shadow-lg"
                 >
                   {isSubmitting || isUploadingImages ? (
                     <>

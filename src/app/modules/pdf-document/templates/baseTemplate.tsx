@@ -21,6 +21,9 @@ export interface BaseTemplateProps {
   headerImageAlt?: string;
   showHeader?: boolean;
   headerClassName?: string;
+  versionSku?: string | null;
+  versionDate?: string | null;
+  versionTime?: string | null;
   
   // Footer Configuration
   footerImage?: string;
@@ -79,6 +82,9 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
   headerImageAlt = "Header",
   showHeader = true,
   headerClassName = "",
+  versionSku,
+  versionDate,
+  versionTime,
   // Footer
   footerImage,
   footerImageAlt = "Footer",
@@ -208,6 +214,31 @@ const BaseTemplate: React.FC<BaseTemplateProps> = ({
               className="w-full h-auto object-cover block"
               style={{ display: "block", width: "100%", height: "auto",  }}
             />
+          </div>
+        )}
+
+        {(versionSku || versionDate || versionTime) && (
+          <div className="pdf-version-badge w-full px-6 pt-5 pb-1">
+            <div className="pdf-version-badge__inner mx-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 shadow-sm">
+              {versionSku && (
+                <div className="pdf-version-badge__pill inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                  <span className="pdf-version-badge__label text-[11px] font-semibold uppercase tracking-wide text-slate-500">REF</span>
+                  <span className="pdf-version-badge__value text-sm font-semibold text-slate-800">{versionSku}</span>
+                </div>
+              )}
+              {versionDate && (
+                <div className="pdf-version-badge__pill inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                  <span className="pdf-version-badge__label text-[11px] font-semibold uppercase tracking-wide text-slate-500">Date</span>
+                  <span className="pdf-version-badge__value text-sm font-medium text-slate-700">{versionDate}</span>
+                </div>
+              )}
+              {versionTime && (
+                <div className="pdf-version-badge__pill inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                  <span className="pdf-version-badge__label text-[11px] font-semibold uppercase tracking-wide text-slate-500">Time</span>
+                  <span className="pdf-version-badge__value text-sm font-medium text-slate-700">{versionTime}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

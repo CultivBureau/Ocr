@@ -59,7 +59,7 @@ export function InlineSectionLoadingExample() {
         </div>
       )}
       
-      <button onClick={fetchData} className="mt-4 px-4 py-2 bg-[#A4C639] text-white rounded-lg">
+      <button onClick={fetchData} className="mt-4 px-4 py-2 bg-[#4A7766] text-white rounded-lg">
         Refresh Data
       </button>
     </div>
@@ -101,7 +101,7 @@ export function FormSubmissionLoadingExample() {
       />
       <button 
         type="submit"
-        className="px-6 py-2 bg-[#A4C639] text-white rounded-lg font-semibold"
+        className="px-6 py-2 bg-[#4A7766] text-white rounded-lg font-semibold"
       >
         Submit
       </button>
@@ -206,7 +206,7 @@ export function ButtonLoadingExample() {
       <button
         onClick={handleAction}
         disabled={isProcessing}
-        className="px-6 py-3 bg-gradient-to-r from-[#A4C639] to-emerald-600 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+        className="px-6 py-3 bg-gradient-to-r from-[#4A7766] to-emerald-600 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
       >
         {isProcessing ? (
           <span className="flex items-center gap-2">
@@ -262,7 +262,7 @@ export function TimeoutLoadingExample() {
     <div className="p-6">
       <button 
         onClick={startLongProcess}
-        className="px-6 py-3 bg-[#A4C639] text-white rounded-xl font-semibold"
+        className="px-6 py-3 bg-[#4A7766] text-white rounded-xl font-semibold"
       >
         Start Long Process
       </button>
@@ -344,7 +344,7 @@ export function FileUploadLoadingExample() {
         <input
           type="file"
           onChange={handleFileUpload}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#A4C639] file:text-white hover:file:bg-[#8FB02E]"
+          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#4A7766] file:text-white hover:file:bg-[#8FB02E]"
         />
       </label>
     </div>
@@ -383,7 +383,7 @@ export function RefreshDataExample() {
         <button
           onClick={fetchData}
           disabled={isRefreshing}
-          className="px-4 py-2 bg-[#A4C639] text-white rounded-lg font-semibold disabled:opacity-50"
+          className="px-4 py-2 bg-[#4A7766] text-white rounded-lg font-semibold disabled:opacity-50"
         >
           {isRefreshing ? "Refreshing..." : "Refresh"}
         </button>

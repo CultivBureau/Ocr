@@ -60,7 +60,7 @@ export default function RenameModal({
               id="title"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A4C639] focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A7766] focus:border-transparent transition-all"
               placeholder={t.history.enterNewTitle}
               autoFocus
               dir={dir}
@@ -78,7 +78,7 @@ export default function RenameModal({
             <button
               type="submit"
               disabled={isLoading || !newTitle.trim()}
-              className="flex-1 px-4 py-3 bg-[#A4C639] text-white font-semibold rounded-lg hover:bg-[#8FB02E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 px-4 py-3 bg-[#4A7766] text-white font-semibold rounded-lg hover:bg-[#8FB02E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? t.history.renaming : t.history.rename}
             </button>

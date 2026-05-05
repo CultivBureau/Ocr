@@ -10,7 +10,7 @@ import React, {
 import Image from "next/image";
 import Link from "next/link";
 import { Undo2, Redo2 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import StructureRenderer from "../components/StructureRenderer";
 import CreateTableModal from "../components/CreateTableModal";
 import AddAirplaneModal, { FlightData } from "../components/AddAirplaneModal";
@@ -30,9 +30,17 @@ import EditTransportTableModal from "../components/EditTransportTableModal";
 import EditTransportSectionModal from "../components/EditTransportSectionModal";
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
 import ComponentSuggestionModal from "../components/ComponentSuggestionModal";
-import { Hotel } from "../templates/HotelsSection";
+import type { Hotel } from "../templates/HotelsSection";
 import { isAuthenticated } from "@/app/modules/auth/services/AuthApi";
-import { saveDocument, updateDocument, getDocument, generatePublicLink, getPublicLink } from "@/app/modules/history/services/HistoryApi";
+import {
+  saveDocument,
+  updateDocument,
+  getDocument,
+  getDocumentVersion,
+  restoreDocumentVersion,
+  generatePublicLink,
+  getPublicLink,
+} from "@/app/modules/history/services/HistoryApi";
 import { generatePDFWithPlaywright, downloadPDFBlob } from "../services/PdfApi";
 import { getCompany } from "@/app/modules/companies/services/CompanyApi";
 import ProtectedRoute from "@/app/modules/auth/components/ProtectedRoute";
@@ -50,6 +58,7 @@ import {
   repairTransportSupersedes,
 } from "../utils/aiSuggestionSupersedes";
 import { useDocumentStructureHistory } from "../hooks/useDocumentStructureHistory";
+import { useHistory } from "@/app/modules/history/contexts/HistoryContext";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
@@ -107,6 +116,8 @@ const deduplicateStructure = (structure: SeparatedStructure): SeparatedStructure
 function CodePageContent() {
   const { t, isRTL, dir } = useLanguage();
   const { user } = useAuth();
+  const { setSidebarTemporarilyHidden } = useHistory();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const {
     structure,
@@ -130,6 +141,11 @@ function CodePageContent() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [currentVersion, setCurrentVersion] = useState<number>(1);
   const [totalVersions, setTotalVersions] = useState<number>(1);
+  const [currentVersionSku, setCurrentVersionSku] = useState<string | null>(null);
+  const [currentVersionDate, setCurrentVersionDate] = useState<string | null>(null);
+  const [currentVersionTime, setCurrentVersionTime] = useState<string | null>(null);
+  const [viewingHistoricalVersion, setViewingHistoricalVersion] = useState<number | null>(null);
+  const [isRestoringHistoricalVersion, setIsRestoringHistoricalVersion] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [isSavingTerms, setIsSavingTerms] = useState(false);
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
@@ -189,6 +205,11 @@ function CodePageContent() {
       setPendingSuggestions([]);
     }
   }, [structure.suggestions]);
+
+  useEffect(() => {
+    setSidebarTemporarilyHidden(showSuggestionModal);
+    return () => setSidebarTemporarilyHidden(false);
+  }, [showSuggestionModal, setSidebarTemporarilyHidden]);
   
   // Event delegation for airplane section actions
   useEffect(() => {
@@ -245,6 +266,16 @@ function CodePageContent() {
             return;
           }
           handleRemoveFlight(sectionId, flightIndex);
+          break;
+        }
+        case 'move-flight-up':
+        case 'move-flight-down': {
+          const flightIndex = flightIndexStr ? parseInt(flightIndexStr, 10) : null;
+          if (flightIndex === null || isNaN(flightIndex)) {
+            console.error(`Invalid flight index for ${action} action`);
+            return;
+          }
+          handleMoveFlight(sectionId, flightIndex, action === 'move-flight-up' ? 'up' : 'down');
           break;
         }
         case 'add-flight': {
@@ -427,6 +458,17 @@ function CodePageContent() {
           handleRemoveTransportRow(sectionIdString, tableIndex, rowIndex);
           break;
         }
+        case 'move-row-up':
+        case 'move-row-down': {
+          const tableIndex = tableIndexStr ? parseInt(tableIndexStr, 10) : null;
+          const rowIndex = rowIndexStr ? parseInt(rowIndexStr, 10) : null;
+          if (tableIndex === null || isNaN(tableIndex) || rowIndex === null || isNaN(rowIndex)) {
+            console.error(`Invalid table/row index for ${action} action`);
+            return;
+          }
+          handleMoveTransportRow(sectionIdString, tableIndex, rowIndex, action === 'move-row-up' ? 'up' : 'down');
+          break;
+        }
         case 'add-row': {
           const tableIndex = tableIndexStr ? parseInt(tableIndexStr, 10) : null;
           if (tableIndex === null || isNaN(tableIndex)) {
@@ -588,6 +630,57 @@ function CodePageContent() {
       } else {
         alert(error instanceof Error ? error.message : 'Failed to add flight');
       }
+    }
+  }, []);
+
+  const handleMoveFlight = useCallback((id: string, flightIndex: number, direction: 'up' | 'down') => {
+    try {
+      if (!id.startsWith('user_airplane_')) {
+        alert('Cannot modify generated content. Only user-created airplane sections can be edited.');
+        return;
+      }
+
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'airplane');
+        if (userElementIndex === -1) {
+          alert('Airplane section not found');
+          return prev;
+        }
+
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const flights = [...(element.data.flights || [])];
+        const targetIndex = direction === 'up' ? flightIndex - 1 : flightIndex + 1;
+
+        if (
+          flightIndex < 0 ||
+          flightIndex >= flights.length ||
+          targetIndex < 0 ||
+          targetIndex >= flights.length
+        ) {
+          return prev;
+        }
+
+        [flights[flightIndex], flights[targetIndex]] = [flights[targetIndex], flights[flightIndex]];
+
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            flights
+          }
+        };
+
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Error moving flight:', error);
+      alert(error instanceof Error ? error.message : 'Failed to move flight');
     }
   }, []);
   
@@ -1208,6 +1301,65 @@ function CodePageContent() {
     }
   }, []);
 
+  const handleMoveTransportRow = useCallback((id: string, tableIndex: number, rowIndex: number, direction: 'up' | 'down') => {
+    try {
+      if (!id.startsWith('user_transport_')) {
+        alert('Cannot modify generated content. Only user-created transport sections can be edited.');
+        return;
+      }
+
+      setStructureWithUndo(prev => {
+        const userElementIndex = prev.user.elements.findIndex(el => el.id === id && el.type === 'transport');
+        if (userElementIndex === -1) {
+          alert('Transport section not found');
+          return prev;
+        }
+
+        const updatedElements = [...prev.user.elements];
+        const element = updatedElements[userElementIndex];
+        const tables = [...(element.data.tables || [])];
+
+        if (tableIndex < 0 || tableIndex >= tables.length) {
+          return prev;
+        }
+
+        const table = tables[tableIndex];
+        const rows = [...(table.rows || [])];
+        const targetIndex = direction === 'up' ? rowIndex - 1 : rowIndex + 1;
+
+        if (
+          rowIndex < 0 ||
+          rowIndex >= rows.length ||
+          targetIndex < 0 ||
+          targetIndex >= rows.length
+        ) {
+          return prev;
+        }
+
+        [rows[rowIndex], rows[targetIndex]] = [rows[targetIndex], rows[rowIndex]];
+        tables[tableIndex] = { ...table, rows };
+
+        updatedElements[userElementIndex] = {
+          ...element,
+          data: {
+            ...element.data,
+            tables
+          }
+        };
+
+        return {
+          ...prev,
+          user: {
+            elements: updatedElements
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Error moving transport row:', error);
+      alert(error instanceof Error ? error.message : 'Failed to move row');
+    }
+  }, []);
+
   const handleRemoveTransportTable = useCallback((id: string, tableIndex: number) => {
     try {
       if (!id.startsWith('user_transport_')) {
@@ -1599,6 +1751,9 @@ function CodePageContent() {
     
     // Check if we're loading a specific document from URL (e.g., from history)
     const docIdParam = searchParams?.get("docId");
+    const versionNumberParamRaw = searchParams?.get("versionNumber");
+    const parsedVersionNumber = versionNumberParamRaw ? parseInt(versionNumberParamRaw, 10) : NaN;
+    const hasVersionParam = Number.isFinite(parsedVersionNumber) && parsedVersionNumber > 0;
     
     // Load from sessionStorage (from upload flow) - FIRST
     const storedDocId = sessionStorage.getItem("codePreview.documentId");
@@ -1614,7 +1769,11 @@ function CodePageContent() {
       }
     } else if (docIdParam && isAuthenticated() && !hasSessionStorageData) {
       // Loading from history (no sessionStorage data) - load full document from database
-      loadDocument(docIdParam);
+      if (hasVersionParam) {
+        loadDocumentVersionForPreview(docIdParam, parsedVersionNumber);
+      } else {
+        loadDocument(docIdParam);
+      }
     }
 
     const storedMetadata = sessionStorage.getItem("codePreview.metadata");
@@ -1813,6 +1972,10 @@ function CodePageContent() {
       setDocumentId(doc.id);
       setCurrentVersion(doc.current_version || 1);
       setTotalVersions(doc.total_versions || 1);
+      setCurrentVersionSku(doc.sku || null);
+      setCurrentVersionDate(doc.version_date || null);
+      setCurrentVersionTime(doc.version_time || null);
+      setViewingHistoricalVersion(null);
       
       // Load v2 structure from extracted_data
       let loadedStructure: SeparatedStructure | null = null;
@@ -1924,6 +2087,10 @@ function CodePageContent() {
       setDocumentId(doc.id);
       setCurrentVersion(doc.current_version || 1);
       setTotalVersions(doc.total_versions || 1);
+      setCurrentVersionSku(doc.sku || null);
+      setCurrentVersionDate(doc.version_date || null);
+      setCurrentVersionTime(doc.version_time || null);
+      setViewingHistoricalVersion(null);
       
       if (doc.metadata) {
         setSourceMetadata({
@@ -1978,6 +2145,108 @@ function CodePageContent() {
     }
   };
 
+  const loadDocumentVersionForPreview = async (docId: string, versionNumber: number) => {
+    try {
+      const [documentResponse, versionResponse] = await Promise.all([
+        getDocument(docId),
+        getDocumentVersion(docId, versionNumber),
+      ]);
+      const doc = documentResponse.document;
+      const version = versionResponse.version;
+
+      setDocumentId(doc.id);
+      setCurrentVersion(version.version_number || versionNumber);
+      setTotalVersions(doc.total_versions || 1);
+      setCurrentVersionSku(version.sku || doc.sku || null);
+      setCurrentVersionDate(version.version_date || doc.version_date || null);
+      setCurrentVersionTime(version.version_time || doc.version_time || null);
+      setViewingHistoricalVersion(version.version_number || versionNumber);
+
+      const extractedData = version.extracted_data as any;
+      if (extractedData.generated && extractedData.user && extractedData.layout) {
+        const loadedStructure = deduplicateStructure(extractedData as SeparatedStructure);
+        setStructure(loadedStructure);
+        clearHistory();
+        setTimeout(() => {
+          initialStructureRef.current = JSON.parse(JSON.stringify(loadedStructure));
+          setHasChanges(false);
+        }, 100);
+      } else if (extractedData.sections || extractedData.tables) {
+        const migratedStructure: SeparatedStructure = {
+          generated: {
+            sections: extractedData.sections || [],
+            tables: extractedData.tables || [],
+          },
+          user: {
+            elements: [],
+          },
+          layout: [
+            ...(extractedData.sections || []).map((s: any) => s.id),
+            ...(extractedData.tables || []).map((t: any) => t.id),
+          ],
+          meta: extractedData.meta || {},
+        };
+        setStructure(migratedStructure);
+        clearHistory();
+        setTimeout(() => {
+          initialStructureRef.current = JSON.parse(JSON.stringify(migratedStructure));
+          setHasChanges(false);
+        }, 100);
+      }
+
+      if (doc.metadata) {
+        setSourceMetadata({
+          filename: doc.metadata.filename || doc.original_filename,
+          uploadedAt: doc.created_at,
+        });
+      }
+
+      if (doc.company_id) {
+        try {
+          const company = await getCompany(doc.company_id);
+          if (company.header_image) {
+            const headerUrl = company.header_image.startsWith("http")
+              ? company.header_image
+              : `${API_BASE_URL}${company.header_image}`;
+            setHeaderImage(headerUrl);
+          } else {
+            setHeaderImage(undefined);
+          }
+
+          if (company.footer_image) {
+            const footerUrl = company.footer_image.startsWith("http")
+              ? company.footer_image
+              : `${API_BASE_URL}${company.footer_image}`;
+            setFooterImage(footerUrl);
+          } else {
+            setFooterImage(undefined);
+          }
+
+          setCompanyTermsDefault(company.terms_and_conditions || null);
+          setTermsConditionsOverride(
+            doc.terms_and_conditions_override !== undefined
+              ? doc.terms_and_conditions_override
+              : null
+          );
+        } catch (err) {
+          console.error("Failed to fetch company branding:", err);
+          setHeaderImage(undefined);
+          setFooterImage(undefined);
+          setCompanyTermsDefault(null);
+          setTermsConditionsOverride(null);
+        }
+      } else {
+        setHeaderImage(undefined);
+        setFooterImage(undefined);
+        setCompanyTermsDefault(null);
+        setTermsConditionsOverride(null);
+      }
+    } catch (err) {
+      console.error("Failed to load document version:", err);
+      alert("Failed to load requested version");
+    }
+  };
+
   const handleTermsDocumentSave = useCallback(
     async (html: string | null) => {
       setTermsConditionsOverride(html);
@@ -2005,6 +2274,10 @@ function CodePageContent() {
       
       setCurrentVersion(doc.current_version || 1);
       setTotalVersions(doc.total_versions || 1);
+      setCurrentVersionSku(doc.sku || null);
+      setCurrentVersionDate(doc.version_date || null);
+      setCurrentVersionTime(doc.version_time || null);
+      setViewingHistoricalVersion(null);
       
       // Reload structure - handle both v2 and legacy formats
       if (doc.extracted_data) {
@@ -2157,6 +2430,10 @@ function CodePageContent() {
         if (updateResponse.document) {
           setCurrentVersion(updateResponse.document.current_version || 1);
           setTotalVersions(updateResponse.document.total_versions || 1);
+          setCurrentVersionSku(updateResponse.document.sku || null);
+          setCurrentVersionDate(updateResponse.document.version_date || null);
+          setCurrentVersionTime(updateResponse.document.version_time || null);
+          setViewingHistoricalVersion(null);
         }
       } else {
         // Create new document
@@ -2179,6 +2456,10 @@ function CodePageContent() {
           setDocumentId(response.document.id);
           setCurrentVersion(response.document.current_version || 1);
           setTotalVersions(response.document.total_versions || 1);
+          setCurrentVersionSku(response.document.sku || null);
+          setCurrentVersionDate(response.document.version_date || null);
+          setCurrentVersionTime(response.document.version_time || null);
+          setViewingHistoricalVersion(null);
         }
       }
 
@@ -2198,6 +2479,38 @@ function CodePageContent() {
       setIsSaving(false);
     }
   }, [structure, documentId, sourceMetadata, hasChanges, termsConditionsOverride]);
+
+  const handleRestoreViewedVersion = useCallback(async () => {
+    if (!documentId || !viewingHistoricalVersion) return;
+    try {
+      setIsRestoringHistoricalVersion(true);
+      const response = await restoreDocumentVersion(
+        documentId,
+        viewingHistoricalVersion,
+        `Restored from previewed version ${viewingHistoricalVersion}`
+      );
+      const doc = response.document;
+      setCurrentVersion(doc.current_version || viewingHistoricalVersion);
+      setTotalVersions(doc.total_versions || 1);
+      setCurrentVersionSku(doc.sku || null);
+      setCurrentVersionDate(doc.version_date || null);
+      setCurrentVersionTime(doc.version_time || null);
+      setViewingHistoricalVersion(null);
+      await loadDocument(documentId);
+
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        params.delete("versionNumber");
+        const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+        router.replace(next);
+      }
+    } catch (err) {
+      console.error("Failed to restore viewed version:", err);
+      alert("Failed to restore this version");
+    } finally {
+      setIsRestoringHistoricalVersion(false);
+    }
+  }, [documentId, viewingHistoricalVersion, router]);
 
   const handleExportPDFWithPlaywright = useCallback(async () => {
     // Ensure document is saved first
@@ -2245,6 +2558,10 @@ function CodePageContent() {
           setDocumentId(response.document.id);
           setCurrentVersion(response.document.current_version || 1);
           setTotalVersions(response.document.total_versions || 1);
+          setCurrentVersionSku(response.document.sku || null);
+          setCurrentVersionDate(response.document.version_date || null);
+          setCurrentVersionTime(response.document.version_time || null);
+          setViewingHistoricalVersion(null);
           console.log('Document saved with ID:', currentDocId);
         } else {
           console.error('No document ID in response:', response);
@@ -2631,7 +2948,7 @@ function CodePageContent() {
     });
   }, [documentId, pendingSuggestions, sourceMetadata]);
 
-  const handleApproveAllSuggestions = useCallback(async () => {
+  const handleApproveAllSuggestions = useCallback(async (suggestionsToApprove: ComponentSuggestion[]) => {
     // Build new structure
     let newStructure: SeparatedStructure | null = null;
     
@@ -2646,7 +2963,7 @@ function CodePageContent() {
       const newElements: UserElement[] = [];
       const newLayoutIds: string[] = [];
 
-      pendingSuggestions.forEach(suggestion => {
+      suggestionsToApprove.forEach(suggestion => {
         const key = keyFor(suggestion.type, suggestion.data);
         if (existingKeys.has(key) || newKeys.has(key)) return;
         newKeys.add(key);
@@ -2718,8 +3035,8 @@ function CodePageContent() {
           {/* Logo and Title */}
           <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
             <Image
-              src="/logo.png"
-              alt="Buearau logo"
+              src="/true-quotation-logo.png"
+              alt="True Quotation logo"
               width={140}
               height={50}
               className="object-contain"
@@ -2745,6 +3062,11 @@ function CodePageContent() {
                       v{currentVersion}/{totalVersions}
                     </span>
                   )}
+                </p>
+              )}
+              {viewingHistoricalVersion && (
+                <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                  Viewing historical version v{viewingHistoricalVersion}
                 </p>
               )}
             </div>
@@ -2778,9 +3100,9 @@ function CodePageContent() {
             {isAuthenticated() && (
               <button
                 onClick={handleSave}
-                disabled={isSaving || !hasChanges}
+                disabled={isSaving || !hasChanges || !!viewingHistoricalVersion}
                 className={`px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm ${
-                  !hasChanges
+                  !hasChanges || viewingHistoricalVersion
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                     : saveStatus === "success"
                     ? "bg-green-500 text-white hover:bg-green-600"
@@ -2818,6 +3140,26 @@ function CodePageContent() {
                     </svg>
                     <span>Save</span>
                   </>
+                )}
+              </button>
+            )}
+            {isAuthenticated() && viewingHistoricalVersion && documentId && (
+              <button
+                onClick={handleRestoreViewedVersion}
+                disabled={isRestoringHistoricalVersion}
+                className="px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                title={`Restore version ${viewingHistoricalVersion}`}
+              >
+                {isRestoringHistoricalVersion ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Restoring...</span>
+                  </>
+                ) : (
+                  <span>Restore this version</span>
                 )}
               </button>
             )}
@@ -2889,7 +3231,7 @@ function CodePageContent() {
                       }}
                       className={`w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
                     >
-                      <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-[#4A7766]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
                       <span>{t.modals.createNewTable}</span>
@@ -2924,7 +3266,7 @@ function CodePageContent() {
                       >
                         {isExportingPlaywright ? (
                           <>
-                            <svg className="animate-spin h-4 w-4 text-[#A4C639]" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin h-4 w-4 text-[#4A7766]" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -2932,7 +3274,7 @@ function CodePageContent() {
                           </>
                         ) : (
                           <>
-                            <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 text-[#4A7766]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             <span>{t.modals.exportToPDF}</span>
@@ -2952,7 +3294,7 @@ function CodePageContent() {
                       title={linkCopied ? (isRTL ? 'تم نسخ الرابط!' : 'Link copied!') : (isRTL ? 'نسخ الرابط العام' : 'Copy public link')}
                     >
                       {isCopyingLink ? (
-                        <svg className="animate-spin h-4 w-4 text-[#A4C639]" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin h-4 w-4 text-[#4A7766]" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -2961,7 +3303,7 @@ function CodePageContent() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       ) : (
-                        <svg className="w-4 h-4 text-[#A4C639]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-[#4A7766]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                         </svg>
                       )}
@@ -3019,7 +3361,7 @@ function CodePageContent() {
         </div>
       </div>
     </div>
-  ), [handleExportCode, handleExportPDF, handleExportPDFWithPlaywright, handleCopyPublicLink, handleSave, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, showMenuDropdown, isExportingPlaywright, hasChanges, isCopyingLink, linkCopied, undoDocument, redoDocument, canUndo, canRedo, historyEpoch, t]);
+  ), [handleExportCode, handleExportPDF, handleExportPDFWithPlaywright, handleCopyPublicLink, handleSave, handleRestoreViewedVersion, handleAddAirplaneClick, handleAddAirplaneSubmit, handleAddHotelClick, handleAddHotelSubmit, handleAddTransportClick, handleAddTransportSubmit, sourceMetadata, isSaving, saveStatus, documentId, totalVersions, currentVersion, viewingHistoricalVersion, isRestoringHistoricalVersion, showMenuDropdown, isExportingPlaywright, hasChanges, isCopyingLink, linkCopied, undoDocument, redoDocument, canUndo, canRedo, historyEpoch, t]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-cyan-50 via-blue-50 to-lime-50 text-gray-900">
@@ -3046,6 +3388,9 @@ function CodePageContent() {
               editable={true}
               headerImage={headerImage}
               footerImage={footerImage}
+              versionSku={currentVersionSku}
+              versionDate={currentVersionDate}
+              versionTime={currentVersionTime}
               termsAndConditions={resolvedTerms}
               companyTermsDefault={companyTermsDefault}
               termsEditable={!!user?.company_id}
@@ -3141,6 +3486,19 @@ function CodePageContent() {
                 } else if (element.type === 'hotel') {
                   setEditingHotelId(element.id);
                   setShowEditHotelSectionModal(true);
+                } else if (element.type === 'transport') {
+                  setEditingTransportId(element.id);
+                  setShowEditTransportSectionModal(true);
+                } else if (element.type === 'extra_service' || element.type === 'total_price') {
+                  // These component types are edited inline from StructureRenderer (TipTap/table cell editors).
+                  setStructureWithUndo((prev) => ({
+                    ...prev,
+                    user: {
+                      elements: prev.user.elements.map((el) =>
+                        el.id === element.id ? { ...el, data: element.data } : el
+                      ),
+                    },
+                  }));
                 }
               }}
               onUserElementDelete={(id) => {
@@ -3338,6 +3696,7 @@ function CodePageContent() {
 
       {/* Component Suggestion Modal */}
       <ComponentSuggestionModal
+        key={pendingSuggestions.map((suggestion) => suggestion.id).join("|") || "no-suggestions"}
         isOpen={showSuggestionModal}
         onClose={handleCloseSuggestionModal}
         suggestions={pendingSuggestions}
@@ -3373,4 +3732,3 @@ export default function CodePage() {
     </ProtectedRoute>
   );
 }
-

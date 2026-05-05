@@ -119,7 +119,7 @@ export default function CreateTableModal({
         dir={dir}
       >
         {/* Header */}
-        <div className={`bg-gradient-to-r from-[#A4C639] to-[#8FB02E] px-6 py-4 flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={`bg-gradient-to-r from-[#4A7766] to-[#8FB02E] px-6 py-4 flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
           <h2 className={`text-xl font-bold text-white flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -148,7 +148,7 @@ export default function CreateTableModal({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A4C639] focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A7766] focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
               placeholder={t.modals.tableTitlePlaceholderExample}
             />
           </div>
@@ -166,7 +166,7 @@ export default function CreateTableModal({
                 max="20"
                 value={columnCount}
                 onChange={(e) => setColumnCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#A4C639] focus:border-transparent ${
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#4A7766] focus:border-transparent ${
                   errors.columnCount ? "border-red-500" : "border-gray-300"
                 } ${isRTL ? 'text-right' : 'text-left'}`}
               />
@@ -186,7 +186,7 @@ export default function CreateTableModal({
                 max="100"
                 value={rowCount}
                 onChange={(e) => setRowCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#A4C639] focus:border-transparent ${
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#4A7766] focus:border-transparent ${
                   errors.rowCount ? "border-red-500" : "border-gray-300"
                 } ${isRTL ? 'text-right' : 'text-left'}`}
               />
@@ -211,7 +211,7 @@ export default function CreateTableModal({
                     type="text"
                     value={name}
                     onChange={(e) => handleColumnNameChange(index, e.target.value)}
-                    className={`flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A4C639] focus:border-transparent text-sm ${isRTL ? 'text-right' : 'text-left'}`}
+                    className={`flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A7766] focus:border-transparent text-sm ${isRTL ? 'text-right' : 'text-left'}`}
                     placeholder={`${t.modals.colNumber} ${index + 1}`}
                   />
                 </div>
@@ -252,7 +252,7 @@ export default function CreateTableModal({
           <button
             type="submit"
             onClick={handleSubmit}
-            className={`px-5 py-2 bg-gradient-to-r from-[#A4C639] to-[#8FB02E] text-white rounded-lg hover:from-[#8FB02E] hover:to-[#7A9124] transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+            className={`px-5 py-2 bg-gradient-to-r from-[#4A7766] to-[#8FB02E] text-white rounded-lg hover:from-[#8FB02E] hover:to-[#7A9124] transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

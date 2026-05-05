@@ -29,7 +29,8 @@ import {
   Building,
   Crown,
   Star,
-  User as UserIcon
+  User as UserIcon,
+  Search
 } from "lucide-react";
 
 export default function UserManagementPage() {
@@ -41,7 +42,7 @@ export default function UserManagementPage() {
 }
 
 function UserManagementContent() {
-  const { user: currentUser, isSuperAdmin, logout } = useAuth();
+  const { user: currentUser, isSuperAdmin, isCompanyAdmin, logout } = useAuth();
   const { t, isRTL, dir } = useLanguage();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -57,6 +58,8 @@ function UserManagementContent() {
   const [isCreating, setIsCreating] = useState(false);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
 
+
+  
   const USERS_PAGE_SIZE = 10;
 
   // Users list state
@@ -68,6 +71,7 @@ function UserManagementContent() {
   const [usersError, setUsersError] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [usersSearch, setUsersSearch] = useState("");
   
   // Companies list (for Super Admin)
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -102,7 +106,7 @@ function UserManagementContent() {
   useEffect(() => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyFilter, usersPage]);
+  }, [companyFilter, usersPage, usersSearch]);
 
   const fetchUsers = async () => {
     try {
@@ -110,7 +114,7 @@ function UserManagementContent() {
       setUsersError("");
       const companyIdForApi =
         isSuperAdmin && companyFilter ? companyFilter : undefined;
-      const response = await getAllUsers(usersPage, USERS_PAGE_SIZE, companyIdForApi);
+      const response = await getAllUsers(usersPage, USERS_PAGE_SIZE, companyIdForApi, usersSearch);
       setUsers(response.users);
       setUsersTotal(response.total);
       setUsersTotalPages(response.total_pages ?? Math.max(1, Math.ceil(response.total / USERS_PAGE_SIZE)));
@@ -209,8 +213,8 @@ function UserManagementContent() {
           <div className="flex items-center gap-4">
             <Link href="/">
               <Image
-               src="/logo.png"
-              alt="Buearau logo"
+               src="/true-quotation-logo.png"
+              alt="True Quotation logo"
                 width={140}
                 height={60}
                 className="object-contain cursor-pointer"
@@ -228,7 +232,7 @@ function UserManagementContent() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className={`flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-full flex items-center justify-center text-white font-semibold">
+                  <div className="w-8 h-8 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-full flex items-center justify-center text-white font-semibold">
                     {currentUser.name.charAt(0).toUpperCase()}
                   </div>
                   <div className={`flex flex-col ${isRTL ? 'items-end' : 'items-start'}`}>
@@ -274,13 +278,13 @@ function UserManagementContent() {
         {/* Page Header */}
         <div className="mb-8">
           <div className={`flex items-center gap-3 mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <div className="w-14 h-14 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl flex items-center justify-center shadow-lg">
               <Users className="w-7 h-7 text-white" />
             </div>
             <div className={isRTL ? 'text-right' : 'text-left'}>
               <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <h1 className="text-4xl font-bold text-black">{t.userManagement.title}</h1>
-                <span className={`inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-bold rounded-full shadow-md ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span className={`inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white text-xs font-bold rounded-full shadow-md ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <Shield className="w-3 h-3" />
                   {t.home.adminOnly}
                 </span>
@@ -312,9 +316,9 @@ function UserManagementContent() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Create User Form */}
           <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-gray-200 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#C4B454] via-[#B8A040] to-[#A69035]"></div>
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#4A7766] via-[#3D6558] to-[#3D6558]"></div>
             <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3 mt-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center shadow-md">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center shadow-md">
                 <UserPlus className="w-5 h-5 text-white" />
               </div>
               {t.userManagement.createNewUser}
@@ -331,7 +335,7 @@ function UserManagementContent() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#C4B454] focus:bg-white transition-all duration-200 text-black placeholder:text-gray-400 font-medium"
+                  className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] focus:bg-white transition-all duration-200 text-black placeholder:text-gray-400 font-medium"
                   placeholder="John Doe"
                   dir={dir}
                 />
@@ -348,7 +352,7 @@ function UserManagementContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#A4C639]/20 focus:border-[#A4C639] focus:bg-white transition-all duration-200 text-gray-900 placeholder:text-gray-400"
+                  className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] focus:bg-white transition-all duration-200 text-gray-900 placeholder:text-gray-400"
                   placeholder="user@example.com"
                   dir={dir}
                 />
@@ -366,7 +370,7 @@ function UserManagementContent() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#C4B454] focus:bg-white transition-all duration-200 text-black placeholder:text-gray-400 font-medium"
+                  className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] focus:bg-white transition-all duration-200 text-black placeholder:text-gray-400 font-medium"
                   placeholder="••••••••"
                   dir={dir}
                 />
@@ -386,7 +390,7 @@ function UserManagementContent() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#C4B454] focus:bg-white transition-all duration-200 text-black placeholder:text-gray-400 font-medium"
+                  className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] focus:bg-white transition-all duration-200 text-black placeholder:text-gray-400 font-medium"
                   placeholder="••••••••"
                   dir={dir}
                 />
@@ -401,14 +405,14 @@ function UserManagementContent() {
                   id="role"
                   value={role}
                   onChange={(e) => setRole(e.target.value as UserRole)}
-                  className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#C4B454] focus:bg-white transition-all duration-200 text-black font-medium cursor-pointer"
+                  className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] focus:bg-white transition-all duration-200 text-black font-medium cursor-pointer"
                   dir={dir}
                 >
                   <option value="user">{t.userManagement.userRegularAccess}</option>
                   {isSuperAdmin && <option value="superadmin">{t.userManagement.superAdminFullAccess}</option>}
                   <option value="company_admin">{t.userManagement.companyAdminManagement}</option>
                 </select>
-                <p className="mt-1.5 text-xs text-black bg-[#C4B454]/10 px-3 py-2 rounded-lg border border-[#C4B454]/30">
+                <p className="mt-1.5 text-xs text-black bg-[#4A7766]/10 px-3 py-2 rounded-lg border border-[#4A7766]/30">
                   {role === "superadmin" 
                     ? t.userManagement.superAdminHasFullAccess
                     : role === "company_admin"
@@ -428,7 +432,7 @@ function UserManagementContent() {
                     id="company"
                     value={companyId || ""}
                     onChange={(e) => setCompanyId(e.target.value || null)}
-                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#C4B454] focus:bg-white transition-all duration-200 text-black font-medium cursor-pointer"
+                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] focus:bg-white transition-all duration-200 text-black font-medium cursor-pointer"
                     dir={dir}
                   >
                     <option value="">{t.userManagement.noCompany}</option>
@@ -442,7 +446,7 @@ function UserManagementContent() {
                       ))
                     )}
                   </select>
-                  <p className="mt-1.5 text-xs text-black bg-[#C4B454]/10 px-3 py-2 rounded-lg border border-[#C4B454]/30">
+                  <p className="mt-1.5 text-xs text-black bg-[#4A7766]/10 px-3 py-2 rounded-lg border border-[#4A7766]/30">
                     {role === "superadmin" 
                       ? t.userManagement.leaveEmptyForSuperAdmin
                       : t.userManagement.selectCompanyToAssign}
@@ -453,7 +457,7 @@ function UserManagementContent() {
               <button
                 type="submit"
                 disabled={isCreating}
-                className="w-full bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 hover:scale-[1.02] active:scale-95"
+                className="w-full bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-1 hover:scale-[1.02] active:scale-95"
               >
                 {isCreating ? (
                   <span className={`flex items-center justify-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -472,18 +476,34 @@ function UserManagementContent() {
 
           {/* Users List */}
           <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-gray-200 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#C4B454] via-[#B8A040] to-[#A69035]"></div>
-            <div className={`flex items-center justify-between mb-6 mt-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <h2 className={`text-2xl font-bold text-black flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center shadow-md">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#4A7766] via-[#3D6558] to-[#3D6558]"></div>
+            <div className="flex flex-col gap-4 mb-6 mt-2">
+              <h2 className={`text-2xl font-bold text-black flex items-center gap-3 shrink-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center shadow-md">
                   <Users className="w-5 h-5 text-white" />
                 </div>
                 <span>
                   {isSuperAdmin ? t.userManagement.allUsers : t.userManagement.companyUsers} 
-                  <span className="text-[#C4B454]"> ({usersTotal})</span>
+                  <span className="text-[#4A7766]"> ({usersTotal})</span>
                 </span>
               </h2>
-              <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className={`w-full flex flex-wrap items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                {(isSuperAdmin || isCompanyAdmin) && (
+                  <div className="relative flex-1 min-w-[220px]">
+                    <Search className={`w-4 h-4 text-gray-500 absolute top-1/2 -translate-y-1/2 ${isRTL ? 'right-3' : 'left-3'}`} />
+                    <input
+                      type="text"
+                      value={usersSearch}
+                      onChange={(e) => {
+                        setUsersSearch(e.target.value);
+                        setUsersPage(1);
+                      }}
+                      placeholder="Search by name or email"
+                      className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 text-sm bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] transition-all duration-200 text-black font-medium`}
+                      dir={dir}
+                    />
+                  </div>
+                )}
                 {/* Company Filter (Super Admin only) */}
                 {isSuperAdmin && (
                   <select
@@ -492,7 +512,7 @@ function UserManagementContent() {
                       setCompanyFilter(e.target.value || null);
                       setUsersPage(1);
                     }}
-                    className="px-4 py-2 text-sm bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#C4B454] transition-all duration-200 text-black font-medium cursor-pointer"
+                    className="flex-1 min-w-[180px] sm:flex-none sm:min-w-0 px-4 py-2 text-sm bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] transition-all duration-200 text-black font-medium cursor-pointer"
                     dir={dir}
                   >
                     <option value="">{t.userManagement.allCompanies}</option>
@@ -506,7 +526,7 @@ function UserManagementContent() {
                 <button
                   onClick={fetchUsers}
                   disabled={isLoadingUsers}
-                  className={`flex items-center gap-2 px-4 py-2 text-sm bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white font-bold rounded-xl hover:shadow-lg disabled:opacity-50 transition-all duration-200 transform hover:scale-105 active:scale-95 ${isRTL ? 'flex-row-reverse' : ''}`}
+                  className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-sm bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white font-bold rounded-xl hover:shadow-lg disabled:opacity-50 transition-all duration-200 transform hover:scale-105 active:scale-95 ${isRTL ? 'flex-row-reverse' : ''}`}
                 >
                   <RefreshCw className="w-4 h-4" />
                   {t.userManagement.refresh}
@@ -517,7 +537,7 @@ function UserManagementContent() {
             {isLoadingUsers ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
-                  <Loader2 className="w-8 h-8 text-[#C4B454] animate-spin mx-auto" />
+                  <Loader2 className="w-8 h-8 text-[#4A7766] animate-spin mx-auto" />
                   <p className="mt-2 text-sm text-black font-medium">{t.userManagement.loadingUsers}</p>
                 </div>
               </div>
@@ -530,8 +550,8 @@ function UserManagementContent() {
               </div>
             ) : users.length === 0 ? (
               <div className="py-12 text-center">
-                <div className="w-16 h-16 bg-[#C4B454]/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Users className="w-8 h-8 text-[#C4B454]" />
+                <div className="w-16 h-16 bg-[#4A7766]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Users className="w-8 h-8 text-[#4A7766]" />
                 </div>
                 <p className="text-black font-semibold text-lg">{t.userManagement.noUsersFound}</p>
                 <p className="text-sm text-gray-700 mt-1">{t.userManagement.createFirstUser}</p>
@@ -548,8 +568,8 @@ function UserManagementContent() {
                       key={user.id}
                       className={`p-5 border-2 rounded-2xl transition-all duration-200 ${
                         isCurrentUser
-                          ? "border-[#C4B454] bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 shadow-md"
-                          : "border-gray-200 hover:border-[#C4B454]/40 hover:shadow-md hover:bg-gray-50"
+                          ? "border-[#4A7766] bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 shadow-md"
+                          : "border-gray-200 hover:border-[#4A7766]/40 hover:shadow-md hover:bg-gray-50"
                       }`}
                     >
                       <div className="flex items-start justify-between">
@@ -557,7 +577,7 @@ function UserManagementContent() {
                           <div className={`flex items-center gap-2 mb-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
                             <h3 className="font-bold text-black">{user.name}</h3>
                             {isCurrentUser && (
-                              <span className="text-xs bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white px-2 py-0.5 rounded-full font-bold">
+                              <span className="text-xs bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white px-2 py-0.5 rounded-full font-bold">
                                 {t.userManagement.you}
                               </span>
                             )}
@@ -572,7 +592,7 @@ function UserManagementContent() {
                             </p>
                           )}
                           {!user.company_id && user.role === "superadmin" && (
-                            <p className={`text-xs text-[#C4B454] mt-1 font-bold ${isRTL ? 'text-right' : 'text-left'}`}>
+                            <p className={`text-xs text-[#4A7766] mt-1 font-bold ${isRTL ? 'text-right' : 'text-left'}`}>
                               {t.userManagement.superAdminNoCompany}
                             </p>
                           )}

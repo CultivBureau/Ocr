@@ -57,7 +57,7 @@ export default function Pagination({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 rounded-2xl border border-[#C4B454]/25 bg-gradient-to-r from-[#C4B454]/8 to-[#B8A040]/5 ${className}`}
+      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 rounded-2xl border border-[#4A7766]/25 bg-gradient-to-r from-[#4A7766]/8 to-[#3D6558]/5 ${className}`}
       dir={isRTL ? "rtl" : "ltr"}
     >
       <p className="text-sm font-medium text-slate-600 text-center sm:text-start">
@@ -70,7 +70,7 @@ export default function Pagination({
           type="button"
           onClick={prev}
           disabled={!canPrev}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-white border-2 border-slate-200 text-slate-700 hover:border-[#C4B454] hover:bg-[#C4B454]/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-white border-2 border-slate-200 text-slate-700 hover:border-[#4A7766] hover:bg-[#4A7766]/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
           <ChevronLeft className="w-4 h-4" />
           {labels.previous}
@@ -82,7 +82,7 @@ export default function Pagination({
           type="button"
           onClick={next}
           disabled={!canNext}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-white border-2 border-slate-200 text-slate-700 hover:border-[#C4B454] hover:bg-[#C4B454]/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-white border-2 border-slate-200 text-slate-700 hover:border-[#4A7766] hover:bg-[#4A7766]/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
           {labels.next}
           <ChevronRight className="w-4 h-4" />

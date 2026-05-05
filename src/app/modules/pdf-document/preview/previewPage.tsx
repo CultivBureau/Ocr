@@ -118,7 +118,7 @@ export default function PreviewPage() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
               <Image
-                src="/logoHappylife.jpg"
+                src="/true-quotation-logo.png"
                 alt="HappyLife Travel & Tourism"
                 width={150}
                 height={50}
@@ -152,7 +152,7 @@ export default function PreviewPage() {
               onClick={() => setViewMode("editor")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 viewMode === "editor"
-                  ? "bg-[#A4C639] text-white"
+                  ? "bg-[#4A7766] text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
@@ -162,7 +162,7 @@ export default function PreviewPage() {
               onClick={() => setViewMode("pdf")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 viewMode === "pdf"
-                  ? "bg-[#A4C639] text-white"
+                  ? "bg-[#4A7766] text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
@@ -173,7 +173,7 @@ export default function PreviewPage() {
           {/* Generation Status */}
           {isGenerating && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-4 h-4 border-2 border-[#A4C639] border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-4 h-4 border-2 border-[#4A7766] border-t-transparent rounded-full animate-spin"></div>
               <span>جاري توليد JSX...</span>
             </div>
           )}

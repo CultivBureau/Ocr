@@ -6,7 +6,7 @@
  */
 
 import { guardGeneratedContent } from './contentGuards';
-import { Hotel } from '../templates/HotelsSection';
+import type { Hotel } from '../templates/HotelsSection';
 
 /**
  * Find a HotelsSection component by ID in the code

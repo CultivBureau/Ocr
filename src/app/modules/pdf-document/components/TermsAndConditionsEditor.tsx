@@ -75,7 +75,7 @@ export default function TermsAndConditionsEditor({
   const line = (
     <div
       style={{
-        borderTop: "1.5px solid #C4B454",
+        borderTop: "1.5px solid #4A7766",
         marginBottom: "8px",
       }}
     />

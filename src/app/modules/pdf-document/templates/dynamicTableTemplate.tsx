@@ -167,7 +167,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
   // Header
   headerBackgroundColor,
   headerGradient = {
-    from: "#A4C639",
+    from: "#4A7766",
     to: "#8FB02E",
   },
   headerTextColor = "text-white",
@@ -225,26 +225,26 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
   const getBackgroundColorClass = (color: 'dark-blue' | 'dark-red' | 'pink' | 'green' | 'black' | 'purple' | 'teal' | 'orange' | 'indigo' | 'emerald') => {
     switch (color) {
       case 'dark-blue':
-        return { bg: 'bg-[#1E3A8A]', border: 'border-[#1E3A8A]', from: '#1E3A8A', to: '#1E40AF', accent: '#3B82F6' };
+        return { bg: 'bg-[#1E3A8A]', border: '#C7D7F5', from: '#1E3A8A', to: '#2B4FBF', accent: '#EEF3FD', stripe: '#F5F8FF', hover: '#EBF1FE' };
       case 'dark-red':
-        return { bg: 'bg-[#991B1B]', border: 'border-[#991B1B]', from: '#991B1B', to: '#B91C1C', accent: '#EF4444' };
+        return { bg: 'bg-[#991B1B]', border: '#F5C6C6', from: '#991B1B', to: '#C02020', accent: '#FEF2F2', stripe: '#FFF5F5', hover: '#FEE9E9' };
       case 'black':
-        return { bg: 'bg-[#1F2937]', border: 'border-[#1F2937]', from: '#1F2937', to: '#374151', accent: '#6B7280' };
+        return { bg: 'bg-[#1F2937]', border: '#D1D5DB', from: '#1F2937', to: '#374151', accent: '#F9FAFB', stripe: '#F3F4F6', hover: '#EAECEF' };
       case 'purple':
-        return { bg: 'bg-[#7C3AED]', border: 'border-[#7C3AED]', from: '#7C3AED', to: '#8B5CF6', accent: '#A78BFA' };
+        return { bg: 'bg-[#7C3AED]', border: '#DDD6FE', from: '#6D28D9', to: '#7C3AED', accent: '#F5F3FF', stripe: '#FAF8FF', hover: '#EDE9FE' };
       case 'teal':
-        return { bg: 'bg-[#0D9488]', border: 'border-[#0D9488]', from: '#0D9488', to: '#14B8A6', accent: '#2DD4BF' };
+        return { bg: 'bg-[#0D9488]', border: '#99F6E4', from: '#0D7A6F', to: '#0D9488', accent: '#F0FDFB', stripe: '#F5FFFE', hover: '#CCFBF3' };
       case 'orange':
-        return { bg: 'bg-[#EA580C]', border: 'border-[#EA580C]', from: '#EA580C', to: '#F97316', accent: '#FB923C' };
+        return { bg: 'bg-[#EA580C]', border: '#FED7AA', from: '#C2410C', to: '#EA580C', accent: '#FFF7ED', stripe: '#FFFBF5', hover: '#FFEDD5' };
       case 'indigo':
-        return { bg: 'bg-[#4338CA]', border: 'border-[#4338CA]', from: '#4338CA', to: '#5B21B6', accent: '#8B5CF6' };
+        return { bg: 'bg-[#4338CA]', border: '#C7D2FE', from: '#3730A3', to: '#4338CA', accent: '#EEF2FF', stripe: '#F5F7FF', hover: '#E0E7FF' };
       case 'emerald':
-        return { bg: 'bg-[#059669]', border: 'border-[#059669]', from: '#059669', to: '#10B981', accent: '#34D399' };
+        return { bg: 'bg-[#059669]', border: '#A7F3D0', from: '#047857', to: '#059669', accent: '#ECFDF5', stripe: '#F2FDF8', hover: '#D1FAE5' };
       case 'pink':
-        return { bg: 'bg-[#EC4899]', border: 'border-[#EC4899]', from: '#EC4899', to: '#F472B6', accent: '#F9A8D4' };
+        return { bg: 'bg-[#EC4899]', border: '#FBCFE8', from: '#DB2777', to: '#EC4899', accent: '#FDF2F8', stripe: '#FEF6FB', hover: '#FCE7F3' };
       case 'green':
       default:
-        return { bg: 'bg-[#A4C639]', border: 'border-[#A4C639]', from: '#A4C639', to: '#8FB02E', accent: '#BEF264' };
+        return { bg: 'bg-[#3D6B58]', border: '#B7D5CA', from: '#2D5244', to: '#3D6B58', accent: '#F0F7F4', stripe: '#F5FAF8', hover: '#E2F0EB' };
     }
   };
   
@@ -327,12 +327,10 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
         ? "text-right"
         : "text-center";
 
-  // Build cell classes - Compact for perfect compression
+  // Build cell classes
   const cellClasses = [
     cellTextColor,
     cellAlignClass,
-    "border-r border-gray-200",
-    "last:border-r-0",
     cellClassName,
   ].filter(Boolean).join(" ");
 
@@ -406,7 +404,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
   }, [cellEditor, onCellChange]);
 
   return (
-    <div className={`${wrapperClasses} relative px-4 py-3`} style={style}>
+    <div className={`${wrapperClasses} relative px-2 py-2`} style={style}>
       {/* Action Buttons - Top Right */}
       {editable && (
         <div className="absolute -top-1 right-2 flex gap-2 no-pdf-export">
@@ -482,7 +480,7 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { value: 'green', label: 'Nature Green', bg: 'bg-[#A4C639]', accent: '#BEF264' },
+                      { value: 'green', label: 'Nature Green', bg: 'bg-[#4A7766]', accent: '#BEF264' },
                       { value: 'dark-blue', label: 'Ocean Blue', bg: 'bg-[#1E3A8A]', accent: '#3B82F6' },
                       { value: 'dark-red', label: 'Ruby Red', bg: 'bg-[#991B1B]', accent: '#EF4444' },
                       { value: 'black', label: 'Carbon Black', bg: 'bg-[#1F2937]', accent: '#6B7280' },
@@ -718,11 +716,11 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
         </div>
       )}
       
-      {/* Table Title - Compact */}
+      {/* Table Title */}
       {showTitle && title && (
-        <div className="mb-4">
-          <h3 
-            className={`text-base font-bold text-gray-900 ${editable ? 'cursor-text hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 rounded-lg px-2 py-1 transition-all duration-200 inline-block' : ''}`}
+        <div className="mb-3">
+          <h3
+            className={`text-sm font-semibold text-gray-800 tracking-tight ${editable ? 'cursor-text hover:bg-gray-100/70 rounded-md px-2 py-1 -ml-2 transition-colors duration-150 inline-block' : ''}`}
             contentEditable={editable}
             suppressContentEditableWarning={true}
             onBlur={(e) => {
@@ -741,41 +739,31 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
         </div>
       )}
 
-      {/* Responsive Table Container - Enhanced Professional Styling */}
+      {/* Responsive Table Container */}
       <div className="responsive-table-container relative">
-        <div className={`w-full rounded-2xl border-2 ${colorClasses.border} shadow-2xl hover:shadow-3xl transition-all duration-500 relative overflow-hidden`}
-             style={{
-               background: `linear-gradient(145deg, ${colorClasses.accent}08, ${colorClasses.from}05)`,
-               backdropFilter: 'blur(10px)'
-             }}>
-          {/* Subtle background pattern */}
-          <div className="absolute inset-0 opacity-[0.03]" 
-               style={{
-                 backgroundImage: `radial-gradient(circle at 1px 1px, ${colorClasses.from} 1px, transparent 0)`,
-                 backgroundSize: '20px 20px'
-               }}></div>
-          
-          <table className="dynamic-table w-full border-collapse rounded-2xl relative z-10" style={{ tableLayout: 'fixed' }}>
+        <div
+          className="w-full rounded-xl overflow-hidden transition-shadow duration-300"
+          style={{
+            border: `1px solid ${colorClasses.border}`,
+            boxShadow: `0 1px 3px 0 rgba(0,0,0,0.07), 0 4px 16px -2px ${colorClasses.from}22`,
+          }}
+        >
+          <table className="dynamic-table w-full border-collapse" style={{ tableLayout: 'fixed' }}>
           {/* Table Header - Enhanced Professional Design */}
           <thead>
-            <tr style={{ 
-                background: `linear-gradient(135deg, ${colorClasses.from} 0%, ${colorClasses.to} 50%, ${colorClasses.accent} 100%)`,
-                boxShadow: `0 4px 6px -1px ${colorClasses.from}40`
-              }}>
+            <tr style={{ background: `linear-gradient(135deg, ${colorClasses.from} 0%, ${colorClasses.to} 100%)` }}>
               {cleanHeaders.map((header, index) => (
                   <th
                     key={index}
-                  className="text-white font-bold text-center border-r border-white/30 tracking-tight last:border-r-0 relative group backdrop-blur-sm"
-                  style={{ 
-                    fontSize: '9px',
-                    lineHeight: '1.2',
-                    padding: '6px 4px',
+                  className="text-white font-semibold text-center border-r border-white/20 last:border-r-0 relative group"
+                  style={{
+                    fontSize: '12px',
+                    lineHeight: '1.4',
+                    padding: '11px 10px',
                     verticalAlign: 'middle',
-                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
+                    letterSpacing: '0.02em',
                   }}
                 >
-                  {/* Subtle header accent */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                   {/* Delete Column Button */}
                   {editable && onRemoveColumn && cleanHeaders.length > 1 && (
                     <button
@@ -819,30 +807,30 @@ const DynamicTableTemplate: React.FC<DynamicTableTemplateProps> = ({
           <tbody>
             {normalizedRows.length > 0 ? (
               normalizedRows.map((row, rowIndex) => (
-                <tr 
-                  key={rowIndex} 
-                  className={`${
-                    rowIndex % 2 === 0 
-                      ? 'bg-white/90 backdrop-blur-sm' 
-                      : 'bg-gradient-to-r from-gray-50/80 to-blue-50/30'
-                  } hover:bg-gradient-to-r hover:from-blue-50/70 hover:to-purple-50/40 transition-all duration-300 group relative`}
+                <tr
+                  key={rowIndex}
+                  className="group relative transition-colors duration-150"
                   style={{
-                    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                    backgroundColor: rowIndex % 2 === 0 ? '#ffffff' : colorClasses.stripe,
                   }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = colorClasses.hover; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = rowIndex % 2 === 0 ? '#ffffff' : colorClasses.stripe; }}
                 >
                   {cleanHeaders.map((_, cellIndex) => {
                     const cell = row[cellIndex];
                     const cellValue = cell !== null && cell !== undefined ? String(cell) : '';
                     
                     return (
-                      <td 
-                        key={cellIndex} 
+                      <td
+                        key={cellIndex}
                         className={`${cellClasses} ${cellIndex === 0 ? 'relative' : ''}`}
-                        style={{ 
-                          fontSize: '10px',
-                          lineHeight: '1.35',
-                          padding: '5px 4px',
-                          verticalAlign: 'middle'
+                        style={{
+                          fontSize: '12px',
+                          lineHeight: '1.5',
+                          padding: '9px 10px',
+                          verticalAlign: 'middle',
+                          borderBottom: rowIndex < normalizedRows.length - 1 ? `1px solid ${colorClasses.border}` : 'none',
+                          borderRight: cellIndex < cleanHeaders.length - 1 ? `1px solid ${colorClasses.border}` : 'none',
                         }}
                       >
                         {/* Delete Row Button - only on first cell */}

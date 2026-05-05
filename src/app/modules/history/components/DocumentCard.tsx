@@ -30,6 +30,9 @@ interface DocumentCardProps {
     is_public?: boolean;
     current_version?: number;
     total_versions?: number;
+    matched_version_number?: number | null;
+    matched_version_sku?: string | null;
+    matched_by?: "title" | "current_sku" | "version_sku" | null;
     creator_name?: string | null;
     creator_email?: string | null;
     metadata?: {
@@ -38,7 +41,7 @@ interface DocumentCardProps {
       fileSize?: number;
     };
   };
-  onOpen: (docId: string) => void;
+  onOpen: (docId: string, versionNumber?: number) => void;
   onRename: (docId: string) => void;
   onDelete: (docId: string) => void;
   onViewVersions?: (docId: string) => void;
@@ -216,7 +219,7 @@ export default function DocumentCard({
 
   return (
     <div
-      className="group bg-white rounded-2xl border-2 border-gray-200 hover:border-[#C4B454] shadow-lg hover:shadow-2xl transition-all duration-300 p-6 relative overflow-hidden"
+      className="group bg-white rounded-2xl border-2 border-gray-200 hover:border-[#4A7766] shadow-lg hover:shadow-2xl transition-all duration-300 p-6 relative overflow-hidden"
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
@@ -240,13 +243,13 @@ export default function DocumentCard({
       </div>
       
       {/* PDF Icon/Thumbnail */}
-      <div className="mb-4 flex items-center justify-center h-40 bg-gradient-to-br from-[#C4B454]/5 via-[#B8A040]/10 to-amber-50 rounded-xl relative overflow-hidden group-hover:scale-105 transition-transform duration-300">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#C4B454]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        <FileText className="w-20 h-20 text-[#B8A040] relative z-10" strokeWidth={1.5} />
+      <div className="mb-4 flex items-center justify-center h-40 bg-gradient-to-br from-[#4A7766]/5 via-[#3D6558]/10 to-amber-50 rounded-xl relative overflow-hidden group-hover:scale-105 transition-transform duration-300">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#4A7766]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <FileText className="w-20 h-20 text-[#3D6558] relative z-10" strokeWidth={1.5} />
       </div>
 
       {/* Title */}
-      <h3 className="font-bold text-lg text-gray-900 mb-2 truncate group-hover:text-[#B8A040] transition-colors" title={document.title}>
+      <h3 className="font-bold text-lg text-gray-900 mb-2 truncate group-hover:text-[#3D6558] transition-colors" title={document.title}>
         {document.title}
       </h3>
       
@@ -272,16 +275,16 @@ export default function DocumentCard({
       {/* Metadata */}
       <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-4 pb-4 border-b border-gray-100">
         <span className="flex items-center gap-1.5">
-          <Clock className="w-4 h-4 text-[#B8A040]" />
+          <Clock className="w-4 h-4 text-[#3D6558]" />
           {timeAgo}
         </span>
         {document.current_version && document.total_versions && (
           <span className={`flex items-center gap-1.5 px-2 py-1 rounded-lg font-semibold ${
             document.total_versions > 1 
-              ? "bg-[#C4B454]/10 text-[#B8A040]" 
+              ? "bg-[#4A7766]/10 text-[#3D6558]" 
               : "bg-gray-100 text-gray-600"
           }`}>
-            <FileText className={`w-4 h-4 ${document.total_versions > 1 ? "text-[#B8A040]" : "text-gray-500"}`} />
+            <FileText className={`w-4 h-4 ${document.total_versions > 1 ? "text-[#3D6558]" : "text-gray-500"}`} />
             v{document.current_version}/{document.total_versions}
           </span>
         )}
@@ -297,13 +300,19 @@ export default function DocumentCard({
             {formatFileSize(document.metadata.fileSize)}
           </span>
         )}
+        {document.matched_by === "version_sku" && document.matched_version_number && (
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg font-semibold bg-blue-100 text-blue-700">
+            <History className="w-4 h-4 text-blue-600" />
+            Matched v{document.matched_version_number}
+          </span>
+        )}
       </div>
 
       {/* Actions */}
       <div className={`flex flex-wrap gap-2 transition-all duration-300 ${showActions ? 'opacity-100' : 'opacity-90'} ${isRTL ? 'flex-row-reverse' : ''}`}>
         <button
-          onClick={() => onOpen(document.id)}
-          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-sm font-bold rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+          onClick={() => onOpen(document.id, document.matched_version_number ?? undefined)}
+          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white text-sm font-bold rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105"
         >
           {t.history.open}
         </button>
@@ -313,7 +322,7 @@ export default function DocumentCard({
               e.stopPropagation();
               onViewVersions(document.id);
             }}
-            className={`px-3 py-2.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-sm font-semibold rounded-xl hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}
+            className={`px-3 py-2.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white text-sm font-semibold rounded-xl hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}
             title="View version history"
           >
             <History className="w-4 h-4" />

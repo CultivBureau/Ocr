@@ -91,7 +91,7 @@ const PdfConverterContent: React.FC = () => {
   // Upload limits (must match backend config.py)
   const MAX_UPLOAD_SIZE_MB = 20;
   const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
-  const ALLOWED_DOCUMENT = /\.(pdf|docx|doc)$/i;
+  const ALLOWED_DOCUMENT = /\.(pdf|docx|doc|png|jpe?g|webp)$/i;
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
@@ -223,8 +223,8 @@ const PdfConverterContent: React.FC = () => {
         try {
           setStatus(t.pdfConverter.savingToHistory);
           const docTitle =
-            uploadResponse.original_filename?.replace(/\.(pdf|docx|doc)$/i, "") ||
-            selectedFile.name.replace(/\.(pdf|docx|doc)$/i, "");
+            uploadResponse.original_filename?.replace(/\.(pdf|docx|doc|png|jpe?g|webp)$/i, "") ||
+            selectedFile.name.replace(/\.(pdf|docx|doc|png|jpe?g|webp)$/i, "");
           
           const savedDoc = await saveDocument({
             title: docTitle,
@@ -322,8 +322,8 @@ const PdfConverterContent: React.FC = () => {
           <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
             <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
               <Image
-               src="/logo.png"
-              alt="Buearau logo"
+               src="/true-quotation-logo.png"
+              alt="True Quotation logo"
                 width={140}
                 height={50}
                 className="object-contain"
@@ -340,7 +340,7 @@ const PdfConverterContent: React.FC = () => {
               </div>
               <Link 
                 href="/pages/CodePreview"
-                className="px-4 py-2 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-lg font-medium hover:from-[#B8A040] hover:to-[#A69035] transition-all shadow-md text-sm"
+                className="px-4 py-2 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-lg font-medium hover:from-[#3D6558] hover:to-[#3D6558] transition-all shadow-md text-sm"
               >
                 {isRTL ? 'فتح المحرر' : 'Open Editor'}
               </Link>
@@ -352,13 +352,13 @@ const PdfConverterContent: React.FC = () => {
       <div className="mx-auto flex min-h-[calc(100vh-100px)] w-full max-w-4xl flex-col items-center justify-center px-6 py-16">
         {/* Hero Section */}
         <div className="text-center mb-8">
-          <div className={`inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/10 rounded-full shadow-md border border-[#C4B454]/20 mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <Sparkles className="w-4 h-4 text-[#B8A040]" />
-            <span className="text-sm font-medium text-[#B8A040]">{t.home.aiPowered}</span>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4A7766]/10 to-[#3D6558]/10 rounded-full shadow-md border border-[#4A7766]/20 mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Sparkles className="w-4 h-4 text-[#3D6558]" />
+            <span className="text-sm font-medium text-[#3D6558]">{t.home.aiPowered}</span>
           </div>
           <h1 className="text-4xl font-bold mb-3">
             <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">{isRTL ? 'حوّل ' : 'Transform Your '}</span>
-            <span className="bg-gradient-to-r from-[#C4B454] to-[#B8A040] bg-clip-text text-transparent">{isRTL ? 'مستنداتك' : 'Documents'}</span>
+            <span className="bg-gradient-to-r from-[#4A7766] to-[#3D6558] bg-clip-text text-transparent">{isRTL ? 'مستنداتك' : 'Documents'}</span>
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
             {t.pdfConverter.uploadHero}
@@ -367,10 +367,10 @@ const PdfConverterContent: React.FC = () => {
 
         <form
           onSubmit={handleSubmit}
-          className="w-full rounded-2xl bg-white p-10 shadow-2xl ring-1 ring-gray-200 border-t-4 border-[#C4B454]"
+          className="w-full rounded-2xl bg-white p-10 shadow-2xl ring-1 ring-gray-200 border-t-4 border-[#4A7766]"
         >
           <div className={`flex items-center gap-3 mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <div className="p-3 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl text-white shadow-md">
+            <div className="p-3 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl text-white shadow-md">
               <Upload className="w-7 h-7" />
             </div>
             <div className={isRTL ? 'text-right' : 'text-left'}>
@@ -391,25 +391,25 @@ const PdfConverterContent: React.FC = () => {
               <div className="relative">
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/webp"
                   onChange={handleFileChange}
                   className="block w-full text-sm text-gray-700
                     file:mr-4 file:py-3 file:px-6
                     file:rounded-lg file:border-0
                     file:text-sm file:font-semibold
-                    file:bg-gradient-to-r file:from-[#C4B454] file:to-[#B8A040] file:text-white
-                    hover:file:from-[#B8A040] hover:file:to-[#A69035]
+                    file:bg-gradient-to-r file:from-[#4A7766] file:to-[#3D6558] file:text-white
+                    hover:file:from-[#3D6558] hover:file:to-[#3D6558]
                     file:cursor-pointer file:transition-all
                     cursor-pointer
                     border-2 border-dashed border-gray-300 rounded-xl
                     p-4 bg-gray-50
-                    hover:border-[#C4B454] hover:bg-[#C4B454]/5
-                    focus:outline-none focus:ring-2 focus:ring-[#C4B454] focus:border-transparent
+                    hover:border-[#4A7766] hover:bg-[#4A7766]/5
+                    focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-transparent
                     transition-all"
                 />
                 {selectedFile && (
-                  <div className="mt-3 flex items-center gap-2 text-sm text-gray-600 bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/5 p-3 rounded-lg border border-[#C4B454]/30">
-                    <CheckCircle className="w-5 h-5 text-[#B8A040]" />
+                  <div className="mt-3 flex items-center gap-2 text-sm text-gray-600 bg-gradient-to-r from-[#4A7766]/10 to-[#3D6558]/5 p-3 rounded-lg border border-[#4A7766]/30">
+                    <CheckCircle className="w-5 h-5 text-[#3D6558]" />
                     <span className="font-medium">{selectedFile.name}</span>
                     <span className="text-gray-500">
                       ({(selectedFile.size / 1024).toFixed(2)} KB)
@@ -432,15 +432,15 @@ const PdfConverterContent: React.FC = () => {
             )}
 
             {status && (
-              <div className="rounded-lg bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/5 border border-[#C4B454]/30 p-4">
+              <div className="rounded-lg bg-gradient-to-r from-[#4A7766]/10 to-[#3D6558]/5 border border-[#4A7766]/30 p-4">
                 <div className="flex items-center gap-3">
-                  <Loader2 className="w-5 h-5 text-[#B8A040] animate-spin shrink-0" />
+                  <Loader2 className="w-5 h-5 text-[#3D6558] animate-spin shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-900">{status}</p>
                     {uploadPercent !== null && (
-                      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#C4B454]/20">
+                      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#4A7766]/20">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-[#C4B454] to-[#B8A040] transition-[width] duration-300"
+                          className="h-full rounded-full bg-gradient-to-r from-[#4A7766] to-[#3D6558] transition-[width] duration-300"
                           style={{ width: `${uploadPercent}%` }}
                         />
                       </div>
@@ -456,7 +456,7 @@ const PdfConverterContent: React.FC = () => {
             <button
               type="submit"
               disabled={isProcessing}
-              className="w-full inline-flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-[#C4B454] to-[#B8A040] px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:from-[#B8A040] hover:to-[#A69035] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+              className="w-full inline-flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-[#4A7766] to-[#3D6558] px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:from-[#3D6558] hover:to-[#3D6558] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none transition-all transform hover:-translate-y-0.5 active:translate-y-0"
             >
               {isProcessing ? (
                 <>
@@ -474,9 +474,9 @@ const PdfConverterContent: React.FC = () => {
 
           {/* Company Info (if user has company) */}
           {user && (user.company_id || isSuperAdmin) && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/5 rounded-xl border border-[#C4B454]/30">
+            <div className="mt-6 p-4 bg-gradient-to-r from-[#4A7766]/10 to-[#3D6558]/5 rounded-xl border border-[#4A7766]/30">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-lg flex items-center justify-center">
                   <Building2 className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1">
@@ -501,8 +501,8 @@ const PdfConverterContent: React.FC = () => {
           <div className="mt-8 pt-6 border-t border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
               <div className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454]/20 to-[#B8A040]/20 rounded-full flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-[#B8A040]" />
+                <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766]/20 to-[#3D6558]/20 rounded-full flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-[#3D6558]" />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-900">{t.home.aiPowered}</p>
@@ -510,8 +510,8 @@ const PdfConverterContent: React.FC = () => {
                 </div>
               </div>
               <div className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454]/20 to-[#B8A040]/20 rounded-full flex items-center justify-center">
-                  <Eye className="w-5 h-5 text-[#B8A040]" />
+                <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766]/20 to-[#3D6558]/20 rounded-full flex items-center justify-center">
+                  <Eye className="w-5 h-5 text-[#3D6558]" />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-900">{t.pdfConverter.previewDocument}</p>
@@ -519,8 +519,8 @@ const PdfConverterContent: React.FC = () => {
                 </div>
               </div>
               <div className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#C4B454]/20 to-[#B8A040]/20 rounded-full flex items-center justify-center">
-                  <Download className="w-5 h-5 text-[#B8A040]" />
+                <div className="w-10 h-10 bg-gradient-to-br from-[#4A7766]/20 to-[#3D6558]/20 rounded-full flex items-center justify-center">
+                  <Download className="w-5 h-5 text-[#3D6558]" />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-900">{t.home.easyExport}</p>

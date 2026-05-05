@@ -177,15 +177,15 @@ function PlansContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50" dir={dir}>
+    <div className="min-h-screen bg-[#ECE7E2]" dir={dir}>
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm sticky top-0 z-50">
         <div className={`max-w-7xl mx-auto px-6 py-4 flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="flex items-center gap-4">
             <Link href="/">
               <Image
-             src="/logo.png"
-              alt="Buearau logo"
+             src="/true-quotation-logo.png"
+              alt="True Quotation logo"
                 width={140}
                 height={60}
                 className="object-contain cursor-pointer"
@@ -204,7 +204,7 @@ function PlansContent() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className={`flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-full flex items-center justify-center text-white font-semibold">
+                  <div className="w-8 h-8 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-full flex items-center justify-center text-white font-semibold">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <span className="text-sm font-medium text-gray-700">{user.name}</span>
@@ -244,7 +244,7 @@ function PlansContent() {
           {isSuperAdmin && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl font-bold hover:shadow-xl transition-all transform hover:scale-105 shadow-lg ${isRTL ? 'flex-row-reverse' : ''}`}
+              className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl font-bold hover:shadow-xl transition-all transform hover:scale-105 shadow-lg ${isRTL ? 'flex-row-reverse' : ''}`}
             >
               <Plus className="w-5 h-5" />
               {t.plans.addPlan}
@@ -267,19 +267,19 @@ function PlansContent() {
         {/* Plans List */}
         {isLoading ? (
           <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 text-[#C4B454] animate-spin mx-auto" />
+            <Loader2 className="w-8 h-8 text-[#4A7766] animate-spin mx-auto" />
             <p className="mt-2 text-black font-medium">Loading plans...</p>
           </div>
         ) : plans.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl shadow-xl border-2 border-dashed border-gray-300">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#C4B454]/20 to-[#B8A040]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-10 h-10 text-[#C4B454]" />
+            <div className="w-20 h-20 bg-gradient-to-br from-[#4A7766]/20 to-[#3D6558]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-10 h-10 text-[#4A7766]" />
             </div>
             <p className="text-black font-semibold text-lg mb-2">No plans found</p>
             {isSuperAdmin && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="mt-4 flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl font-bold hover:shadow-xl shadow-lg transition-all transform hover:scale-105 mx-auto"
+                className="mt-4 flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl font-bold hover:shadow-xl shadow-lg transition-all transform hover:scale-105 mx-auto"
               >
                 <Plus className="w-5 h-5" />
                 Create First Plan
@@ -292,8 +292,8 @@ function PlansContent() {
               <div
                 key={plan.id}
                 className={`bg-white rounded-2xl shadow-xl p-8 border-2 hover:shadow-2xl transition-all ${
-                  plan.is_active ? "border-[#C4B454]" : "border-gray-300 opacity-60"
-                } ${plan.is_trial ? "border-[#C4B454] bg-gradient-to-br from-[#C4B454]/5 to-[#B8A040]/5" : ""}`}
+                  plan.is_active ? "border-[#4A7766]" : "border-gray-300 opacity-60"
+                } ${plan.is_trial ? "border-[#4A7766] bg-gradient-to-br from-[#4A7766]/5 to-[#3D6558]/5" : ""}`}
               >
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex-1">
@@ -307,7 +307,7 @@ function PlansContent() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-3xl font-bold text-[#C4B454]">
+                      <span className="text-3xl font-bold text-[#4A7766]">
                         ${plan.price_monthly.toFixed(2)}
                       </span>
                       <span className="text-sm text-gray-700 font-medium">/month</span>
@@ -327,30 +327,30 @@ function PlansContent() {
                 </div>
 
                 <div className="space-y-3 mb-6">
-                  <div className="flex justify-between items-center bg-[#C4B454]/10 p-3 rounded-lg border border-[#C4B454]/30">
+                  <div className="flex justify-between items-center bg-[#4A7766]/10 p-3 rounded-lg border border-[#4A7766]/30">
                     <span className="text-black font-medium text-sm">Uploads/month:</span>
                     <span className="font-bold text-black text-base">
                       {plan.limits.uploads_per_month === 0 ? "∞ Unlimited" : plan.limits.uploads_per_month}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center bg-[#C4B454]/10 p-3 rounded-lg border border-[#C4B454]/30">
+                  <div className="flex justify-between items-center bg-[#4A7766]/10 p-3 rounded-lg border border-[#4A7766]/30">
                     <span className="text-black font-medium text-sm">Users:</span>
                     <span className="font-bold text-black text-base">{plan.limits.users_limit}</span>
                   </div>
-                  <div className="flex justify-between items-center bg-[#C4B454]/10 p-3 rounded-lg border border-[#C4B454]/30">
+                  <div className="flex justify-between items-center bg-[#4A7766]/10 p-3 rounded-lg border border-[#4A7766]/30">
                     <span className="text-black font-medium text-sm">Pages/month:</span>
                     <span className="font-bold text-black text-base">
                       {plan.limits.pages_per_month === 0 ? "∞ Unlimited" : plan.limits.pages_per_month}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center bg-[#C4B454]/10 p-3 rounded-lg border border-[#C4B454]/30">
+                  <div className="flex justify-between items-center bg-[#4A7766]/10 p-3 rounded-lg border border-[#4A7766]/30">
                     <span className="text-black font-medium text-sm">PDF Exports:</span>
                     <span className="font-bold text-black text-base">
                       {plan.limits.pdf_exports === 0 ? "∞ Unlimited" : plan.limits.pdf_exports}
                     </span>
                   </div>
                   {plan.is_trial && plan.duration_days && (
-                    <div className="flex justify-between items-center bg-[#C4B454]/10 p-3 rounded-lg border border-[#C4B454]/30">
+                    <div className="flex justify-between items-center bg-[#4A7766]/10 p-3 rounded-lg border border-[#4A7766]/30">
                       <span className="text-black font-medium text-sm">Duration:</span>
                       <span className="font-bold text-black text-base">{plan.duration_days} days</span>
                     </div>
@@ -366,7 +366,7 @@ function PlansContent() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => openEditModal(plan)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl hover:shadow-lg font-bold transition-all transform hover:scale-105"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl hover:shadow-lg font-bold transition-all transform hover:scale-105"
                     >
                       <Edit className="w-4 h-4" />
                       Edit
@@ -389,9 +389,9 @@ function PlansContent() {
       {/* Create/Edit Modal (Super Admin only) */}
       {isSuperAdmin && (showCreateModal || editingPlan) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 my-8 border-2 border-[#C4B454]">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 my-8 border-2 border-[#4A7766]">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center shadow-lg">
                 <FileText className="w-6 h-6 text-white" />
               </div>
               <h2 className="text-3xl font-bold text-black">
@@ -408,7 +408,7 @@ function PlansContent() {
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#C4B454]/30 focus:border-[#C4B454] font-medium"
+                  className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#4A7766]/30 focus:border-[#4A7766] font-medium"
                   placeholder="Enter plan name"
                 />
               </div>
@@ -423,7 +423,7 @@ function PlansContent() {
                     step="0.01"
                     value={formPrice}
                     onChange={(e) => setFormPrice(parseFloat(e.target.value) || 0)}
-                    className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#C4B454]/30 focus:border-[#C4B454] font-medium"
+                    className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#4A7766]/30 focus:border-[#4A7766] font-medium"
                   />
                 </div>
                 <div>
@@ -434,20 +434,20 @@ function PlansContent() {
                     type="number"
                     value={formDurationDays || ""}
                     onChange={(e) => setFormDurationDays(e.target.value ? parseInt(e.target.value) : null)}
-                    className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#C4B454]/30 focus:border-[#C4B454] font-medium"
+                    className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#4A7766]/30 focus:border-[#4A7766] font-medium"
                     placeholder="Optional"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center gap-6 bg-[#C4B454]/10 p-4 rounded-xl border border-[#C4B454]/30">
+              <div className="flex items-center gap-6 bg-[#4A7766]/10 p-4 rounded-xl border border-[#4A7766]/30">
                 <div className="flex items-center gap-3">
                   <input
                     type="checkbox"
                     id="isTrial"
                     checked={formIsTrial}
                     onChange={(e) => setFormIsTrial(e.target.checked)}
-                    className="w-5 h-5 text-[#C4B454] border-gray-300 rounded focus:ring-[#C4B454]"
+                    className="w-5 h-5 text-[#4A7766] border-gray-300 rounded focus:ring-[#4A7766]"
                   />
                   <label htmlFor="isTrial" className="flex items-center gap-2 text-sm font-bold text-black">
                     <Target className="w-4 h-4" />
@@ -460,7 +460,7 @@ function PlansContent() {
                     id="isActive"
                     checked={formIsActive}
                     onChange={(e) => setFormIsActive(e.target.checked)}
-                    className="w-5 h-5 text-[#C4B454] border-gray-300 rounded focus:ring-[#C4B454]"
+                    className="w-5 h-5 text-[#4A7766] border-gray-300 rounded focus:ring-[#4A7766]"
                   />
                   <label htmlFor="isActive" className="flex items-center gap-2 text-sm font-bold text-black">
                     <Check className="w-4 h-4" />
@@ -469,7 +469,7 @@ function PlansContent() {
                 </div>
               </div>
 
-              <div className="border-t-2 border-[#C4B454]/30 pt-6">
+              <div className="border-t-2 border-[#4A7766]/30 pt-6">
                 <h3 className="text-xl font-bold text-black mb-4 flex items-center gap-2">
                   <TrendingUp className="w-6 h-6" />
                   Plan Limits
@@ -485,7 +485,7 @@ function PlansContent() {
                       onChange={(e) =>
                         setFormLimits({ ...formLimits, uploads_per_month: parseInt(e.target.value) || 0 })
                       }
-                      className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#C4B454]/30 focus:border-[#C4B454] font-medium"
+                      className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#4A7766]/30 focus:border-[#4A7766] font-medium"
                     />
                   </div>
                   <div>
@@ -498,7 +498,7 @@ function PlansContent() {
                       onChange={(e) =>
                         setFormLimits({ ...formLimits, users_limit: parseInt(e.target.value) || 1 })
                       }
-                      className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#C4B454]/30 focus:border-[#C4B454] font-medium"
+                      className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#4A7766]/30 focus:border-[#4A7766] font-medium"
                     />
                   </div>
                   <div>
@@ -511,7 +511,7 @@ function PlansContent() {
                       onChange={(e) =>
                         setFormLimits({ ...formLimits, pages_per_month: parseInt(e.target.value) || 0 })
                       }
-                      className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#C4B454]/30 focus:border-[#C4B454] font-medium"
+                      className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#4A7766]/30 focus:border-[#4A7766] font-medium"
                     />
                   </div>
                   <div>
@@ -524,13 +524,13 @@ function PlansContent() {
                       onChange={(e) =>
                         setFormLimits({ ...formLimits, pdf_exports: parseInt(e.target.value) || 0 })
                       }
-                      className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#C4B454]/30 focus:border-[#C4B454] font-medium"
+                      className="w-full px-4 py-3 text-black border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#4A7766]/30 focus:border-[#4A7766] font-medium"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-6 border-t-2 border-[#C4B454]/30">
+              <div className="flex gap-3 pt-6 border-t-2 border-[#4A7766]/30">
                 <button
                   onClick={closeModal}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-black rounded-xl font-bold hover:bg-gray-200 border-2 border-gray-300 transition-all"
@@ -541,7 +541,7 @@ function PlansContent() {
                 <button
                   onClick={editingPlan ? handleUpdate : handleCreate}
                   disabled={isSubmitting}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl font-bold hover:shadow-xl disabled:opacity-50 shadow-lg transition-all transform hover:scale-105"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl font-bold hover:shadow-xl disabled:opacity-50 shadow-lg transition-all transform hover:scale-105"
                 >
                   {isSubmitting ? (
                     <>

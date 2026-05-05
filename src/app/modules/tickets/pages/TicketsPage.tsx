@@ -119,7 +119,7 @@ function TicketsPageContent() {
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 ${dir === "rtl" ? "rtl" : "ltr"}`} dir={dir}>
+    <div className={`min-h-screen bg-[#ECE7E2] ${dir === "rtl" ? "rtl" : "ltr"}`} dir={dir}>
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
@@ -159,7 +159,7 @@ function TicketsPageContent() {
               <LanguageToggle />
               <Link
                 href="/pages/Tickets/new"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white px-5 py-2.5 rounded-xl hover:from-[#B8A040] hover:to-[#A69035] transition-all shadow-md hover:shadow-lg font-medium"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white px-5 py-2.5 rounded-xl hover:from-[#3D6558] hover:to-[#3D6558] transition-all shadow-md hover:shadow-lg font-medium"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -187,14 +187,14 @@ function TicketsPageContent() {
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
             <div className="group bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 rounded-lg">
-                  <svg className="w-5 h-5 text-[#B8A040]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="p-2 bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 rounded-lg">
+                  <svg className="w-5 h-5 text-[#3D6558]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
-                <div className="text-3xl font-bold bg-gradient-to-r from-[#C4B454] to-[#B8A040] bg-clip-text text-transparent">{stats.total}</div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-[#4A7766] to-[#3D6558] bg-clip-text text-transparent">{stats.total}</div>
               </div>
               <div className="text-sm font-medium text-gray-600">
                 {language === "ar" ? "إجمالي التذاكر" : "Total Tickets"}
@@ -254,7 +254,7 @@ function TicketsPageContent() {
         {/* Filters */}
         <div className="bg-white rounded-2xl shadow-lg text-black border border-gray-200 p-6 mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <svg className="w-5 h-5 text-[#B8A040]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-[#3D6558]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
             <h3 className="text-lg font-semibold text-gray-900">
@@ -339,7 +339,7 @@ function TicketsPageContent() {
                     setPriorityFilter("");
                     setPage(1);
                   }}
-                  className="px-4 py-2 text-sm font-medium text-[#B8A040] hover:text-[#A69035] border border-[#C4B454] rounded-lg hover:bg-[#C4B454]/5 transition-all"
+                  className="px-4 py-2 text-sm font-medium text-[#3D6558] hover:text-[#3D6558] border border-[#4A7766] rounded-lg hover:bg-[#4A7766]/5 transition-all"
                 >
                   {language === "ar" ? "مسح الفلاتر" : "Clear Filters"}
                 </button>
@@ -359,14 +359,14 @@ function TicketsPageContent() {
           </div>
         ) : tickets.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-16 text-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="w-10 h-10 text-[#B8A040]"
+                className="w-10 h-10 text-[#3D6558]"
               >
                 <path
                   strokeLinecap="round"
@@ -385,7 +385,7 @@ function TicketsPageContent() {
             </p>
             <Link
               href="/pages/Tickets/new"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white px-6 py-3 rounded-xl hover:from-[#B8A040] hover:to-[#A69035] transition-all shadow-lg hover:shadow-xl font-medium"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white px-6 py-3 rounded-xl hover:from-[#3D6558] hover:to-[#3D6558] transition-all shadow-lg hover:shadow-xl font-medium"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -512,17 +512,17 @@ function TicketsPageContent() {
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#C4B454] hover:bg-[#C4B454]/5 transition-all"
+                    className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#4A7766] hover:bg-[#4A7766]/5 transition-all"
                   >
                     {language === "ar" ? "السابق" : "Previous"}
                   </button>
-                  <span className="text-sm font-semibold text-gray-900 px-4 py-2 bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/10 rounded-lg">
+                  <span className="text-sm font-semibold text-gray-900 px-4 py-2 bg-gradient-to-r from-[#4A7766]/10 to-[#3D6558]/10 rounded-lg">
                     {page} / {totalPages}
                   </span>
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#C4B454] hover:bg-[#C4B454]/5 transition-all"
+                    className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#4A7766] hover:bg-[#4A7766]/5 transition-all"
                   >
                     {language === "ar" ? "التالي" : "Next"}
                   </button>

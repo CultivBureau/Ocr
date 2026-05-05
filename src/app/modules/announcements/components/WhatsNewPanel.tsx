@@ -106,7 +106,7 @@ export default function WhatsNewPanel({
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className="relative shrink-0 overflow-hidden">
           {/* Background gradient */}
-          <div className="absolute inset-0 bg-linear-to-br from-[#7cb518] via-[#A4C639] to-emerald-400 opacity-95" />
+          <div className="absolute inset-0 bg-linear-to-br from-[#7cb518] via-[#4A7766] to-emerald-400 opacity-95" />
           {/* Decorative circles */}
           <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-white/10" />
           <div className="absolute -bottom-6 -left-6 w-28 h-28 rounded-full bg-white/10" />
@@ -133,7 +133,7 @@ export default function WhatsNewPanel({
               </div>
               <div>
                 <h2 className="text-lg font-bold text-white leading-tight">What&apos;s New</h2>
-                <p className="text-xs text-white/75">Bureau OCR · Release notes</p>
+                <p className="text-xs text-white/75">True Quotation · Release notes</p>
               </div>
             </div>
 
@@ -185,10 +185,10 @@ export default function WhatsNewPanel({
         {/* ── Footer ───────────────────────────────────────────────────── */}
         <div className="shrink-0 px-5 py-3 border-t border-gray-100 bg-gray-50/80 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-[#A4C639] animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-[#4A7766] animate-pulse" />
             <p className="text-[11px] text-gray-400 font-medium">Live updates enabled</p>
           </div>
-          <p className="text-[11px] text-gray-300">Bureau OCR</p>
+          <p className="text-[11px] text-gray-300">True Quotation</p>
         </div>
       </div>
     </>
@@ -215,13 +215,13 @@ function AnnouncementCard({
     <article
       className={`relative rounded-2xl border transition-all duration-200 hover:shadow-md overflow-hidden
         ${isUnread
-          ? "bg-white border-[#A4C639]/25 shadow-sm ring-1 ring-[#A4C639]/15"
+          ? "bg-white border-[#4A7766]/25 shadow-sm ring-1 ring-[#4A7766]/15"
           : "bg-gray-50/60 border-gray-100"
         }`}
     >
       {/* Unread left accent bar */}
       {isUnread && (
-        <span className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-[#A4C639] to-emerald-400 block rounded-l-2xl" />
+        <span className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-[#4A7766] to-emerald-400 block rounded-l-2xl" />
       )}
 
       {/* Draft badge (superadmin only) */}
@@ -241,8 +241,8 @@ function AnnouncementCard({
             {icon} {label}
           </span>
           {isUnread && (
-            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-[#A4C639] uppercase tracking-widest">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#A4C639] animate-pulse" />
+            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-[#4A7766] uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#4A7766] animate-pulse" />
               New
             </span>
           )}
@@ -304,8 +304,8 @@ function LoadingSkeleton() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full py-20 px-6 text-center">
-      <div className="w-20 h-20 rounded-3xl bg-linear-to-br from-[#A4C639]/20 to-emerald-100 flex items-center justify-center mb-5 shadow-inner">
-        <svg className="w-10 h-10 text-[#A4C639]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <div className="w-20 h-20 rounded-3xl bg-linear-to-br from-[#4A7766]/20 to-emerald-100 flex items-center justify-center mb-5 shadow-inner">
+        <svg className="w-10 h-10 text-[#4A7766]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
       </div>

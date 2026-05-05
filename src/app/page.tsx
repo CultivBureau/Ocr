@@ -124,14 +124,14 @@ function HomeContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50" dir={dir}>
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #ECE7E2 0%, #f5f2ee 50%, #ECE7E2 100%)' }} dir={dir}>
       {/* Header with Logo */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Image
-              src="/logo.png"
-              alt="Buearau logo"
+              src="/true-quotation-logo.png"
+              alt="True Quotation logo"
               width={140}
               height={50}
               className="object-contain"
@@ -154,7 +154,7 @@ function HomeContent() {
                 <Clock className="w-5 h-5 text-gray-700" />
                 <span className="text-sm font-semibold text-gray-700 hidden sm:inline">{t.home.history}</span>
                 {historyTotal > 0 && (
-                  <span className={`absolute -top-1 ${isRTL ? '-left-1' : '-right-1'} w-5 h-5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-bold rounded-full flex items-center justify-center`}>
+                  <span className={`absolute -top-1 ${isRTL ? '-left-1' : '-right-1'} w-5 h-5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white text-xs font-bold rounded-full flex items-center justify-center`}>
                     {historyTotal > 99 ? '99+' : historyTotal}
                   </span>
                 )}
@@ -166,7 +166,7 @@ function HomeContent() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-full flex items-center justify-center text-white font-semibold">
+                  <div className="w-8 h-8 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-full flex items-center justify-center text-white font-semibold">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex flex-col items-start">
@@ -253,7 +253,7 @@ function HomeContent() {
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         <span className="flex items-center gap-2">
-                          <Zap className="w-4 h-4 text-[#A4C639]" />
+                          <Zap className="w-4 h-4 text-[#4A7766]" />
                           Manage What&apos;s New
                         </span>
                       </Link>
@@ -270,7 +270,7 @@ function HomeContent() {
             ) : (
               <Link
                 href="/pages/Login"
-                className="px-4 py-2 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-lg font-medium hover:from-[#B8A040] hover:to-[#A69035] transition-all shadow-md hover:shadow-lg"
+                className="px-4 py-2 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-lg font-medium hover:from-[#3D6558] hover:to-[#3D6558] transition-all shadow-md hover:shadow-lg"
               >
                 {t.common.login}
               </Link>
@@ -284,13 +284,13 @@ function HomeContent() {
         <div className="w-full max-w-5xl">
           {/* Welcome Section */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#C4B454]/10 to-[#B8A040]/10 rounded-full border border-[#C4B454]/20 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4A7766]/10 to-[#3D6558]/10 rounded-full border border-[#4A7766]/20 mb-6">
               <span className="text-2xl">✨</span>
-              <span className="text-sm font-bold text-[#B8A040]">{t.home.professionalTemplateStudio}</span>
+              <span className="text-sm font-bold text-[#3D6558]">{t.home.professionalTemplateStudio}</span>
             </div>
             <h1 className="text-5xl font-extrabold mb-4">
               <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">{t.home.welcomeTo} </span>
-              <span className="bg-gradient-to-r from-[#C4B454] to-[#B8A040] bg-clip-text text-transparent">{t.home.bureauOCR}</span>
+              <span className="bg-gradient-to-r from-[#4A7766] to-[#3D6558] bg-clip-text text-transparent">{t.home.bureauOCR}</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
               {t.home.subtitle}
@@ -299,7 +299,7 @@ function HomeContent() {
 
           {/* Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden cursor-pointer"
+            <div className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#4A7766] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#4A7766]/50 relative overflow-hidden cursor-pointer"
               onClick={() => {
                 const input = document.createElement('input');
                 input.type = 'file';
@@ -324,10 +324,10 @@ function HomeContent() {
                 input.click();
               }}
             >
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
               <div className="flex flex-col h-full">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                  <div className="p-4 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                     <FileStack className="w-8 h-8" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900">{t.home.uploadJson}</h2>
@@ -335,7 +335,7 @@ function HomeContent() {
                 <p className="text-gray-600 mb-4 grow leading-relaxed">
                   {t.home.uploadJsonDesc}
                 </p>
-                <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                <div className="flex items-center text-[#3D6558] font-bold group-hover:gap-3 transition-all">
                   <span>{t.home.uploadFile}</span>
                   <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
                 </div>
@@ -344,12 +344,12 @@ function HomeContent() {
 
             <Link
               href="/pages/PdfConverter"
-              className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden"
+              className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#4A7766] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#4A7766]/50 relative overflow-hidden"
             >
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
               <div className="flex flex-col h-full">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                  <div className="p-4 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                     <Upload className="w-8 h-8" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900">{t.home.pdfUpload}</h2>
@@ -357,7 +357,7 @@ function HomeContent() {
                 <p className="text-gray-600 mb-4 grow leading-relaxed">
                   {t.home.pdfUploadDesc}
                 </p>
-                <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                <div className="flex items-center text-[#3D6558] font-bold group-hover:gap-3 transition-all">
                   <span>{t.home.uploadDocument}</span>
                   <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
                 </div>
@@ -374,12 +374,12 @@ function HomeContent() {
                   handleCreateBlankDocument();
                 }
               }}
-              className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden cursor-pointer"
+              className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#4A7766] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#4A7766]/50 relative overflow-hidden cursor-pointer"
             >
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
               <div className="flex flex-col h-full">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                  <div className="p-4 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                     <FilePlus className="w-8 h-8" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900">{t.home.blankDocument}</h2>
@@ -387,7 +387,7 @@ function HomeContent() {
                 <p className="text-gray-600 mb-4 grow leading-relaxed">
                   {t.home.blankDocumentDesc}
                 </p>
-                <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                <div className="flex items-center text-[#3D6558] font-bold group-hover:gap-3 transition-all">
                   <span>{t.home.startBlankDocument}</span>
                   <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
                 </div>
@@ -397,12 +397,12 @@ function HomeContent() {
             {user && (
               <Link
                 href="/pages/History"
-                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden"
+                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#4A7766] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#4A7766]/50 relative overflow-hidden"
               >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
                 <div className="flex flex-col h-full">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <div className="p-4 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                       <Clock className="w-8 h-8" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900">
@@ -416,7 +416,7 @@ function HomeContent() {
                       ? t.home.companyDocumentsDesc
                       : t.home.myDocumentsDesc}
                   </p>
-                  <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                  <div className="flex items-center text-[#3D6558] font-bold group-hover:gap-3 transition-all">
                     <span>{t.home.viewDocuments}</span>
                     <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
                   </div>
@@ -428,18 +428,18 @@ function HomeContent() {
               <>
                 <Link
                   href="/pages/Companies"
-                  className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden"
+                  className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#4A7766] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#4A7766]/50 relative overflow-hidden"
                 >
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
                   <div className="flex flex-col h-full">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                      <div className="p-4 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                         <Building2 className="w-8 h-8" />
                       </div>
                       <h2 className="text-2xl font-bold text-gray-900">{t.home.companies}</h2>
                     </div>
                     <div className="mb-4">
-                      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-bold rounded-full mb-3 shadow-md">
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white text-xs font-bold rounded-full mb-3 shadow-md">
                         <Shield className="w-3 h-3" />
                         {t.home.superAdminOnly}
                       </span>
@@ -447,7 +447,7 @@ function HomeContent() {
                         {t.home.manageCompaniesDesc}
                       </p>
                     </div>
-                    <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                    <div className="flex items-center text-[#3D6558] font-bold group-hover:gap-3 transition-all">
                       <span>{t.home.manageCompanies}</span>
                       <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
                     </div>
@@ -456,18 +456,18 @@ function HomeContent() {
                 {isSuperAdmin && (
                   <Link
                     href="/pages/CompanyDetails"
-                    className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden"
+                    className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#4A7766] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#4A7766]/50 relative overflow-hidden"
                   >
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
                     <div className="flex flex-col h-full">
                       <div className="flex items-center gap-3 mb-4">
-                        <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                        <div className="p-4 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                           <FileText className="w-8 h-8" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900">{t.home.companyDetails}</h2>
                       </div>
                       <div className="mb-4">
-                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-bold rounded-full mb-3 shadow-md">
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white text-xs font-bold rounded-full mb-3 shadow-md">
                           <Shield className="w-3 h-3" />
                           {t.home.superAdminOnly}
                         </span>
@@ -475,7 +475,7 @@ function HomeContent() {
                           {t.home.viewDetailsDesc}
                         </p>
                       </div>
-                      <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                      <div className="flex items-center text-[#3D6558] font-bold group-hover:gap-3 transition-all">
                         <span>{t.home.viewDetails}</span>
                         <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
                       </div>
@@ -488,12 +488,12 @@ function HomeContent() {
             {canManagePlans && (
               <Link
                 href="/pages/Plans"
-                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden"
+                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#4A7766] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#4A7766]/50 relative overflow-hidden"
               >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
                 <div className="flex flex-col h-full">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <div className="p-4 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                       <Shield className="w-8 h-8" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900">{t.home.plans}</h2>
@@ -501,7 +501,7 @@ function HomeContent() {
                   <p className="text-gray-600 mb-4 grow leading-relaxed">
                     {t.home.managePlansDesc}
                   </p>
-                  <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                  <div className="flex items-center text-[#3D6558] font-bold group-hover:gap-3 transition-all">
                     <span>{t.home.managePlans}</span>
                     <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
                   </div>
@@ -512,12 +512,12 @@ function HomeContent() {
             {canManageUsers && (
               <Link
                 href="/pages/UserManagement"
-                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden"
+                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#4A7766] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#4A7766]/50 relative overflow-hidden"
               >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
                 <div className="flex flex-col h-full">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <div className="p-4 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
                       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                       </svg>
@@ -525,7 +525,7 @@ function HomeContent() {
                     <h2 className="text-2xl font-bold text-gray-900">{t.home.userManagement}</h2>
                   </div>
                   <div className="mb-4">
-                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-bold rounded-full mb-3 shadow-md">
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white text-xs font-bold rounded-full mb-3 shadow-md">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                       </svg>
@@ -535,7 +535,7 @@ function HomeContent() {
                       {t.home.manageUsersDesc}
                     </p>
                   </div>
-                  <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                  <div className="flex items-center text-[#3D6558] font-bold group-hover:gap-3 transition-all">
                     <span>{t.home.manageUsers}</span>
                     <svg className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -548,12 +548,12 @@ function HomeContent() {
             {canManageCompanySettings && !isSuperAdmin && (
               <Link
                 href="/pages/CompanySettings"
-                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden"
+                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#4A7766] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#4A7766]/50 relative overflow-hidden"
               >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
                 <div className="flex flex-col h-full">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <div className="p-4 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                       <Settings className="w-8 h-8" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900">{t.home.companySettingsCard}</h2>
@@ -561,7 +561,7 @@ function HomeContent() {
                   <p className="text-gray-600 mb-4 grow leading-relaxed">
                     {t.home.companySettingsDesc}
                   </p>
-                  <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                  <div className="flex items-center text-[#3D6558] font-bold group-hover:gap-3 transition-all">
                     <span>{t.home.viewSettings}</span>
                     <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
                   </div>
@@ -573,12 +573,12 @@ function HomeContent() {
             {user && !isSuperAdmin && (
               <Link
                 href="/pages/Tickets"
-                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden"
+                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#4A7766] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#4A7766]/50 relative overflow-hidden"
               >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
                 <div className="flex flex-col h-full">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <div className="p-4 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                       <LifeBuoy className="w-8 h-8" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900">{t.home.supportTickets}</h2>
@@ -586,7 +586,7 @@ function HomeContent() {
                   <p className="text-gray-600 mb-4 grow leading-relaxed">
                     {t.home.supportTicketsDesc}
                   </p>
-                  <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                  <div className="flex items-center text-[#3D6558] font-bold group-hover:gap-3 transition-all">
                     <span>{t.home.submitTicket}</span>
                     <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
                   </div>
@@ -598,18 +598,18 @@ function HomeContent() {
             {isSuperAdmin && (
               <Link
                 href="/pages/Tickets/admin"
-                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#C4B454] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#C4B454]/50 relative overflow-hidden"
+                className="group block rounded-3xl border-2 border-gray-200 bg-white p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-[#4A7766] hover:-translate-y-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#4A7766]/50 relative overflow-hidden"
               >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#C4B454] to-[#B8A040]"></div>
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A7766] to-[#3D6558]"></div>
                 <div className="flex flex-col h-full">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="p-4 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <div className="p-4 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                       <LifeBuoy className="w-8 h-8" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900">{t.home.ticketManagement}</h2>
                   </div>
                   <div className="mb-4">
-                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-bold rounded-full mb-3 shadow-md">
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white text-xs font-bold rounded-full mb-3 shadow-md">
                       <Shield className="w-3 h-3" />
                       {t.home.superAdminOnly}
                     </span>
@@ -617,7 +617,7 @@ function HomeContent() {
                       {t.home.ticketManagementDesc}
                     </p>
                   </div>
-                  <div className="flex items-center text-[#B8A040] font-bold group-hover:gap-3 transition-all">
+                  <div className="flex items-center text-[#3D6558] font-bold group-hover:gap-3 transition-all">
                     <span>{t.home.manageTickets}</span>
                     <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
                   </div>
@@ -629,21 +629,21 @@ function HomeContent() {
           {/* Features Section */}
           <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center p-8 bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <Zap className="w-8 h-8 text-white" />
               </div>
               <h3 className="font-bold text-gray-900 mb-2 text-lg">{t.home.fastEfficient}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{t.home.fastEfficientDesc}</p>
             </div>
             <div className="text-center p-8 bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <Eye className="w-8 h-8 text-white" />
               </div>
               <h3 className="font-bold text-gray-900 mb-2 text-lg">{t.home.livePreview}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{t.home.livePreviewDesc}</p>
             </div>
             <div className="text-center p-8 bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <Download className="w-8 h-8 text-white" />
               </div>
               <h3 className="font-bold text-gray-900 mb-2 text-lg">{t.home.easyExport}</h3>
@@ -658,8 +658,8 @@ function HomeContent() {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
             <Image
-              src="/logo.png"
-              alt="Bureau OCR"
+              src="/true-quotation-logo.png"
+              alt="True Quotation logo"
               width={140}
               height={50}
               className="object-contain opacity-75"

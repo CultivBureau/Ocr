@@ -50,7 +50,7 @@ const LanguageToggle: React.FC<LanguageToggleProps> = ({
           {language === "en" ? "EN" : "عربي"}
         </span>
         <div className={`w-10 h-5 rounded-full relative transition-colors duration-200 ${
-          language === "ar" ? "bg-gradient-to-r from-[#C4B454] to-[#B8A040]" : "bg-gray-300"
+          language === "ar" ? "bg-gradient-to-r from-[#4A7766] to-[#3D6558]" : "bg-gray-300"
         }`}>
           <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
             language === "ar" ? (isRTL ? "left-0.5" : "right-0.5 translate-x-0") : (isRTL ? "right-0.5" : "left-0.5")

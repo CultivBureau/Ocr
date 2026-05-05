@@ -207,7 +207,7 @@ function TicketDetailContent() {
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 ${dir === "rtl" ? "rtl" : "ltr"}`} dir={dir}>
+    <div className={`min-h-screen bg-[#ECE7E2] ${dir === "rtl" ? "rtl" : "ltr"}`} dir={dir}>
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
@@ -244,7 +244,7 @@ function TicketDetailContent() {
               {canUpdateTicket && (
                 <button
                   onClick={() => setShowAdminPanel(!showAdminPanel)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl hover:from-[#B8A040] hover:to-[#A69035] transition-all shadow-md hover:shadow-lg font-medium"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl hover:from-[#3D6558] hover:to-[#3D6558] transition-all shadow-md hover:shadow-lg font-medium"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -260,9 +260,9 @@ function TicketDetailContent() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Admin Panel */}
         {canUpdateTicket && showAdminPanel && (
-          <div className="bg-gradient-to-br text-black from-[#C4B454]/5 to-[#B8A040]/5 border-2 border-[#C4B454] rounded-2xl p-6 shadow-xl">
+          <div className="bg-gradient-to-br text-black from-[#4A7766]/5 to-[#3D6558]/5 border-2 border-[#4A7766] rounded-2xl p-6 shadow-xl">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-lg">
+              <div className="p-2 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-lg">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
@@ -280,7 +280,7 @@ function TicketDetailContent() {
                   <select
                     value={adminStatus}
                     onChange={(e) => setAdminStatus(e.target.value as TicketStatus)}
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C4B454] focus:border-[#C4B454] transition-all"
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-[#4A7766] transition-all"
                   >
                     {Object.keys(TICKET_STATUS_LABELS).map((status) => (
                       <option key={status} value={status}>
@@ -296,7 +296,7 @@ function TicketDetailContent() {
                   <select
                     value={adminPriority}
                     onChange={(e) => setAdminPriority(e.target.value as TicketPriority)}
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C4B454] focus:border-[#C4B454] transition-all"
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-[#4A7766] transition-all"
                   >
                     {Object.keys(TICKET_PRIORITY_LABELS).map((priority) => (
                       <option key={priority} value={priority}>
@@ -314,7 +314,7 @@ function TicketDetailContent() {
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C4B454] focus:border-[#C4B454] transition-all"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-[#4A7766] transition-all"
                   placeholder={language === "ar" ? "ملاحظات داخلية..." : "Internal notes..."}
                 />
               </div>
@@ -326,7 +326,7 @@ function TicketDetailContent() {
                   value={solutionSummary}
                   onChange={(e) => setSolutionSummary(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C4B454] focus:border-[#C4B454] transition-all"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-[#4A7766] transition-all"
                   placeholder={
                     language === "ar"
                       ? "كيف تم حل المشكلة؟ (للاستخدام في تحسين AI)"
@@ -345,7 +345,7 @@ function TicketDetailContent() {
                 <button
                   type="submit"
                   disabled={isUpdating}
-                  className="px-8 py-2.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl font-medium hover:from-[#B8A040] hover:to-[#A69035] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-8 py-2.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl font-medium hover:from-[#3D6558] hover:to-[#3D6558] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isUpdating && (
                     <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -452,9 +452,9 @@ function TicketDetailContent() {
 
           {/* Admin Notes (if exists) */}
           {ticket.admin_notes && (
-            <div className="mt-6 bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 rounded-xl p-6 border-2 border-[#C4B454]">
+            <div className="mt-6 bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 rounded-xl p-6 border-2 border-[#4A7766]">
               <div className="flex items-center gap-2 mb-3">
-                <svg className="w-5 h-5 text-[#B8A040]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-[#3D6558]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
@@ -482,7 +482,7 @@ function TicketDetailContent() {
             {ticket.attachments.map((att, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-[#C4B454] hover:shadow-md transition-all group"
+                className="flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-[#4A7766] hover:shadow-md transition-all group"
               >
                 <div className="flex items-center gap-4">
                   {att.file_type === "screenshot" ? (
@@ -519,7 +519,7 @@ function TicketDetailContent() {
                 </div>
                 <button
                   onClick={() => handleDownloadAttachment(att.filename, att.original_filename)}
-                  className="p-2.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white hover:from-[#B8A040] hover:to-[#A69035] rounded-lg transition-all shadow-sm hover:shadow-md"
+                  className="p-2.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white hover:from-[#3D6558] hover:to-[#3D6558] rounded-lg transition-all shadow-sm hover:shadow-md"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -551,7 +551,7 @@ function TicketDetailContent() {
                   key={comment.id}
                   className={`p-5 rounded-xl border-2 ${
                     comment.user_role === "superadmin" || comment.user_role === "company_admin"
-                      ? "bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 border-[#C4B454]"
+                      ? "bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 border-[#4A7766]"
                       : "bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200"
                   }`}
                 >
@@ -561,7 +561,7 @@ function TicketDetailContent() {
                         {comment.user_email}
                       </span>
                       {(comment.user_role === "superadmin" || comment.user_role === "company_admin") && (
-                        <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white shadow-sm">
+                        <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white shadow-sm">
                           {language === "ar" ? "مدير" : "Admin"}
                         </span>
                       )}
@@ -599,13 +599,13 @@ function TicketDetailContent() {
                   : "Write your comment here..."
               }
               rows={3}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C4B454] focus:border-[#C4B454] resize-none transition-all"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A7766] focus:border-[#4A7766] resize-none transition-all"
             />
             <div className="flex justify-end mt-4">
               <button
                 type="submit"
                 disabled={!newComment.trim() || isSubmittingComment}
-                className="px-8 py-2.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl font-medium hover:from-[#B8A040] hover:to-[#A69035] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-8 py-2.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl font-medium hover:from-[#3D6558] hover:to-[#3D6558] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSubmittingComment && (
                   <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

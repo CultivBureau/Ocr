@@ -13,6 +13,7 @@ export default function HistorySidebar() {
   const { isAuthenticated } = useAuth();
   const {
     isSidebarOpen,
+    isSidebarTemporarilyHidden,
     toggleSidebar,
     documents,
     total,
@@ -33,7 +34,7 @@ export default function HistorySidebar() {
   // Hide sidebar on login page
   const isLoginPage = pathname?.includes("/Login");
   const isPdfPage = pathname?.startsWith("/pdf/");
-  const shouldShow = isAuthenticated && !isLoginPage && !isPdfPage;
+  const shouldShow = isAuthenticated && !isLoginPage && !isPdfPage && !isSidebarTemporarilyHidden;
   
   // Debounce search
   useEffect(() => {
@@ -81,23 +82,23 @@ export default function HistorySidebar() {
         }`}
       >
         {/* Header */}
-        <div className="h-16 border-b border-gray-200 flex items-center justify-between px-4 bg-gradient-to-r from-[#C4B454]/5 to-[#B8A040]/5">
+        <div className="h-16 border-b border-gray-200 flex items-center justify-between px-4 bg-gradient-to-r from-[#4A7766]/5 to-[#3D6558]/5">
           {isSidebarOpen ? (
             <div className="flex items-center gap-2 flex-1">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-lg flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <h2 className="font-bold text-gray-900">History</h2>
               {total > 0 && (
-                <span className="ml-auto px-2 py-0.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white text-xs font-bold rounded-full">
+                <span className="ml-auto px-2 py-0.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white text-xs font-bold rounded-full">
                   {total > 999 ? "999+" : total}
                 </span>
               )}
             </div>
           ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-lg flex items-center justify-center mx-auto">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-lg flex items-center justify-center mx-auto">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -130,7 +131,7 @@ export default function HistorySidebar() {
                   value={localSearch}
                   onChange={(e) => setLocalSearch(e.target.value)}
                   placeholder="Search documents..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#C4B454]/20 focus:border-[#C4B454] focus:bg-white transition-all duration-200 text-sm"
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-[#4A7766]/20 focus:border-[#4A7766] focus:bg-white transition-all duration-200 text-sm"
                 />
                 <svg
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
@@ -154,7 +155,7 @@ export default function HistorySidebar() {
                 onClick={() => handleFilterChange("all")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   filterType === "all"
-                    ? "bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white shadow-md"
+                    ? "bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white shadow-md"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
@@ -164,7 +165,7 @@ export default function HistorySidebar() {
                 onClick={() => handleFilterChange("recent")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   filterType === "recent"
-                    ? "bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white shadow-md"
+                    ? "bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white shadow-md"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
@@ -174,7 +175,7 @@ export default function HistorySidebar() {
                 onClick={() => handleFilterChange("favorites")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
                   filterType === "favorites"
-                    ? "bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white shadow-md"
+                    ? "bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white shadow-md"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
@@ -187,7 +188,7 @@ export default function HistorySidebar() {
                 onClick={() => handleFilterChange("shared")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   filterType === "shared"
-                    ? "bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white shadow-md"
+                    ? "bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white shadow-md"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
@@ -200,7 +201,7 @@ export default function HistorySidebar() {
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C4B454]"></div>
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#4A7766]"></div>
                     <p className="mt-2 text-xs text-gray-500">Loading...</p>
                   </div>
                 </div>
@@ -225,7 +226,7 @@ export default function HistorySidebar() {
                   {!searchQuery && (
                     <button
                       onClick={() => router.push("/pages/PdfConverter")}
-                      className="mt-3 text-xs text-[#C4B454] hover:text-[#B8A040] font-semibold"
+                      className="mt-3 text-xs text-[#4A7766] hover:text-[#3D6558] font-semibold"
                     >
                       Upload PDF
                     </button>
@@ -246,7 +247,7 @@ export default function HistorySidebar() {
                         onClick={() => handleDocumentClick(doc.id)}
                         className={`group relative p-3 rounded-xl cursor-pointer transition-all duration-200 ${
                           isActive
-                            ? "bg-[#C4B454]/10 border-2 border-[#C4B454]"
+                            ? "bg-[#4A7766]/10 border-2 border-[#4A7766]"
                             : "bg-gray-50 hover:bg-gray-100 border-2 border-transparent"
                         }`}
                       >
@@ -326,7 +327,7 @@ export default function HistorySidebar() {
             <div className="p-4 border-t border-gray-200 bg-gray-50">
               <button
                 onClick={() => router.push("/pages/History")}
-                className="w-full px-4 py-2.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-200 text-sm"
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-200 text-sm"
               >
                 View All Documents
               </button>

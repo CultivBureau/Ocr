@@ -14,7 +14,7 @@ export default function HistorySort() {
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl p-7 border-2 border-slate-200 hover:shadow-2xl transition-all duration-300">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-gradient-to-br from-[#C4B454] to-[#B8A040] rounded-xl flex items-center justify-center shadow-lg">
+        <div className="w-12 h-12 bg-gradient-to-br from-[#4A7766] to-[#3D6558] rounded-xl flex items-center justify-center shadow-lg">
           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
           </svg>
@@ -33,7 +33,7 @@ export default function HistorySort() {
           }}
           className={`flex-1 px-6 py-4 rounded-xl text-sm font-bold transition-all duration-300 ${
             isNewestFirst
-              ? "bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white shadow-lg shadow-[#C4B454]/30 scale-105"
+              ? "bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white shadow-lg shadow-[#4A7766]/30 scale-105"
               : "bg-slate-100 text-slate-700 hover:bg-slate-200 hover:scale-105 border-2 border-slate-200"
           }`}
         >

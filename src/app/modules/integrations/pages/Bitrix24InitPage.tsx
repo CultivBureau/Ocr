@@ -76,7 +76,7 @@ export default function Bitrix24Init() {
           animation: 'spin 1s linear infinite',
           margin: '0 auto 20px',
         }} />
-        <h2>Loading Bureau OCR...</h2>
+        <h2>Loading True Quotation...</h2>
         <p>Authenticating with Bitrix24...</p>
       </div>
       <style jsx>{`

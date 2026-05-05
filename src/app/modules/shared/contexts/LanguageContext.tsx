@@ -83,7 +83,7 @@ export const translations = {
     // Home Page
     home: {
       welcomeTo: "Welcome to",
-      bureauOCR: "Bureau OCR",
+      bureauOCR: "True Quotation",
       professionalTemplateStudio: "Professional Template Studio",
       subtitle: "Transform your documents with AI-powered OCR technology. Extract, edit, and export professional templates with ease.",
       history: "History",
@@ -153,9 +153,9 @@ export const translations = {
     // PDF Converter Page
     pdfConverter: {
       title: "PDF Converter",
-      subtitle: "Upload and convert your PDF or Word documents",
+      subtitle: "Upload and convert your PDF, Word, or image files",
       uploadHero:
-        "Upload your PDF or Word documents and let our intelligent OCR technology extract and transform them into editable templates.",
+        "Upload your PDF, Word, or image files and let our intelligent OCR technology extract and transform them into editable templates.",
       uploadPdf: "Upload document",
       selectFile: "Select File",
       chooseFile: "Choose File",
@@ -168,7 +168,7 @@ export const translations = {
       realTimeEditing: "Real-time editing",
       dragDropHere: "Drag and drop your PDF here",
       orClickToUpload: "or click to upload",
-      supportedFormats: "Supported formats: PDF, Word (.docx, .doc)",
+      supportedFormats: "Supported formats: PDF, Word (.docx, .doc), Image (.png, .jpg, .jpeg, .webp)",
       maxFileSize: "Maximum file size: 50MB",
       processing: "Processing...",
       extracting: "Extracting content...",
@@ -189,10 +189,10 @@ export const translations = {
       discardChanges: "Discard Changes",
       addNewTrip: "Add New Trip",
       // Error messages
-      pleasChoosePdf: "Please choose a PDF or Word file before submitting.",
-      unsupportedFileType: "Please choose a PDF or Word file (.pdf, .docx, .doc).",
+      pleasChoosePdf: "Please choose a PDF, Word, or image file before submitting.",
+      unsupportedFileType: "Please choose a supported file (.pdf, .docx, .doc, .png, .jpg, .jpeg, .webp).",
       uploadLimitsFootnote:
-        "Supports PDF and Word (.docx, .doc), up to 15 pages, 20MB max.",
+        "Supports PDF, Word (.docx, .doc), and images (.png, .jpg, .jpeg, .webp); documents up to 15 pages, 20MB max.",
       uploadLimitReached: "Limit exceeded",
       uploadFailed: "Upload failed: No file path returned.",
       extractionFailed: "Extraction returned no content.",
@@ -209,7 +209,7 @@ export const translations = {
     history: {
       title: "Document History",
       subtitle: "View and manage your converted documents",
-      searchDocuments: "Search documents...",
+      searchDocuments: "Search by document name or SKU ID...",
       filterByDate: "Filter by date",
       filterByType: "Filter by type",
       sortBy: "Sort by",
@@ -232,9 +232,9 @@ export const translations = {
       restoreVersion: "Restore Version",
       // Filter and sort
       filters: "Filters",
-      filterByNameOrFavorites: "Filter by name or favorites",
-      filterByName: "Filter by Name",
-      searchByDocumentName: "Search by document name...",
+      filterByNameOrFavorites: "Filter by name, SKU ID, or favorites",
+      filterByName: "Filter by Name or SKU ID",
+      searchByDocumentName: "Search by document name or SKU ID...",
       showFavoritesOnly: "Show Favorites Only",
       allDocuments: "All Documents",
       favoritesOnly: "Favorites Only",
@@ -1068,7 +1068,7 @@ export const translations = {
     // Home Page
     home: {
       welcomeTo: "مرحباً بك في",
-      bureauOCR: "BUREAU OCR",
+      bureauOCR: "TRUE QUOTATION",
       professionalTemplateStudio: "استوديو القوالب الاحترافية",
       subtitle: "حوّل مستنداتك باستخدام تقنية التعرف الضوئي على الحروف المدعومة بالذكاء الاصطناعي. استخرج وحرر وصدر القوالب الاحترافية بسهولة.",
       history: "السجل",
@@ -1138,9 +1138,9 @@ export const translations = {
     // PDF Converter Page
     pdfConverter: {
       title: "محول PDF",
-      subtitle: "ارفع وحوّل مستندات PDF أو Word",
+      subtitle: "ارفع وحوّل ملفات PDF أو Word أو الصور",
       uploadHero:
-        "ارفع مستندات PDF أو Word ودع تقنية OCR الذكية لدينا تستخرجها وتحوّلها إلى قوالب قابلة للتحرير.",
+        "ارفع ملفات PDF أو Word أو الصور ودع تقنية OCR الذكية لدينا تستخرجها وتحوّلها إلى قوالب قابلة للتحرير.",
       uploadPdf: "رفع المستند",
       selectFile: "اختر ملف",
       chooseFile: "اختر ملف",
@@ -1153,7 +1153,7 @@ export const translations = {
       realTimeEditing: "تحرير مباشر",
       dragDropHere: "اسحب وأفلت ملف PDF هنا",
       orClickToUpload: "أو انقر للرفع",
-      supportedFormats: "الصيغ المدعومة: PDF، Word (.docx، .doc)",
+      supportedFormats: "الصيغ المدعومة: PDF، Word (.docx، .doc)، صورة (.png، .jpg، .jpeg، .webp)",
       maxFileSize: "الحجم الأقصى للملف: 50 ميجابايت",
       processing: "جاري المعالجة...",
       extracting: "جاري استخراج المحتوى...",
@@ -1174,10 +1174,10 @@ export const translations = {
       discardChanges: "تجاهل التغييرات",
       addNewTrip: "إضافة رحلة جديدة",
       // Error messages
-      pleasChoosePdf: "يرجى اختيار ملف PDF أو Word قبل الإرسال.",
-      unsupportedFileType: "يرجى اختيار ملف PDF أو Word (.pdf، .docx، .doc).",
+      pleasChoosePdf: "يرجى اختيار ملف PDF أو Word أو صورة قبل الإرسال.",
+      unsupportedFileType: "يرجى اختيار ملف مدعوم (.pdf، .docx، .doc، .png، .jpg، .jpeg، .webp).",
       uploadLimitsFootnote:
-        "يدعم PDF وWord (.docx، .doc) حتى 15 صفحة و20 ميجابايت كحد أقصى.",
+        "يدعم PDF وWord (.docx، .doc) والصور (.png، .jpg، .jpeg، .webp)؛ المستندات حتى 15 صفحة و20 ميجابايت كحد أقصى.",
       uploadLimitReached: "تجاوز الحد",
       uploadFailed: "فشل في الرفع: لم يتم إرجاع مسار الملف.",
       extractionFailed: "لم يتم إرجاع أي محتوى من عملية الاستخراج.",
@@ -1194,7 +1194,7 @@ export const translations = {
     history: {
       title: "سجل المستندات",
       subtitle: "عرض وإدارة المستندات المحولة",
-      searchDocuments: "البحث في المستندات...",
+      searchDocuments: "ابحث باسم المستند أو معرف SKU...",
       filterByDate: "تصفية حسب التاريخ",
       filterByType: "تصفية حسب النوع",
       sortBy: "ترتيب حسب",
@@ -1217,9 +1217,9 @@ export const translations = {
       restoreVersion: "استعادة الإصدار",
       // Filter and sort
       filters: "مرشحات",
-      filterByNameOrFavorites: "الترشيح بالاسم أو المفضلات",
-      filterByName: "الترشيح بالاسم",
-      searchByDocumentName: "ابحث باسم المستند...",
+      filterByNameOrFavorites: "التصفية بالاسم أو معرف SKU أو المفضلات",
+      filterByName: "التصفية بالاسم أو معرف SKU",
+      searchByDocumentName: "ابحث باسم المستند أو معرف SKU...",
       showFavoritesOnly: "إظهار المفضلات فقط",
       allDocuments: "جميع المستندات",
       favoritesOnly: "المفضلات فقط",

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { AlertTriangle, Link as LinkIcon } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, Link as LinkIcon } from 'lucide-react';
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
 import {
   columnLabel,
@@ -25,7 +25,8 @@ export interface AirplaneSectionProps {
   // Data
   flights?: {
     date: string;
-    time?: string;
+    arrivalTime?: string;
+    departureTime?: string;
     airlineCompany?: string;
     airlineCompanyLink?: string;
     fromAirport: string;
@@ -58,7 +59,8 @@ export interface AirplaneSectionProps {
   columnConfig?: AirplaneColumnConfigItem[];
   columnLabels?: {
     date: string;
-    time?: string;
+    arrivalTime?: string;
+    departureTime?: string;
     airlineCompany?: string;
     fromAirport: string;
     toAirport: string;
@@ -212,10 +214,16 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
             <span className="text-[#4A5568] font-bold">{formatDate(flight.date)}</span>
           </div>
         );
-      case "time":
+      case "arrivalTime":
         return (
           <div className="flex flex-col items-center">
-            <span className="text-[#4A5568] font-bold">{flight.time || "-"}</span>
+            <span className="text-[#4A5568] font-bold">{flight.arrivalTime || "-"}</span>
+          </div>
+        );
+      case "departureTime":
+        return (
+          <div className="flex flex-col items-center">
+            <span className="text-[#4A5568] font-bold">{flight.departureTime || "-"}</span>
           </div>
         );
       case "airlineCompany":
@@ -292,8 +300,8 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
 
   const cellWrapperClass = (isLast: boolean) =>
     isLast
-      ? "px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base"
-      : "px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base border-r-2 border-white/50";
+      ? "px-4 py-4 text-center text-gray-700 text-sm md:text-base"
+      : "px-4 py-4 text-center text-gray-700 text-sm md:text-base border-r border-gray-100";
 
   return (
     <div 
@@ -359,14 +367,14 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
       )}
 
       {/* Table Container */}
-      <div className="overflow-hidden rounded-2xl shadow-xl border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-2xl shadow-lg border border-gray-100 bg-white">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[600px]">
           {/* Column Headers */}
           <thead>
             <tr className="bg-[#F5A623]">
               {editable && (
-                  <th className="px-3 py-4 text-center text-white font-bold text-xs md:text-sm border-r-2 border-white/30 min-w-[80px]">
+                  <th className="px-3 py-4 text-center text-white font-bold text-xs md:text-sm border-r border-white/20 min-w-20">
                     <div className="flex items-center justify-center">
                       <span>{language === 'ar' ? 'إجراءات' : 'Actions'}</span>
                     </div>
@@ -376,7 +384,7 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                   <th
                     key={col.kind === "builtin" ? col.key : col.id}
                     className={`px-4 py-4 text-center text-white font-bold text-sm md:text-base min-w-[100px] ${
-                      colIndex < columns.length - 1 ? "border-r-2 border-white/30" : ""
+                      colIndex < columns.length - 1 ? "border-r border-white/20" : ""
                     } ${col.kind === "builtin" && (col.key === "airlineCompany" || col.key === "fromAirport" || col.key === "toAirport") ? "min-w-[150px]" : ""}`}
                   >
                     {columnLabel(col, language)}
@@ -389,12 +397,38 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
           <tbody>
             {flights.map((flight, index) => (
               <React.Fragment key={index}>
-                <tr 
-                  className="bg-[#E8E8E8] hover:bg-[#D8D8D8] transition-colors duration-200 border-b-2 border-white group"
+                <tr
+                  className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-amber-50/50 transition-colors duration-200 border-b border-gray-100 group`}
                 >
                 {editable && (
-                    <td className="px-3 py-4 border-r-2 border-white/50">
+                    <td className="px-3 py-4 border-r border-gray-100">
                       <div className="flex flex-col gap-2 items-center">
+                      {flights.length > 1 && (
+                        <div className="flex gap-1">
+                          <button
+                            data-action="move-flight-up"
+                            data-airplane-section-id={sectionIdValue}
+                            data-flight-index={index}
+                            disabled={index === 0}
+                            className="p-1.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 disabled:opacity-35 disabled:hover:bg-slate-500 disabled:hover:scale-100 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                            title={language === 'ar' ? 'تحريك للأعلى' : 'Move up'}
+                            type="button"
+                          >
+                            <ArrowUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            data-action="move-flight-down"
+                            data-airplane-section-id={sectionIdValue}
+                            data-flight-index={index}
+                            disabled={index === flights.length - 1}
+                            className="p-1.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 disabled:opacity-35 disabled:hover:bg-slate-500 disabled:hover:scale-100 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                            title={language === 'ar' ? 'تحريك للأسفل' : 'Move down'}
+                            type="button"
+                          >
+                            <ArrowDown className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                       <button
                         onClick={(e) => {
                           // Support prop handler if provided (for backward compatibility)
@@ -445,7 +479,7 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
                 ))}
               </tr>
                 {flight.note?.trim() ? (
-                  <tr className="bg-red-50 border-b-2 border-white">
+                  <tr className="bg-red-50 border-b border-gray-100">
                     <td colSpan={editable ? 1 + dataColumnCount : dataColumnCount} className="px-4 py-3">
                       <div
                         className={`flex items-center justify-center gap-2 text-center text-red-800 font-bold text-sm md:text-base whitespace-pre-line ${
@@ -491,19 +525,19 @@ const AirplaneSection: React.FC<AirplaneSectionProps> = ({
 
       {/* Notice Message */}
       {showNotice && defaultNotice && (
-        <div className="mt-6 text-center">
-          <div className={`inline-flex items-center gap-3 bg-red-50 border-2 border-[#DC143C] rounded-2xl px-6 py-4 shadow-md ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              viewBox="0 0 24 24" 
-              fill="currentColor" 
-              className="w-6 h-6 text-[#DC143C] shrink-0"
+        <div className="mt-5">
+          <div className={`flex flex-col items-center justify-center gap-2 bg-red-50 border border-red-200 rounded-xl px-5 py-4 text-center ${direction === 'rtl' ? 'border-r-4 border-r-[#DC143C]' : 'border-l-4 border-l-[#DC143C]'}`}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="w-5 h-5 text-[#DC143C] shrink-0"
             >
               <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
             </svg>
-            <p className="text-[#DC143C] font-bold text-base md:text-lg leading-relaxed">
+            <p className="text-[#DC143C] font-semibold text-sm md:text-base leading-relaxed w-full text-center">
               {defaultNotice}
-          </p>
+            </p>
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #ECE7E2;
   --foreground: #171717;
 }
 
@@ -177,7 +177,7 @@ div[class*="section"] {
 
 /* Focus styles */
 *:focus-visible {
-  outline: 2px solid #A4C639;
+  outline: 2px solid #4A7766;
   outline-offset: 2px;
 }
 
@@ -331,7 +331,7 @@ div[class*="section"] {
   }
   
   .responsive-table-container::-webkit-scrollbar-thumb {
-    background: #A4C639;
+    background: #4A7766;
     border-radius: 10px;
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Link as LinkIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, Link as LinkIcon } from 'lucide-react';
 import DeleteConfirmationModal from "@/app/modules/shared/components/DeleteConfirmationModal";
 import type { TransportSectionProps, TransportTable, TransportRow } from '../types/TransportTypes';
 
@@ -484,7 +484,7 @@ const TransportSection: React.FC<TransportSectionProps> = ({
           const bgColorClass = getBackgroundColorClass(table.backgroundColor);
           
           return (
-            <div key={table.id || tableIndex} className="overflow-hidden rounded-2xl shadow-xl border border-gray-200 bg-white">
+            <div key={table.id || tableIndex} className="overflow-hidden rounded-2xl shadow-lg border border-gray-100 bg-white">
               {/* Table Title Header */}
               {table.title && (
                 <div className={`${bgColorClass} text-white px-6 py-3 relative ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
@@ -542,7 +542,7 @@ const TransportSection: React.FC<TransportSectionProps> = ({
                   <thead>
                     <tr className={bgColorClass}>
                       {editable && (
-                        <th className="px-3 py-4 text-center text-white font-bold text-xs md:text-sm border-r-2 border-white/30 min-w-[80px]">
+                        <th className="px-3 py-4 text-center text-white font-bold text-xs md:text-sm border-r border-white/20 min-w-20">
                           <div className="flex items-center justify-center">
                             <span>{language === 'ar' ? 'إجراءات' : 'Actions'}</span>
                           </div>
@@ -551,7 +551,7 @@ const TransportSection: React.FC<TransportSectionProps> = ({
                       {table.columns.map((column, colIndex) => (
                         <th 
                           key={column.key || colIndex}
-                          className="px-4 py-4 text-center text-white font-bold text-sm md:text-base border-r-2 border-white/30 whitespace-nowrap"
+                          className="px-4 py-4 text-center text-white font-bold text-sm md:text-base border-r border-white/20 whitespace-nowrap"
                         >
                           {getColumnLabel(column.key, column.label)}
                         </th>
@@ -571,12 +571,40 @@ const TransportSection: React.FC<TransportSectionProps> = ({
                           renderFormRow(tableIndex, bgColorClass, table.columns.length)
                         ) : (
                           <>
-                            <tr 
-                              className="bg-[#E8E8E8] hover:bg-[#D8D8D8] transition-colors duration-200 border-b-2 border-white group"
+                            <tr
+                              className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50/40 transition-colors duration-200 border-b border-gray-100 group`}
                             >
                               {editable && (
-                                <td className="px-3 py-4 border-r-2 border-white/50">
+                                <td className="px-3 py-4 border-r border-gray-100">
                                   <div className="flex flex-col gap-2 items-center">
+                                    {table.rows.length > 1 && (
+                                      <div className="flex gap-1">
+                                        <button
+                                          data-action="move-row-up"
+                                          data-transport-section-id={sectionIdValue}
+                                          data-table-index={tableIndex}
+                                          data-row-index={rowIndex}
+                                          disabled={rowIndex === 0}
+                                          className="p-1.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 disabled:opacity-35 disabled:hover:bg-slate-500 disabled:hover:scale-100 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                                          title={language === 'ar' ? 'تحريك للأعلى' : 'Move up'}
+                                          type="button"
+                                        >
+                                          <ArrowUp className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          data-action="move-row-down"
+                                          data-transport-section-id={sectionIdValue}
+                                          data-table-index={tableIndex}
+                                          data-row-index={rowIndex}
+                                          disabled={rowIndex === table.rows.length - 1}
+                                          className="p-1.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 disabled:opacity-35 disabled:hover:bg-slate-500 disabled:hover:scale-100 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110"
+                                          title={language === 'ar' ? 'تحريك للأسفل' : 'Move down'}
+                                          type="button"
+                                        >
+                                          <ArrowDown className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    )}
                                     <button
                                       onClick={(e) => {
                                         e.preventDefault();
@@ -629,7 +657,7 @@ const TransportSection: React.FC<TransportSectionProps> = ({
                             return (
                               <td 
                                 key={column.key || colIndex}
-                                className={`px-4 py-4 text-center text-gray-800 font-semibold text-sm md:text-base ${!isLastColumn ? 'border-r-2 border-white/50' : ''}`}
+                                className={`px-4 py-4 text-center text-gray-700 text-sm md:text-base ${!isLastColumn ? 'border-r border-gray-100' : ''}`}
                               >
                                 <div className={`flex items-center justify-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                                   {isDateColumn ? (
@@ -681,7 +709,7 @@ const TransportSection: React.FC<TransportSectionProps> = ({
                         </tr>
                         {/* Note row - appears as separate row below data row */}
                         {row.note && (
-                          <tr className="bg-red-50 border-b-2 border-white">
+                          <tr className="bg-red-50 border-b border-gray-100">
                             <td 
                               colSpan={(editable ? 1 : 0) + table.columns.length}
                               className="px-4 py-3 text-center"
@@ -713,7 +741,7 @@ const TransportSection: React.FC<TransportSectionProps> = ({
                               data-action="add-row"
                               data-transport-section-id={sectionIdValue}
                               data-table-index={tableIndex}
-                              className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm md:text-base font-medium flex items-center gap-2 mx-auto shadow-lg hover:shadow-xl hover:scale-105"
+                              className="px-6 py-3 bg-linear-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm md:text-base font-medium flex items-center gap-2 mx-auto shadow-lg hover:shadow-xl hover:scale-105"
                               type="button"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

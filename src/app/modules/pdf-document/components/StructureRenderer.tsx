@@ -1,7 +1,15 @@
 "use client";
 
-import React, { useMemo } from "react";
-import type { Structure, Section, Table, SeparatedStructure, UserElement } from "../types/ExtractTypes";
+import React from "react";
+import type {
+  Structure,
+  Section,
+  Table,
+  SeparatedStructure,
+  UserElement,
+  ExtraServiceSectionData,
+  TotalPriceSectionData,
+} from "../types/ExtractTypes";
 import { useLanguage } from "@/app/modules/shared/contexts/LanguageContext";
 import SectionTemplate from "../templates/sectionTemplate";
 import DynamicTableTemplate from "../templates/dynamicTableTemplate";
@@ -9,10 +17,10 @@ import BaseTemplate from "../templates/baseTemplate";
 import AirplaneSection from "../templates/airplaneSection";
 import HotelsSection from "../templates/HotelsSection";
 import TransportSection from "../templates/TransportSection";
-import { sortSectionsByOrder, getSectionHierarchy } from "../utils/formatSections";
+import { sortSectionsByOrder } from "../utils/formatSections";
 import { sortTablesByOrder, groupTablesBySection } from "../utils/formatTables";
 import { isSeparatedStructure, isLegacyStructure, migrateToSeparatedStructure } from "../utils/structureMigration";
-import { isGeneratedId } from "../utils/contentGuards";
+import { isEmptySectionContent } from "../utils/contentGuards";
 
 interface StructureRendererProps {
   structure: Structure | SeparatedStructure;
@@ -31,6 +39,9 @@ interface StructureRendererProps {
   // Branding props - if provided, will use company branding instead of defaults
   headerImage?: string;
   footerImage?: string;
+  versionSku?: string | null;
+  versionDate?: string | null;
+  versionTime?: string | null;
   termsAndConditions?: string | null;
   companyTermsDefault?: string | null;
   termsEditable?: boolean;
@@ -63,6 +74,9 @@ export default function StructureRenderer({
   className = "",
   headerImage,
   footerImage,
+  versionSku,
+  versionDate,
+  versionTime,
   termsAndConditions,
   companyTermsDefault,
   termsEditable = false,
@@ -103,24 +117,20 @@ export default function StructureRenderer({
     elementMap.set(element.id, { type: 'user', data: element });
   });
 
-  const suppressedGeneratedLayoutIds = useMemo(() => {
-    const s = new Set<string>();
-    separatedStructure.user.elements.forEach((el) => {
-      (el.supersedesGeneratedIds ?? []).forEach((id) => s.add(id));
-    });
-    return s;
-  }, [separatedStructure.user.elements]);
+  const shouldRenderSection = (section: Section) => !isEmptySectionContent(section.content);
+
+  const suppressedGeneratedLayoutIds = new Set<string>();
+  separatedStructure.user.elements.forEach((el) => {
+    (el.supersedesGeneratedIds ?? []).forEach((id) => suppressedGeneratedLayoutIds.add(id));
+  });
 
   // Sort sections and tables for legacy rendering (when not using layout order)
-  const sortedSections = sortSectionsByOrder(separatedStructure.generated.sections);
+  const sortedSections = sortSectionsByOrder(separatedStructure.generated.sections).filter(shouldRenderSection);
   const sortedTables = sortTablesByOrder(separatedStructure.generated.tables);
   
   // Group tables by section for better organization
   const tablesBySection = groupTablesBySection(sortedTables);
   
-  // Get section hierarchy
-  const sectionHierarchy = getSectionHierarchy(sortedSections);
-
   // Render element by ID
   const renderElement = (id: string) => {
     const element = elementMap.get(id);
@@ -129,6 +139,7 @@ export default function StructureRenderer({
     switch (element.type) {
       case 'section': {
         const section = element.data as Section;
+        if (!shouldRenderSection(section)) return null;
         return (
           <SectionTemplate
             key={section.id}
@@ -322,6 +333,99 @@ export default function StructureRenderer({
               />
             </div>
           );
+        } else if (userElement.type === 'extra_service') {
+          const extraData = userElement.data as ExtraServiceSectionData;
+          const rows = Array.isArray(extraData.rows) ? extraData.rows : [];
+          const tableRows = rows.map((r) => [
+            r?.day ?? "",
+            r?.date ?? "",
+            r?.country ?? "",
+            r?.service_name ?? "",
+            String(r?.count ?? ""),
+          ]);
+          return (
+            <div className="w-full">
+              {restoreBar}
+              <DynamicTableTemplate
+                key={userElement.id}
+                title={extraData.title || "خدمات اخرى"}
+                columns={["يوم", "التاريخ", "البلد", "اسم الخدمة", "العدد"]}
+                rows={tableRows}
+                editable={editable}
+                onTitleChange={
+                  editable && onUserElementEdit
+                    ? (newTitle) =>
+                        onUserElementEdit({
+                          ...userElement,
+                          data: { ...extraData, title: newTitle },
+                        })
+                    : undefined
+                }
+                onCellChange={
+                  editable && onUserElementEdit
+                    ? (rowIndex, cellIndex, newValue) => {
+                        const keyMap = ["day", "date", "country", "service_name", "count"] as const;
+                        const key = keyMap[cellIndex];
+                        if (!key) return;
+                        const nextRows = rows.map((row, idx) => {
+                          if (idx !== rowIndex) return row;
+                          if (key === "count") {
+                            const parsed = Number(String(newValue).replace(/[^\d.-]/g, ""));
+                            return { ...row, count: Number.isFinite(parsed) ? parsed : row.count };
+                          }
+                          return { ...row, [key]: newValue };
+                        });
+                        onUserElementEdit({
+                          ...userElement,
+                          data: { ...extraData, rows: nextRows },
+                        });
+                      }
+                    : undefined
+                }
+                tableBackgroundColor="pink"
+              />
+            </div>
+          );
+        } else if (userElement.type === 'total_price') {
+          const totalData = userElement.data as TotalPriceSectionData;
+          const totalText = totalData.formattedTotal?.trim() || `${totalData.amount || ""} ${totalData.currency || ""}`.trim();
+          return (
+            <div className="w-full">
+              {restoreBar}
+              <SectionTemplate
+                key={userElement.id}
+                title={totalData.title || "الاجمالي كليا"}
+                content={totalText || "-"}
+                editable={editable}
+                onTitleChange={
+                  editable && onUserElementEdit
+                    ? (newTitle) =>
+                        onUserElementEdit({
+                          ...userElement,
+                          data: { ...totalData, title: newTitle },
+                        })
+                    : undefined
+                }
+                onContentChange={
+                  editable && onUserElementEdit
+                    ? (newContent) =>
+                        onUserElementEdit({
+                          ...userElement,
+                          data: { ...totalData, formattedTotal: newContent },
+                        })
+                    : undefined
+                }
+                showUnderline={false}
+                titleSize="3xl"
+                contentSize="xl"
+                contentAlignment="center"
+                containerClassName="border rounded-lg overflow-hidden"
+                backgroundColor="bg-white"
+                border
+                borderColor="border-green-600"
+              />
+            </div>
+          );
         }
         return null;
       }
@@ -351,16 +455,21 @@ export default function StructureRenderer({
             if (element.type === 'section') {
               const section = element.data as Section;
               // Check if this section has children
-              const children = separatedStructure.generated.sections.filter(s => s.parent_id === section.id);
+              const children = separatedStructure.generated.sections.filter(s => s.parent_id === section.id && shouldRenderSection(s));
+              if (!shouldRenderSection(section) && children.length === 0) {
+                return null;
+              }
               if (children.length > 0) {
                 return (
                   <React.Fragment key={uniqueKey}>
-                    <SectionTemplate
-                      title={section.title}
-                      content={section.content}
-                      type={section.type || 'section'}
-                      editable={false}
-                    />
+                    {shouldRenderSection(section) && (
+                      <SectionTemplate
+                        title={section.title}
+                        content={section.content}
+                        type={section.type || 'section'}
+                        editable={false}
+                      />
+                    )}
                     {children.map((child, childIndex) => (
                       <SectionTemplate
                         key={`${child.id}-${childIndex}`}
@@ -526,6 +635,9 @@ export default function StructureRenderer({
       footerImage={footerImage}
       showHeader={!!headerImage}
       showFooter={!!footerImage}
+      versionSku={versionSku}
+      versionDate={versionDate}
+      versionTime={versionTime}
       termsAndConditions={termsAndConditions}
       companyTermsDefault={companyTermsDefault}
       termsEditable={termsEditable}
@@ -537,4 +649,3 @@ export default function StructureRenderer({
     </BaseTemplate>
   );
 }
-

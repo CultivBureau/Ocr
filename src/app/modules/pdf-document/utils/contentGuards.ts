@@ -17,6 +17,29 @@ export function isGeneratedId(id: string): boolean {
 }
 
 /**
+ * Return true when a section has no user-visible content.
+ * Handles empty strings and placeholder HTML emitted by older extraction runs.
+ */
+export function isEmptySectionContent(content: unknown): boolean {
+  if (content == null) {
+    return true;
+  }
+  if (typeof content !== "string") {
+    return false;
+  }
+
+  const normalized = content
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/?(p|div|span|strong|em|b|i|u|s|ul|ol|li)[^>]*>/gi, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#160;/gi, " ")
+    .replace(/\u00a0/g, " ")
+    .trim();
+
+  return normalized.length === 0;
+}
+
+/**
  * Check if an ID belongs to user-created content
  */
 export function isUserId(id: string): boolean {

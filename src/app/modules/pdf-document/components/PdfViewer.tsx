@@ -193,7 +193,7 @@ export default function PdfViewer({
             <h2 className="text-lg font-semibold text-gray-900">معاينة نهائية</h2>
             {isExporting && (
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <div className="w-4 h-4 border-2 border-[#A4C639] border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-[#4A7766] border-t-transparent rounded-full animate-spin"></div>
                 <span>جاري التصدير... {exportProgress}%</span>
               </div>
             )}
@@ -226,7 +226,7 @@ export default function PdfViewer({
             <button
               onClick={handleExport}
               disabled={isExporting}
-              className="px-6 py-2 bg-[#A4C639] text-white rounded-lg text-sm font-semibold hover:bg-[#8FB02E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md flex items-center gap-2"
+              className="px-6 py-2 bg-[#4A7766] text-white rounded-lg text-sm font-semibold hover:bg-[#8FB02E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md flex items-center gap-2"
             >
               {isExporting ? (
                 <>
@@ -293,7 +293,7 @@ export default function PdfViewer({
                 <a
                   href={previewUrl}
                   download={`${filename}.pdf`}
-                  className="px-4 py-2 bg-[#A4C639] text-white rounded-lg text-sm font-semibold hover:bg-[#8FB02E] transition-colors"
+                  className="px-4 py-2 bg-[#4A7766] text-white rounded-lg text-sm font-semibold hover:bg-[#8FB02E] transition-colors"
                 >
                   تحميل PDF
                 </a>

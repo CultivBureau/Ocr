@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { saveHotelTemplate } from "@/app/modules/pdf-document/services/TemplatesApi";
 import { useLanguage } from "@/app/modules/shared/contexts/LanguageContext";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 interface EditHotelSectionModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export default function EditHotelSectionModal({
   onSubmit,
   initialData,
 }: EditHotelSectionModalProps) {
+  const TOTAL_STEPS = 2;
   const { t, isRTL, dir } = useLanguage();
   const [title, setTitle] = useState("حجز الفنادق");
   const [showTitle, setShowTitle] = useState(true);
@@ -39,6 +41,7 @@ export default function EditHotelSectionModal({
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Populate form when modal opens or initialData changes
@@ -48,6 +51,7 @@ export default function EditHotelSectionModal({
       setShowTitle(initialData.showTitle !== undefined ? initialData.showTitle : true);
       setDirection(initialData.direction || "rtl");
       setLanguage(initialData.language || "ar");
+      setCurrentStep(1);
     }
   }, [isOpen, initialData]);
 
@@ -152,7 +156,7 @@ export default function EditHotelSectionModal({
           ? 'تم استيراد إعدادات القسم. ملاحظة: يجب إضافة الفنادق يدوياً أو استخدام قالب كامل.' 
           : 'Section settings imported. Note: Hotels need to be added manually or use a full template.', {
           duration: 6000,
-          icon: 'ℹ️'
+          icon: 'i'
         });
       } else {
         toast.success(language === 'ar' ? 'تم استيراد القالب بنجاح' : 'Template imported successfully');
@@ -239,6 +243,31 @@ export default function EditHotelSectionModal({
             </button>
           </div>
         </div>
+
+        <div className="px-6 pt-4 pb-3 bg-gradient-to-r from-[#3B5998] to-[#2E4A7A] border-t border-white/20">
+          <div className="flex items-center justify-center text-xs text-white/70 mb-3">
+            {language === "ar" ? `الخطوة ${currentStep} من ${TOTAL_STEPS}` : `Step ${currentStep} of ${TOTAL_STEPS}`}
+          </div>
+          <div className="flex items-start justify-center gap-0">
+            {[
+              { label: language === "ar" ? "إعدادات القسم" : "Section Setup", sub: language === "ar" ? "العنوان والعرض" : "Title & Display" },
+              { label: language === "ar" ? "اللغة والاتجاه" : "Language", sub: language === "ar" ? "العربية / الإنجليزية" : "Direction & Locale" },
+            ].map((step, i) => (
+              <React.Fragment key={i}>
+                <button type="button" onClick={() => i + 1 < currentStep && setCurrentStep(i + 1)} className="flex flex-col items-center">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 ${currentStep > i + 1 ? "bg-emerald-400 border-emerald-400 text-white" : currentStep === i + 1 ? "bg-white border-white text-[#3B5998] shadow-lg" : "bg-transparent border-white/30 text-white/40"}`}>
+                    {currentStep > i + 1 ? "✓" : i + 1}
+                  </div>
+                  <div className="text-center mt-1 px-1">
+                    <p className={`text-xs font-semibold transition-all ${currentStep >= i + 1 ? "text-white" : "text-white/40"}`}>{step.label}</p>
+                    <p className="text-[10px] text-white/50 whitespace-nowrap">{step.sub}</p>
+                  </div>
+                </button>
+                {i < 1 && <div className={`flex-1 h-0.5 mt-[18px] transition-all duration-500 ${currentStep > i + 1 ? "bg-emerald-400" : "bg-white/20"}`} />}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
         
         {/* Hidden file input for JSON import */}
         <input
@@ -251,67 +280,68 @@ export default function EditHotelSectionModal({
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Section Title */}
-          <div>
-            <label className={`block text-sm font-semibold text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-              {t.modals.sectionTitle}
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
-              placeholder={t.modals.hotelBooking}
-              dir={language === 'ar' ? 'rtl' : 'ltr'}
-            />
-            <div className={`mt-2 flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
+          {currentStep === 1 && (
+            <div>
+              <label className={`block text-sm font-semibold text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t.modals.sectionTitle}
+              </label>
               <input
-                type="checkbox"
-                id="showTitle"
-                checked={showTitle}
-                onChange={(e) => setShowTitle(e.target.checked)}
-                className="w-4 h-4 text-[#3B5998] rounded focus:ring-[#3B5998]"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
+                placeholder={t.modals.hotelBooking}
+                dir={language === 'ar' ? 'rtl' : 'ltr'}
               />
-              <label htmlFor="showTitle" className="text-sm text-gray-700">
-                {t.modals.showTitle}
-              </label>
+              <div className={`mt-2 flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
+                <input
+                  type="checkbox"
+                  id="showTitle"
+                  checked={showTitle}
+                  onChange={(e) => setShowTitle(e.target.checked)}
+                  className="w-4 h-4 text-[#3B5998] rounded focus:ring-[#3B5998]"
+                />
+                <label htmlFor="showTitle" className="text-sm text-gray-700">
+                  {t.modals.showTitle}
+                </label>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Language & Direction */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-sm font-semibold text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                {t.modals.language}
-              </label>
-              <select
-                value={language}
-                onChange={(e) => {
-                  const newLang = e.target.value as "ar" | "en";
-                  setLanguage(newLang);
-                  // Auto-change direction based on language
-                  setDirection(newLang === 'ar' ? 'rtl' : 'ltr');
-                }}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
-              >
-                <option value="ar">{t.modals.arabic}</option>
-                <option value="en">{t.modals.english}</option>
-              </select>
+          {currentStep === 2 && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`block text-sm font-semibold text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t.modals.language}
+                </label>
+                <select
+                  value={language}
+                  onChange={(e) => {
+                    const newLang = e.target.value as "ar" | "en";
+                    setLanguage(newLang);
+                    setDirection(newLang === 'ar' ? 'rtl' : 'ltr');
+                  }}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
+                >
+                  <option value="ar">{t.modals.arabic}</option>
+                  <option value="en">{t.modals.english}</option>
+                </select>
+              </div>
+              <div>
+                <label className={`block text-sm font-semibold text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t.modals.direction}
+                </label>
+                <select
+                  value={direction}
+                  onChange={(e) => setDirection(e.target.value as "rtl" | "ltr")}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
+                >
+                  <option value="rtl">{t.modals.rtl}</option>
+                  <option value="ltr">{t.modals.ltr}</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className={`block text-sm font-semibold text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                {t.modals.direction}
-              </label>
-              <select
-                value={direction}
-                onChange={(e) => setDirection(e.target.value as "rtl" | "ltr")}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5998] focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
-              >
-                <option value="rtl">{t.modals.rtl}</option>
-                <option value="ltr">{t.modals.ltr}</option>
-              </select>
-            </div>
-          </div>
+          )}
         </form>
 
         {/* Footer */}
@@ -323,16 +353,37 @@ export default function EditHotelSectionModal({
           >
             {t.common.cancel}
           </button>
-          <button
-            type="submit"
-            onClick={handleSubmit}
-            className={`px-5 py-2 bg-gradient-to-r from-[#3B5998] to-[#2E4A7A] text-white rounded-lg hover:from-[#2E4A7A] hover:to-[#1E3A5A] transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            {t.modals.saveChanges}
-          </button>
+          {currentStep > 1 && (
+            <button
+              type="button"
+              onClick={() => setCurrentStep((s) => s - 1)}
+              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center gap-2"
+            >
+              {isRTL ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
+              {language === "ar" ? "السابق" : "Back"}
+            </button>
+          )}
+          {currentStep < TOTAL_STEPS ? (
+            <button
+              type="button"
+              onClick={() => setCurrentStep((s) => s + 1)}
+              className={`px-5 py-2 bg-gradient-to-r from-[#3B5998] to-[#2E4A7A] text-white rounded-lg hover:from-[#2E4A7A] hover:to-[#1E3A5A] transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+            >
+              {language === "ar" ? "التالي" : "Next"}
+              {isRTL ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            </button>
+          ) : (
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              className={`px-5 py-2 bg-gradient-to-r from-[#3B5998] to-[#2E4A7A] text-white rounded-lg hover:from-[#2E4A7A] hover:to-[#1E3A5A] transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {t.modals.saveChanges}
+            </button>
+          )}
         </div>
       </div>
 

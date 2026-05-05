@@ -38,6 +38,14 @@ export interface Document {
   current_version?: number;
   original_version_id?: string | null;
   total_versions?: number;
+  sku?: string | null;
+  version_date?: string | null;
+  version_time?: string | null;
+  matched_version_number?: number | null;
+  matched_version_sku?: string | null;
+  matched_by?: "title" | "current_sku" | "version_sku" | null;
+  creator_name?: string | null;
+  creator_email?: string | null;
   terms_and_conditions_override?: string | null;
 }
 

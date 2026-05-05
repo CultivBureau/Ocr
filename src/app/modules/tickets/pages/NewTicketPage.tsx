@@ -223,8 +223,8 @@ function NewTicketPageContent() {
           {/* Category Selection */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-shadow">
             <div className="flex items-center gap-2 mb-5">
-              <div className="p-2 bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 rounded-lg">
-                <svg className="w-5 h-5 text-[#B8A040]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 rounded-lg">
+                <svg className="w-5 h-5 text-[#3D6558]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
               </div>
@@ -241,8 +241,8 @@ function NewTicketPageContent() {
                   onClick={() => setCategory(key as TicketCategory)}
                   className={`p-3 text-sm font-medium rounded-xl border-2 transition-all ${
                     category === key
-                      ? "border-[#C4B454] bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 text-[#B8A040] shadow-md"
-                      : "border-gray-200 hover:border-[#C4B454]/50 text-gray-700 hover:bg-gray-50"
+                      ? "border-[#4A7766] bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 text-[#3D6558] shadow-md"
+                      : "border-gray-200 hover:border-[#4A7766]/50 text-gray-700 hover:bg-gray-50"
                   }`}
                 >
                   {language === "ar" ? labels.ar : labels.en}
@@ -270,8 +270,8 @@ function NewTicketPageContent() {
           {/* Priority Selection */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-shadow">
             <div className="flex items-center gap-2 mb-5">
-              <div className="p-2 bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 rounded-lg">
-                <svg className="w-5 h-5 text-[#B8A040]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 rounded-lg">
+                <svg className="w-5 h-5 text-[#3D6558]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
@@ -309,8 +309,8 @@ function NewTicketPageContent() {
           {/* Description */}
           <div className="bg-white rounded-2xl shadow-lg border text-black border-gray-200 p-6 hover:shadow-xl transition-shadow">
             <div className="flex items-center gap-2 mb-4">
-              <div className="p-2 bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 rounded-lg">
-                <svg className="w-5 h-5 text-[#B8A040]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 rounded-lg">
+                <svg className="w-5 h-5 text-[#3D6558]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
                 </svg>
               </div>
@@ -339,8 +339,8 @@ function NewTicketPageContent() {
           {/* File Uploads */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-shadow">
             <div className="flex items-center gap-2 mb-6">
-              <div className="p-2 bg-gradient-to-br from-[#C4B454]/10 to-[#B8A040]/10 rounded-lg">
-                <svg className="w-5 h-5 text-[#B8A040]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-gradient-to-br from-[#4A7766]/10 to-[#3D6558]/10 rounded-lg">
+                <svg className="w-5 h-5 text-[#3D6558]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                 </svg>
               </div>
@@ -584,7 +584,7 @@ function NewTicketPageContent() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-8 py-2.5 bg-gradient-to-r from-[#C4B454] to-[#B8A040] text-white rounded-xl font-medium hover:from-[#B8A040] hover:to-[#A69035] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-8 py-2.5 bg-gradient-to-r from-[#4A7766] to-[#3D6558] text-white rounded-xl font-medium hover:from-[#3D6558] hover:to-[#3D6558] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting && (
                 <svg

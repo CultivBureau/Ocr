@@ -12,6 +12,8 @@ const TOP_SCORE_FUZZ = 0.14;
 const MAX_IDS = 4;
 /** Transport is split across multiple generated tables (one per city); allow a higher cap. */
 const MAX_IDS_TRANSPORT_TABLES = 32;
+const MAX_IDS_EXTRA_SERVICE_TABLES = 12;
+const MAX_IDS_TOTAL_PRICE = 4;
 
 function stripHtml(html: string): string {
   if (!html) return "";
@@ -35,6 +37,26 @@ function isGeneratedTransportTableTitle(title: string | undefined): boolean {
   const t = normalizeText(stripHtml(title));
   if (t.includes("مواصلات")) return true;
   if (t.includes("transport")) return true;
+  return false;
+}
+
+function isGeneratedExtraServiceTableTitle(title: string | undefined): boolean {
+  if (!title?.trim()) return false;
+  const t = normalizeText(stripHtml(title));
+  if (t.includes("خدمات اخرى")) return true;
+  if (t.includes("خدمات أخرى")) return true;
+  if (t.includes("extra service")) return true;
+  if (t.includes("additional service")) return true;
+  return false;
+}
+
+function isGeneratedTotalTitle(title: string | undefined): boolean {
+  if (!title?.trim()) return false;
+  const t = normalizeText(stripHtml(title));
+  if (t.includes("الاجمالي")) return true;
+  if (t.includes("الإجمالي")) return true;
+  if (t.includes("grand total")) return true;
+  if (t.includes("total")) return true;
   return false;
 }
 
@@ -82,6 +104,8 @@ function typeMultiplier(
   componentType: ComponentSuggestion["type"]
 ): number {
   if (componentType === "transport" && kind === "table") return 1.12;
+  if (componentType === "extra_service" && kind === "table") return 1.16;
+  if (componentType === "total_price") return 1.18;
   if (componentType !== "transport" && kind === "section") return 1.08;
   return 1;
 }
@@ -110,6 +134,30 @@ export function findSupersedesGeneratedIds(
       .map((tbl) => tbl.id);
     if (byTitle.length > 0) {
       return [...byTitle].sort();
+    }
+  }
+  if (suggestion.type === "extra_service") {
+    const byTitle = structure.generated.tables
+      .filter(
+        (tbl) =>
+          !alreadyClaimed.has(tbl.id) &&
+          isGeneratedExtraServiceTableTitle(tbl.title)
+      )
+      .map((tbl) => tbl.id);
+    if (byTitle.length > 0) {
+      return [...byTitle].sort().slice(0, MAX_IDS_EXTRA_SERVICE_TABLES);
+    }
+  }
+  if (suggestion.type === "total_price") {
+    const sectionIds = structure.generated.sections
+      .filter((sec) => !alreadyClaimed.has(sec.id) && isGeneratedTotalTitle(sec.title))
+      .map((sec) => sec.id);
+    const tableIds = structure.generated.tables
+      .filter((tbl) => !alreadyClaimed.has(tbl.id) && isGeneratedTotalTitle(tbl.title))
+      .map((tbl) => tbl.id);
+    const ids = [...sectionIds, ...tableIds];
+    if (ids.length > 0) {
+      return [...new Set(ids)].sort().slice(0, MAX_IDS_TOTAL_PRICE);
     }
   }
 
@@ -149,6 +197,22 @@ export function findSupersedesGeneratedIds(
       .map((c) => c.id);
     if (tableIds.length > 0) {
       return tableIds.slice(0, MAX_IDS_TRANSPORT_TABLES);
+    }
+  }
+  if (suggestion.type === "extra_service") {
+    const tableIds = scored
+      .filter((c) => c.kind === "table" && c.score >= MIN_SCORE)
+      .map((c) => c.id);
+    if (tableIds.length > 0) {
+      return tableIds.slice(0, MAX_IDS_EXTRA_SERVICE_TABLES);
+    }
+  }
+  if (suggestion.type === "total_price") {
+    const ids = scored
+      .filter((c) => c.score >= MIN_SCORE)
+      .map((c) => c.id);
+    if (ids.length > 0) {
+      return ids.slice(0, MAX_IDS_TOTAL_PRICE);
     }
   }
 
