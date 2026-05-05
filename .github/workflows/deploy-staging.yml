@@ -19,10 +19,17 @@ jobs:
           envs: ENV_STAG,DOCKER_USERNAME
           script: |
             cd ~/Pdf-Converter-Staging
-            git fetch origin
-            git pull origin Staging
+            git fetch origin Staging
+            git checkout Staging
+            git reset --hard origin/Staging
             echo "$ENV_STAG" > .env.staging
             export DOCKER_USERNAME=$DOCKER_USERNAME
+            STAGING_API_BASE_URL=$(awk -F= '/^NEXT_PUBLIC_API_BASE_URL=/{print substr($0, index($0,$2)); exit}' .env.staging)
+            if [ -z "$STAGING_API_BASE_URL" ]; then
+              echo "NEXT_PUBLIC_API_BASE_URL is missing or empty in .env.staging"
+              exit 1
+            fi
+            echo "Using NEXT_PUBLIC_API_BASE_URL=$STAGING_API_BASE_URL"
             docker compose -p ocr-staging -f docker-compose.staging.yml --env-file .env.staging build
             docker rm -f ocr.stag || true
             docker compose -p ocr-staging -f docker-compose.staging.yml --env-file .env.staging up -d --force-recreate
